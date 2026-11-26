@@ -15,7 +15,8 @@ test("all primary workspace sections expose a clear dashboard return action", ()
   assert.match(frontend, /goals-page-heading[\s\S]*?ড্যাশবোর্ডে ফিরো/);
   assert.match(tracker, /export function TrackerCenter\(\{ data, onBack \}/);
   assert.match(tracker, /onClick=\{onBack\}[\s\S]*?ড্যাশবোর্ডে ফিরো/);
-  assert.match(frontend, /সব পর্যায়ে ফিরো/);
+  assert.match(frontend, /StageDetailView[\s\S]*?ড্যাশবোর্ডে ফিরো/);
+  assert.doesNotMatch(frontend, /workspace-section-back/);
 });
 
 test("dashboard displays the Gregorian date in English and Hijri date in Bengali", () => {
@@ -62,11 +63,11 @@ test("relational audit remains read-only and covers every key tracker and cache 
   assert.doesNotMatch(audit, /\b(insert|update|delete|truncate)\s+(into|from|table)?\b/i);
 });
 
-test("release metadata and aggregate tests are advanced to 1.2.2", () => {
+test("release metadata and aggregate tests are advanced to 1.2.3", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.version, "1.2.2");
-  assert.equal(lock.version, "1.2.2");
-  assert.equal(lock.packages[""].version, "1.2.2");
+  assert.equal(pkg.version, "1.2.3");
+  assert.equal(lock.version, "1.2.3");
+  assert.equal(lock.packages[""].version, "1.2.3");
   assert.match(pkg.scripts["test:all"], /test:phase13/);
 });

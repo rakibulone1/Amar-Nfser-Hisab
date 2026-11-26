@@ -50,7 +50,7 @@ export type JourneyObservation = { id: string; journeyId: string; stageNumber: n
 export type DeadlineTask = { id: string; title: string; details: string; dueDate: string; completed: boolean; completedAt: string | null; createdAt: string };
 export type DeadlinePlan = { id: string; title: string; category: "exam" | "assignment" | "project" | "other"; startDate?: string; deadline: string; description: string; tasks: DeadlineTask[]; createdAt: string; updatedAt: string };
 export type MosqueTimes = Record<PrayerId, string>;
-export type PrayerTimesCache = { date: string; fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string; forbiddenTimes?: { sunriseStart: string; sunriseEnd: string; zawalStart: string; zawalEnd: string; sunsetStart: string; sunsetEnd: string }; source: string; fetchedAt: string; latitude: number; longitude: number };
+export type PrayerTimesCache = { date: string; fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string; sunset?: string; solarNoon?: string; forbiddenTimes?: { sunrise: string; zawal: string; sunset: string }; source: string; fetchedAt: string; latitude: number; longitude: number };
 export type ReminderEvent = { id: string; key: string; kind: "waqt-ended" | "jamaat-soon" | "night-qada"; date: string; prayer: PrayerId | null; title: string; message: string; createdAt: string; resolved: boolean; readAt?: string | null; response: "prayed" | "not-prayed" | null };
 
 export type LocalPreferences = {
@@ -173,6 +173,13 @@ function normaliseData(value: unknown): LocalAppData {
       asr: typeof raw.asr === "string" ? raw.asr : "",
       maghrib: typeof raw.maghrib === "string" ? raw.maghrib : "",
       isha: typeof raw.isha === "string" ? raw.isha : "",
+      sunset: typeof raw.sunset === "string" ? raw.sunset : (typeof raw.maghrib === "string" ? raw.maghrib : ""),
+      solarNoon: typeof raw.solarNoon === "string" ? raw.solarNoon : "",
+      forbiddenTimes: isObject(raw.forbiddenTimes) ? {
+        sunrise: typeof raw.forbiddenTimes.sunrise === "string" ? raw.forbiddenTimes.sunrise : (typeof raw.sunrise === "string" ? raw.sunrise : ""),
+        zawal: typeof raw.forbiddenTimes.zawal === "string" ? raw.forbiddenTimes.zawal : (typeof raw.solarNoon === "string" ? raw.solarNoon : ""),
+        sunset: typeof raw.forbiddenTimes.sunset === "string" ? raw.forbiddenTimes.sunset : (typeof raw.sunset === "string" ? raw.sunset : (typeof raw.maghrib === "string" ? raw.maghrib : ""))
+      } : undefined,
       source: typeof raw.source === "string" ? raw.source : "সময়সূচি সেবা",
       fetchedAt: typeof raw.fetchedAt === "string" ? raw.fetchedAt : new Date(0).toISOString(),
       latitude: Number.isFinite(Number(raw.latitude ?? oldLocation.latitude)) ? Number(raw.latitude ?? oldLocation.latitude) : prayerFallback.latitude,

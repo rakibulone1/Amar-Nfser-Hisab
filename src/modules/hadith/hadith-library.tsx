@@ -39,7 +39,7 @@ export function HadithLibrary() {
     const category = DATA.categories.find((item) => item.id === current.category_id);
     return <main className="hadith-library view-stack">
       <div className="hadith-page-heading">
-        <button type="button" className="section-back-button" onClick={() => openList(categoryId || undefined)}><ArrowLeft size={16}/> হাদিসের তালিকায় ফিরো</button>
+        <button type="button" className="section-back-button" onClick={() => router.push("/dashboard")}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
         <span className="eyebrow">{category?.name || "হাদিস পাঠ"}</span>
         <h1>হাদিসের বিস্তারিত</h1>
       </div>
@@ -75,7 +75,6 @@ export function HadithLibrary() {
       <button type="button" className="section-back-button" onClick={() => router.push("/dashboard")}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
       <span className="eyebrow">বিশুদ্ধ হাদিসের পাঠ</span>
       <h1>{activeCategory ? activeCategory.name : "হাদিসের সংগ্রহ"}</h1>
-      <p>{visible.length.toLocaleString("bn-BD")}টি হাদিস · বিষয় নির্বাচন করে পড়ো</p>
     </div>
     <div className="hadith-category-grid">
       <button type="button" className={`hadith-category-chip ${!categoryId ? "selected" : ""}`} onClick={() => openList()}>সব হাদিস</button>

@@ -15,7 +15,7 @@ test("fixed 71-stage journey is date-bounded to 23 Nov 2026 – 30 Oct 2030", ()
   assert.match(stages, /stageNumber <= 36 \? stageNumber \+ 2 : 74 - stageNumber/);
   assert.match(ui, /মডিউল \{moduleNumber\.toLocaleString/);
   assert.match(ui, /পরবর্তী ব্যাচ/);
-  assert.match(ui, /চলমান ·/);
+  assert.match(ui, /চলমান ব্যাচ/);
   assert.match(ui, /সম্পন্ন ব্যাচ/);
 });
 
@@ -64,7 +64,7 @@ test("prayer times include prohibited windows and Isha ends one minute before to
   const lib = read("src/lib/prayer-time.ts");
   const widget = read("src/modules/trackers/prayer-time-widget.tsx");
   assert.match(api, /forbiddenTimes/);
-  assert.match(widget, /নিষিদ্ধ সময়/);
+  assert.match(widget, /নিষিদ্ধ মুহূর্তের সময়সূচি/);
   assert.match(lib, /shiftPrayerClock\(tomorrowTimes\.fajr, -1\)/);
 });
 

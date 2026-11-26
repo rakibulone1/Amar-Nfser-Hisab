@@ -384,7 +384,7 @@ export function TrackerCenter({ data, onBack }: { data: LocalAppData; onBack: ()
     <header className="tracker-page-heading">
       <div className="tracker-page-heading-copy">
         <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
-        <div><span className="tracker-eyebrow">ব্যক্তিগত আমল ও আত্মশুদ্ধির রেকর্ড</span><h1>আত্মশুদ্ধি লিপি</h1></div>
+        <div><h1>আত্মশুদ্ধি লিপি</h1></div>
       </div>
       <div className="tracker-heading-mark"><ScaleGlyph/></div>
     </header>

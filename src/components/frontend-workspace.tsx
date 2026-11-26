@@ -83,14 +83,6 @@ function useLocalData() {
 function todayKey(timeZone: string, maghribTime: string) {
   return getLocalJournalDate(new Date(), timeZone || "Asia/Dhaka", maghribTime || null);
 }
-function formatLongDate(value: string, timeZone = "Asia/Dhaka") {
-  const date = new Date(`${value}T12:00:00Z`);
-  try {
-    return new Intl.DateTimeFormat("bn-BD", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone }).format(date);
-  } catch {
-    return new Intl.DateTimeFormat("bn-BD", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Dhaka" }).format(date);
-  }
-}
 function formatCompactDate(value: string) {
   return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }).format(new Date(`${value}T12:00:00Z`));
 }
@@ -175,7 +167,6 @@ function DashboardDateCard({ date }: { date: string }) {
   return <div className="dashboard-date-card"><span lang="en">{formatEnglishGregorianDate(date)}</span><span className="dashboard-date-divider"/><span>{getHijriLabel(date)}</span></div>;
 }
 function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof getLocalDataSnapshot>; date: string }) {
-  const router = useRouter();
   const progress = getFixedJourneyProgress(date);
   const stage = progress.currentStage;
   const nextPlan = [...data.deadlinePlans]
@@ -183,21 +174,35 @@ function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof get
     .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
   const daysToPlan = nextPlan ? Math.max(0, differenceInDateKeys(date, nextPlan.deadline)) : null;
   const module = stage?.module ?? (progress.status === "upcoming" ? 1 : 3);
-  const statusTitle = progress.status === "upcoming" ? "যাত্রা শুরুর অপেক্ষা" : progress.status === "completed" ? "যাত্রা সম্পন্ন" : stage?.title || "আত্মশুদ্ধির যাত্রা";
-  const dayText = stage ? `${progress.stageDay.toLocaleString("bn-BD")} / ${stage.durationDays.toLocaleString("bn-BD")} দিন` : progress.status === "upcoming" ? "শুরু হবে ২৩ নভেম্বর ২০২৬" : "১,৪৩৮ দিনের যাত্রা সম্পন্ন";
-  return <section className={`dashboard-journey-card module-tone-${module}`}>
-    <div className="dashboard-journey-main">
-      <span className="dashboard-journey-overline">আত্মশুদ্ধির যাত্রা</span>
-      <h1>{statusTitle}</h1>
-      <div className="dashboard-journey-dates">{formatCompactDate(FIXED_JOURNEY_START_DATE)} – {formatCompactDate(FIXED_JOURNEY_END_DATE)}</div>
-      <div className="dashboard-journey-progress"><span style={{ width: `${progress.percent}%` }}/></div>
-      <div className="dashboard-journey-progress-meta"><span>সামগ্রিক অগ্রগতি {progress.percent.toLocaleString("bn-BD")}٪</span><span>{progress.remainingDays.toLocaleString("bn-BD")} দিন বাকি</span></div>
+  const statusTitle = progress.status === "upcoming"
+    ? "নতুন যাত্রার প্রস্তুতি"
+    : progress.status === "completed"
+      ? "দীর্ঘ পথচলার অর্জন"
+      : stage?.title || "আত্মশুদ্ধির যাত্রা";
+  const stageDayText = stage
+    ? `${progress.stageDay.toLocaleString("bn-BD")} / ${stage.durationDays.toLocaleString("bn-BD")} দিন`
+    : progress.status === "upcoming" ? "২৩ নভেম্বর ২০২৬ থেকে শুরু" : "সব পর্যায় সম্পন্ন";
+  const stageStart = stage?.startDate || FIXED_JOURNEY_START_DATE;
+  const stageEnd = stage?.endDate || FIXED_JOURNEY_END_DATE;
+  const stagePercent = stage ? progress.stagePercent : progress.percent;
+  const remainingText = stage
+    ? `${progress.stageRemainingDays.toLocaleString("bn-BD")} দিন বাকি`
+    : progress.status === "upcoming" ? "শুরু হতে বাকি" : "সম্পন্ন";
+  return <section className={`dashboard-journey-card dashboard-journey-card-compact module-tone-${module}`}>
+    <div className="dashboard-journey-header">
+      <div><span className="dashboard-journey-overline">আত্মশুদ্ধির যাত্রা</span><small>{stage ? `মডিউল ${stage.module.toLocaleString("bn-BD")} · পর্যায় ${stage.stageNumber.toLocaleString("bn-BD")}` : progress.status === "upcoming" ? "শুরুর প্রস্তুতি" : "যাত্রা সম্পন্ন"}</small></div>
+      <button type="button" className="dashboard-journey-open" onClick={() => navigateSection("goals")}>বিস্তারিত <ArrowRight size={14}/></button>
     </div>
-    <div className="dashboard-journey-side">
-      <div className="dashboard-journey-stage-number"><small>বর্তমান পর্যায়</small><strong>{stage ? stage.stageNumber.toLocaleString("bn-BD") : progress.status === "upcoming" ? "—" : "৭১"}</strong><span>{stage ? `পর্যায় ${stage.stageNumber.toLocaleString("bn-BD")}` : progress.status === "completed" ? "শেষ" : "প্রস্তুতি"}</span></div>
-      <div className="dashboard-journey-days"><strong>{dayText}</strong><span>{stage ? `${progress.stageRemainingDays.toLocaleString("bn-BD")} দিন পর পরবর্তী পর্যায়` : ""}</span></div>
-      <div className="dashboard-journey-next-goal">{nextPlan ? <><small>পরবর্তী লক্ষ্য</small><strong>{nextPlan.title}</strong><span>{daysToPlan === 0 ? "আজ শেষ তারিখ" : `${daysToPlan?.toLocaleString("bn-BD")} দিন বাকি`}</span></> : <><small>পরবর্তী লক্ষ্য</small><strong>এখনো নির্ধারণ করা হয়নি</strong><span>লক্ষ্য যোগ করে পরিকল্পনা সাজাও</span></>}</div>
-      <button type="button" className="dashboard-journey-open" onClick={() => router.push("/dashboard?section=goals")}>যাত্রা দেখো <ArrowRight size={15}/></button>
+    <div className="dashboard-journey-title">
+      <h1>{statusTitle}</h1>
+      <span>{formatCompactDate(stageStart)} – {formatCompactDate(stageEnd)}</span>
+    </div>
+    <div className="dashboard-journey-progress"><span style={{ width: `${stagePercent}%` }}/></div>
+    <div className="dashboard-journey-facts">
+      <div><small>পর্যায়</small><strong>{stage ? `${stage.stageNumber.toLocaleString("bn-BD")} / ৭১` : progress.status === "completed" ? "৭১ / ৭১" : "—"}</strong></div>
+      <div><small>এই পর্যায়</small><strong>{stageDayText}</strong></div>
+      <div><small>পরবর্তী ধাপ</small><strong>{remainingText}</strong></div>
+      <div className="dashboard-journey-next-plan"><small>পরবর্তী লক্ষ্য</small><strong>{nextPlan?.title || "এখনো নির্ধারিত নয়"}</strong><span>{nextPlan ? (daysToPlan === 0 ? "আজ শেষ তারিখ" : `${daysToPlan?.toLocaleString("bn-BD")} দিন বাকি`) : "লক্ষ্য যোগ করলে এখানে দেখাবে"}</span></div>
     </div>
   </section>;
 }
@@ -465,7 +470,7 @@ function StageDetailView({
 
   return <div className="stage-detail-view view-stack">
     <div className="stage-detail-heading">
-      <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> সব পর্যায়ে ফিরো</button>
+      <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
       <span className="eyebrow">মডিউল {stage.module.toLocaleString("bn-BD")} · পর্যায় {stage.stageNumber.toLocaleString("bn-BD")}</span>
       <h1>{stage.title}</h1>
       <p>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)} · {stage.durationDays.toLocaleString("bn-BD")} দিন</p>
@@ -629,7 +634,7 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
   const selectedStage = selectedStageNumber ? FIXED_JOURNEY_STAGES.find((stage) => stage.stageNumber === selectedStageNumber) ?? null : null;
   const categoryLabel = (category: DeadlinePlan["category"]) => ({ exam: "পরীক্ষা", assignment: "অ্যাসাইনমেন্ট", project: "প্রজেক্ট", other: "অন্যান্য" })[category];
 
-  if (selectedStage) return <div className="view-stack"><StageDetailView stage={selectedStage} data={data} currentDate={dateNow} onBack={() => setSelectedStageNumber(null)}/></div>;
+  if (selectedStage) return <div className="view-stack"><StageDetailView stage={selectedStage} data={data} currentDate={dateNow} onBack={() => navigateSection("home")}/></div>;
 
   return <div className="view-stack goals-workspace">
     <div className="goals-page-heading">
@@ -642,13 +647,13 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
     </div>
 
     {activeTab === "journey" ? <>
-      <section className={`journey-current-hero module-tone-${progress.currentStage?.module ?? 1}`}>
-        <span className="journey-current-kicker">{progress.status === "completed" ? "সম্পন্ন যাত্রা" : progress.status === "upcoming" ? "শুরুর অপেক্ষা" : `মডিউল ${progress.currentStage?.module.toLocaleString("bn-BD")}`}</span>
-        <h2>{progress.currentStage?.title || (progress.status === "completed" ? "নতুন জীবনের অঙ্গীকার" : "আত্মশুদ্ধির যাত্রা")}</h2>
-        <p className="journey-current-dates">{formatLongDate(FIXED_JOURNEY_START_DATE)} — {formatLongDate(FIXED_JOURNEY_END_DATE)}</p>
-        <div className="journey-current-index"><span>পর্যায় {progress.currentStage?.stageNumber.toLocaleString("bn-BD") || "৭১"}</span><span>{progress.dayNumber.toLocaleString("bn-BD")} / ১,৪৩৮ দিন</span></div>
-        <div className="journey-current-track"><span style={{ width: `${progress.percent}%` }}/></div>
-        <div className="journey-current-meta"><div><strong>{progress.currentStage ? `${progress.stageDay.toLocaleString("bn-BD")} / ${progress.currentStage.durationDays.toLocaleString("bn-BD")} দিন` : progress.status === "upcoming" ? "শুরু হয়নি" : "৭১টি পর্যায় সম্পন্ন"}</strong><small>এই পর্যায়ের অগ্রগতি {progress.stagePercent.toLocaleString("bn-BD")}٪</small></div><div><strong>{progress.stageRemainingDays.toLocaleString("bn-BD")} দিন</strong><small>পরবর্তী পর্যায়ে বাকি</small></div></div>
+      <section className={`journey-current-hero journey-current-hero-compact module-tone-${progress.currentStage?.module ?? 1}`}>
+        <span className="journey-current-kicker">{progress.status === "completed" ? "অর্জনের স্বীকৃতি" : progress.status === "upcoming" ? "শুরুর প্রস্তুতি" : `মডিউল ${progress.currentStage?.module.toLocaleString("bn-BD")} · বর্তমান পর্যায়`}</span>
+        <h2>{progress.currentStage?.title || (progress.status === "completed" ? "নতুন অধ্যায়ের সূচনা" : "আত্মশুদ্ধির যাত্রা")}</h2>
+        <p className="journey-current-dates">{formatCompactDate(progress.currentStage?.startDate || FIXED_JOURNEY_START_DATE)} — {formatCompactDate(progress.currentStage?.endDate || FIXED_JOURNEY_END_DATE)}</p>
+        <div className="journey-current-index"><span>পর্যায় {progress.currentStage?.stageNumber.toLocaleString("bn-BD") || (progress.status === "completed" ? "৭১" : "—")} / ৭১</span><span>{progress.currentStage ? `দিন ${progress.stageDay.toLocaleString("bn-BD")} / ${progress.currentStage.durationDays.toLocaleString("bn-BD")}` : progress.status === "upcoming" ? "শুরু হয়নি" : "সব পর্যায় সম্পন্ন"}</span></div>
+        <div className="journey-current-track"><span style={{ width: `${progress.currentStage ? progress.stagePercent : progress.percent}%` }}/></div>
+        <div className="journey-current-meta"><div><strong>{progress.currentStage ? `${progress.stagePercent.toLocaleString("bn-BD")}٪ সম্পন্ন` : progress.status === "upcoming" ? "প্রস্তুতির সময়" : "১০০٪ সম্পন্ন"}</strong><small>এই পর্যায়ের অগ্রগতি</small></div><div><strong>{progress.stageRemainingDays.toLocaleString("bn-BD")} দিন</strong><small>পরবর্তী পর্যায়ে বাকি</small></div><div className="journey-overall-progress"><strong>{progress.percent.toLocaleString("bn-BD")}٪</strong><small>সামগ্রিক অগ্রগতি</small></div></div>
       </section>
       <div className="journey-module-intro"><div><span className="eyebrow">৭১টি পর্যায়</span><h2>তোমার অগ্রযাত্রা</h2></div><span>{completedStages.toLocaleString("bn-BD")} / ৭১ সম্পন্ন</span></div>
       <div className="journey-modules-list">
@@ -662,11 +667,19 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
             <div className="journey-stage-list">{moduleStages.map((stage) => {
               const status = stageStatus(stage.stageNumber, progress.currentStage?.stageNumber || 72, progress.status);
               const percent = status === "completed" ? 100 : status === "current" ? progress.stagePercent : 0;
+              const elapsedDays = status === "completed" ? stage.durationDays : status === "current" ? progress.stageDay : 0;
+              const remainingDays = Math.max(0, stage.durationDays - elapsedDays);
               const linkedGoal = stageGoal(stage);
-              return <button type="button" className={`journey-stage-row stage-${status}`} key={stage.stageNumber} onClick={() => setSelectedStageNumber(stage.stageNumber)}>
+              const statusLabel = status === "completed" ? "সম্পন্ন ব্যাচ" : status === "current" ? "চলমান ব্যাচ" : "পরবর্তী ব্যাচ";
+              return <button type="button" className={`journey-stage-row stage-${status}`} key={stage.stageNumber} onClick={() => setSelectedStageNumber(stage.stageNumber)} aria-label={`পর্যায় ${stage.stageNumber}: ${stage.title}, ${statusLabel}`}>
                 <span className="journey-stage-index">{status === "completed" ? <CheckCircle2 size={18}/> : stage.stageNumber.toLocaleString("bn-BD")}</span>
-                <span className="journey-stage-main"><strong>{stage.title}</strong><small>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)} · {stage.durationDays.toLocaleString("bn-BD")} দিন</small>{linkedGoal && <em>লক্ষ্য: {linkedGoal.title.length > 22 ? `${linkedGoal.title.slice(0, 22)}…` : linkedGoal.title}</em>}<span className="journey-stage-mini-track"><i style={{ width: `${percent}%` }}/></span></span>
-                <span className="journey-stage-trailing"><b>{percent.toLocaleString("bn-BD")}٪</b><small>{status === "completed" ? "সম্পন্ন ব্যাচ" : status === "current" ? `চলমান · ${progress.stageDay.toLocaleString("bn-BD")}/${stage.durationDays.toLocaleString("bn-BD")}` : "পরবর্তী ব্যাচ"}</small></span>
+                <span className="journey-stage-main">
+                  <span className="journey-stage-title-line"><strong>{stage.title}</strong><em className={`journey-stage-status-chip stage-chip-${status}`}>{statusLabel}</em></span>
+                  <small>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)}</small>
+                  {linkedGoal && <em className="journey-stage-goal-chip" title={linkedGoal.title}>লক্ষ্য · {linkedGoal.title.length > 18 ? `${linkedGoal.title.slice(0, 18)}…` : linkedGoal.title}</em>}
+                  <span className="journey-stage-mini-track"><i style={{ width: `${percent}%` }}/></span>
+                </span>
+                <span className="journey-stage-trailing"><b>{percent.toLocaleString("bn-BD")}٪</b><small>{elapsedDays.toLocaleString("bn-BD")} / {stage.durationDays.toLocaleString("bn-BD")} দিন</small><small>{remainingDays ? `${remainingDays.toLocaleString("bn-BD")} দিন বাকি` : status === "completed" ? "অর্জিত" : ""}</small></span>
                 <ChevronRight size={16}/>
               </button>;
             })}</div>
@@ -1064,7 +1077,6 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
       <main className="workspace-main">
         <header className="workspace-topbar"><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label cloud-status-${getCloudSyncState()}`}><span/>{getCloudSyncState() === "synced" ? "অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "অনলাইনে সংরক্ষণ হচ্ছে" : getCloudSyncState() === "offline" ? "অফলাইন · সংরক্ষিত নয়" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত"}</span><NotificationPopover events={data.reminderEvents} data={data}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="নোটিফিকেশন ও অ্যাপ সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
         <div className="workspace-content">
-          {section !== "home" && <div className="workspace-section-back"><button type="button" className="section-back-button" onClick={() => navigateSection("home")}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button></div>}
           {section === "home" && <DashboardView data={data}/>} 
           {section === "goals" && <GoalsView data={data}/>} 
           {section === "journal" && <JournalView data={data}/>} 

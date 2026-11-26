@@ -2636,3 +2636,171 @@ body { color: var(--release-ink); background: var(--release-canvas); }
 .dashboard-date-card > span:first-child { direction: ltr; font-variant-numeric: tabular-nums; letter-spacing: .005em; }
 .goals-page-heading { gap: 12px; }
 .goal-linked-stages { flex-wrap: wrap; justify-content: flex-start; }
+
+/* Release 1.2.3 — focused responsive polish for the fixed journey, dashboard and shared pages. */
+.dashboard-journey-card-compact { display:grid; grid-template-columns:minmax(0,1fr); gap:12px; padding:clamp(15px,2.1vw,22px); border-radius:18px; box-shadow:0 4px 16px rgba(28,55,37,.035); }
+.dashboard-journey-header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.dashboard-journey-header > div { display:grid; gap:3px; }
+.dashboard-journey-header .dashboard-journey-overline { font-size:11px; }
+.dashboard-journey-header small { color:var(--ink-soft); font-size:10px; }
+.dashboard-journey-card-compact .dashboard-journey-open { grid-column:auto; min-height:33px; justify-self:end; padding:7px 12px; font-size:11px; }
+.dashboard-journey-title { display:grid; gap:3px; text-align:center; }
+.dashboard-journey-title h1 { margin:0; color:var(--ink); font-size:clamp(19px,2.4vw,27px); line-height:1.35; letter-spacing:-.025em; }
+.dashboard-journey-title > span { color:var(--ink-soft); font-size:10px; }
+.dashboard-journey-card-compact .dashboard-journey-progress { margin:0; height:7px; background:color-mix(in srgb,var(--hero-accent) 14%,var(--paper)); }
+.dashboard-journey-card-compact .dashboard-journey-progress span { background:var(--hero-accent); }
+.dashboard-journey-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.dashboard-journey-facts > div { display:grid; align-content:center; gap:4px; min-width:0; min-height:55px; padding:9px 11px; border:1px solid color-mix(in srgb,var(--hero-accent) 12%,transparent); border-radius:12px; background:color-mix(in srgb,var(--paper) 76%,transparent); }
+.dashboard-journey-facts small { color:var(--ink-soft); font-size:9px; line-height:1.35; }
+.dashboard-journey-facts strong { overflow:hidden; color:var(--ink); font-size:12px; font-weight:750; line-height:1.45; text-overflow:ellipsis; }
+.dashboard-journey-next-plan { grid-column:1/-1; min-height:49px!important; }
+.dashboard-journey-next-plan strong { white-space:normal; }
+.dashboard-journey-next-plan span { color:var(--muted); font-size:9px; }
+
+.journey-current-hero-compact { gap:10px; padding:clamp(17px,2.2vw,25px); border-radius:19px; box-shadow:0 5px 18px rgba(31,56,40,.035); }
+.journey-current-hero-compact h2 { max-width:920px; margin-inline:auto; color:var(--ink); font-size:clamp(21px,2.5vw,29px); line-height:1.35; }
+.journey-current-hero-compact .journey-current-dates { font-size:11px; }
+.journey-current-hero-compact .journey-current-index { width:min(100%,860px); font-size:11px; }
+.journey-current-hero-compact .journey-current-track { width:min(100%,860px); height:8px; border-radius:99px; }
+.journey-current-hero-compact .journey-current-meta { width:min(100%,860px); display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.journey-current-hero-compact .journey-current-meta > div { min-width:0; padding:9px 11px; border:1px solid color-mix(in srgb,var(--module-accent) 13%,transparent); border-radius:12px; background:color-mix(in srgb,white 65%,transparent); text-align:center; }
+.journey-current-hero-compact .journey-current-meta > div:last-child { text-align:center; }
+.journey-current-hero-compact .journey-current-meta strong { font-size:13px; }
+.journey-current-hero-compact .journey-current-meta small { font-size:9px; }
+
+.journey-modules-list { gap:27px; }
+.journey-module-card { padding:17px; border-radius:20px; box-shadow:0 5px 18px rgba(31,56,40,.025); }
+.journey-module-card.module-tone-1 { --module-bg:#f1f7f1; --module-border:#d9e8db; --module-accent:#34754b; }
+.journey-module-card.module-tone-2 { --module-bg:#f5f1fa; --module-border:#e4daf0; --module-accent:#795f9c; }
+.journey-module-card.module-tone-3 { --module-bg:#eff4f9; --module-border:#d8e4ef; --module-accent:#4c7397; }
+.journey-module-heading h3 { color:var(--ink); font-size:16px; }
+.journey-module-heading > strong { padding:5px 9px; border:1px solid color-mix(in srgb,var(--module-accent) 18%,transparent); border-radius:999px; background:color-mix(in srgb,white 70%,transparent); font-size:11px; }
+.journey-stage-list { gap:9px; }
+.journey-stage-row { grid-template-columns:34px minmax(0,1fr) minmax(92px,auto) 15px; min-height:87px; padding:12px 13px; border-color:color-mix(in srgb,var(--module-accent) 13%,#e5ebe6); border-radius:15px; background:color-mix(in srgb,white 93%,var(--module-bg)); }
+.journey-stage-row.stage-current { background:color-mix(in srgb,white 74%,var(--module-bg)); }
+.journey-stage-row.stage-completed { border-color:#d8e9dc; }
+.journey-stage-main { gap:4px; }
+.journey-stage-title-line { display:flex; align-items:center; flex-wrap:wrap; gap:7px; min-width:0; }
+.journey-stage-title-line strong { color:var(--ink); font-size:13px; }
+.journey-stage-title-line .journey-stage-status-chip { display:inline-flex; align-items:center; padding:3px 7px; border-radius:999px; font-size:9px; font-weight:750; font-style:normal; white-space:nowrap; }
+.stage-chip-completed { color:#267346; background:#e4f3e8; }
+.stage-chip-current { color:#7b5c23; background:#f8efd9; }
+.stage-chip-upcoming { color:#64756a; background:#edf1ee; }
+.journey-stage-main > small { font-size:10px; }
+.journey-stage-main .journey-stage-goal-chip { width:fit-content; max-width:100%; overflow:hidden; padding:3px 7px; border:1px solid color-mix(in srgb,var(--module-accent) 15%,transparent); border-radius:7px; color:var(--module-accent); background:color-mix(in srgb,white 65%,transparent); font-size:9px; line-height:1.35; text-overflow:ellipsis; white-space:nowrap; }
+.journey-stage-trailing { min-width:85px; gap:4px; }
+.journey-stage-trailing b { font-size:12px; }
+.journey-stage-trailing small { font-size:10px; white-space:nowrap; }
+.journey-stage-mini-track { height:5px; border-radius:999px; background:#e7ede8; }
+.journey-stage-mini-track i { border-radius:999px; }
+
+/* One clear return control per page; the global duplicate bar is intentionally absent. */
+.section-back-button { min-height:38px; padding:7px 12px; border-radius:10px; font-size:12px; font-weight:700; }
+.page-intro, .goals-page-heading, .tracker-page-heading-copy, .stage-detail-heading, .hadith-page-heading { gap:9px; }
+.page-intro h1, .goals-page-heading h1, .tracker-page-heading h1, .hadith-page-heading h1 { font-size:clamp(23px,2.7vw,32px); }
+.workspace-section-back { display:none!important; }
+
+/* Compact personal footer: content stays central and the workspace remains dominant. */
+.workspace-footer, .login-personal-footer { display:grid; justify-items:center; gap:1px; margin:17px auto 0; padding:9px 10px 6px; border:0; color:var(--muted); text-align:center; }
+.workspace-footer span, .login-personal-footer span { max-width:100%; font-size:11px; line-height:1.55; font-weight:650; }
+
+/* Readable hadith surfaces without unnecessary vertical bulk. */
+.hadith-daily-card { border-radius:16px; box-shadow:0 3px 12px rgba(31,65,42,.035); }
+.hadith-daily-head { padding:12px 15px 0; }
+.hadith-daily-head > span { font-size:11px; }
+.hadith-refresh-button { min-height:31px; padding:5px 9px; font-size:10px; }
+.hadith-daily-summary { gap:6px; padding:9px 15px 13px; }
+.hadith-daily-category { font-size:9px; }
+.hadith-daily-summary > strong { display:-webkit-box; overflow:hidden; max-width:880px; -webkit-box-orient:vertical; -webkit-line-clamp:3; font-size:clamp(13px,1.25vw,16px); line-height:1.65; }
+.hadith-daily-reference { font-size:10px; }
+.hadith-daily-open { margin-top:0; font-size:10px; }
+.hadith-detail-card { gap:12px; padding:clamp(16px,2.8vw,26px); border-radius:18px; }
+.hadith-detail-summary { font-size:clamp(15px,1.5vw,18px); line-height:1.75; }
+.hadith-detail-text { font-size:14px; line-height:1.85; }
+.hadith-detail-meta > div { padding:10px 11px; }
+.hadith-detail-meta dd { overflow-wrap:anywhere; font-size:11px; }
+
+.notification-popover { width:min(370px,calc(100vw - 22px)); max-height:min(560px,calc(100dvh - 82px)); padding:12px; border-radius:16px; }
+.notification-popover-header strong { font-size:14px; }
+.notification-item-title { font-size:12px; }
+.notification-item-summary { font-size:11px; line-height:1.55; }
+.notification-item-detail { font-size:11px; }
+.forbidden-prayer-times > div:not(.forbidden-prayer-heading) { align-items:center; }
+.forbidden-prayer-times > div > span { display:grid; gap:2px; }
+.forbidden-prayer-times > div > span small { color:var(--muted); font-size:9px; }
+.forbidden-prayer-note { margin:3px 0 0; color:var(--ink-soft); font-size:10px; line-height:1.65; }
+
+@media (max-width:800px) {
+  .dashboard-journey-card-compact { gap:11px; }
+  .dashboard-journey-facts { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .dashboard-journey-next-plan { grid-column:1/-1; }
+  .journey-stage-row { grid-template-columns:31px minmax(0,1fr) 84px 12px; gap:8px; }
+}
+@media (max-width:600px) {
+  .workspace-content { padding:14px 12px calc(100px + env(safe-area-inset-bottom)); }
+  .view-stack { gap:15px; }
+  .dashboard-date-card { min-height:31px; justify-content:center; gap:8px; padding:5px 8px; border-radius:9px; font-size:10px; }
+  .dashboard-journey-card-compact { padding:13px; border-radius:15px; gap:10px; }
+  .dashboard-journey-header .dashboard-journey-open { min-height:31px; padding-inline:9px; font-size:10px; }
+  .dashboard-journey-title h1 { font-size:18px; }
+  .dashboard-journey-title > span { font-size:9px; }
+  .dashboard-journey-facts { gap:7px; }
+  .dashboard-journey-facts > div { min-height:48px; padding:8px 9px; border-radius:10px; }
+  .dashboard-journey-facts small { font-size:8px; }
+  .dashboard-journey-facts strong { font-size:11px; }
+  .metric-grid { gap:8px; }
+  .metric-card { min-height:103px; padding:11px; border-radius:13px; }
+  .hadith-daily-head { padding:10px 12px 0; }
+  .hadith-daily-summary { padding:8px 12px 11px; }
+  .hadith-daily-summary > strong { font-size:13px; line-height:1.6; -webkit-line-clamp:4; }
+  .hadith-daily-reference { font-size:9px; }
+  .journey-current-hero-compact { padding:15px 12px; gap:9px; border-radius:15px; }
+  .journey-current-hero-compact h2 { font-size:19px; line-height:1.4; }
+  .journey-current-hero-compact .journey-current-dates { font-size:9px; }
+  .journey-current-hero-compact .journey-current-index { font-size:9px; gap:8px; }
+  .journey-current-hero-compact .journey-current-meta { grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+  .journey-current-hero-compact .journey-current-meta > div { padding:7px 5px; border-radius:9px; }
+  .journey-current-hero-compact .journey-current-meta strong { font-size:10px; }
+  .journey-current-hero-compact .journey-current-meta small { font-size:8px; line-height:1.4; }
+  .journey-module-intro h2 { font-size:16px; }
+  .journey-module-intro > span { font-size:9px; }
+  .journey-modules-list { gap:18px; }
+  .journey-module-card { padding:11px; border-radius:15px; }
+  .journey-module-heading { gap:8px; margin-bottom:9px; }
+  .journey-module-heading h3 { font-size:14px; }
+  .journey-module-heading span, .journey-module-heading > strong { font-size:9px; }
+  .journey-stage-list { gap:7px; }
+  .journey-stage-row { grid-template-columns:27px minmax(0,1fr) 64px; gap:7px; min-height:78px; padding:9px 8px; border-radius:12px; }
+  .journey-stage-row > svg:last-child { display:none; }
+  .journey-stage-index { width:25px; height:25px; border-radius:8px; font-size:9px; }
+  .journey-stage-title-line { gap:5px; }
+  .journey-stage-title-line strong { font-size:11px; line-height:1.4; }
+  .journey-stage-title-line .journey-stage-status-chip { padding:2px 5px; font-size:8px; }
+  .journey-stage-main > small { font-size:8px; }
+  .journey-stage-main .journey-stage-goal-chip { padding:2px 5px; font-size:8px; }
+  .journey-stage-trailing { min-width:60px; }
+  .journey-stage-trailing b { font-size:10px; }
+  .journey-stage-trailing small { font-size:8.5px; }
+  .journey-stage-mini-track { height:4px; }
+  .stage-observation-summary { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .stage-section-head { gap:8px; }
+  .stage-section-head .button-primary { min-height:32px; padding-inline:8px; font-size:10px; }
+  .stage-observation-item { padding:11px; }
+  .stage-observation-actions button { min-height:32px; padding:6px 9px; }
+  .deadline-plan-card { padding:12px; }
+  .deadline-plan-heading h3 { font-size:15px; }
+  .goal-linked-stages button { font-size:9px; }
+  .tracker-page-heading, .page-intro, .goals-page-heading { margin-bottom:0; }
+  .section-back-button { min-height:35px; padding:6px 10px; font-size:11px; }
+  .workspace-footer { margin-top:10px; padding:5px 8px 0; }
+  .workspace-footer span, .login-personal-footer span { font-size:10px; line-height:1.5; }
+  .notification-popover { position:fixed; top:64px; right:10px; width:calc(100vw - 20px); max-height:calc(100dvh - 92px); }
+  .notification-popover-item { padding:9px; }
+  .hadith-detail-meta { grid-template-columns:1fr 1fr; }
+  .hadith-detail-navigation { gap:7px; }
+  .hadith-detail-navigation .button-secondary { min-height:36px; font-size:10px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .dashboard-journey-card-compact *, .journey-current-hero-compact *, .journey-stage-row { transition-duration:.01ms!important; }
+}
+

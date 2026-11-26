@@ -12,10 +12,13 @@ function cleanTime(value: unknown): string {
 function json(body: object, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" } });
 }
-function shiftClock(value: string, offset: number) {
-  const [hour, minute] = value.split(":").map(Number);
-  const total = (hour * 60 + minute + offset + 1440) % 1440;
-  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+function midpointClock(first: string, last: string) {
+  if (!CLOCK.test(first) || !CLOCK.test(last)) return "";
+  const toMinutes = (value: string) => { const [h, m] = value.split(":").map(Number); return h * 60 + m; };
+  const a = toMinutes(first), b = toMinutes(last);
+  if (b <= a) return "";
+  const middle = Math.round((a + b) / 2);
+  return `${String(Math.floor(middle / 60)).padStart(2, "0")}:${String(middle % 60).padStart(2, "0")}`;
 }
 
 /**
@@ -46,18 +49,18 @@ export async function GET(request: NextRequest) {
     const payload = await response.json() as { code?: number; data?: { timings?: Record<string, unknown>; date?: { readable?: string; hijri?: { date?: string } } } };
     const timings = payload.data?.timings;
     if (payload.code !== 200 || !timings) return json({ ok: false, message: "সময়সূচির তথ্য পড়া যায়নি।" }, 502);
+    const sunrise = cleanTime(timings.Sunrise);
+    const sunset = cleanTime(timings.Sunset) || cleanTime(timings.Maghrib);
+    const solarNoon = midpointClock(sunrise, sunset);
     const normalized = {
-      date, fajr: cleanTime(timings.Fajr), sunrise: cleanTime(timings.Sunrise), dhuhr: cleanTime(timings.Dhuhr),
+      date, fajr: cleanTime(timings.Fajr), sunrise, dhuhr: cleanTime(timings.Dhuhr),
       asr: cleanTime(timings.Asr), maghrib: cleanTime(timings.Maghrib), isha: cleanTime(timings.Isha),
-      forbiddenTimes: {
-        sunriseStart: cleanTime(timings.Sunrise), sunriseEnd: shiftClock(cleanTime(timings.Sunrise), 15),
-        zawalStart: shiftClock(cleanTime(timings.Dhuhr), -5), zawalEnd: cleanTime(timings.Dhuhr),
-        sunsetStart: shiftClock(cleanTime(timings.Maghrib), -5), sunsetEnd: cleanTime(timings.Maghrib)
-      },
+      sunset, solarNoon,
+      forbiddenTimes: { sunrise, zawal: solarNoon, sunset },
       source: "আলআযান সেবা · করাচি গণনা (১) · হানাফি আসর (১)", fetchedAt: new Date().toISOString(),
       latitude: lat, longitude: lon, method: 1, school: 1
     };
-    if (![normalized.fajr, normalized.sunrise, normalized.dhuhr, normalized.asr, normalized.maghrib, normalized.isha].every((time) => CLOCK.test(time))) {
+    if (![normalized.fajr, normalized.sunrise, normalized.dhuhr, normalized.asr, normalized.maghrib, normalized.isha, normalized.sunset, normalized.solarNoon].every((time) => CLOCK.test(time))) {
       return json({ ok: false, message: "সময়সূচির কিছু তথ্য অসম্পূর্ণ এসেছে।" }, 502);
     }
     return json({ ok: true, timings: normalized });
