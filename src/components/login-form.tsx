@@ -15,7 +15,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
-    if (!configured) { setMessage("Supabase Environment প্রস্তুত নয়। .env.local পরীক্ষা করো।"); return; }
+    if (!configured) { setMessage("লগইন সেবা প্রস্তুত নয়। Environment সেটিংস পরীক্ষা করো।"); return; }
     if (busy) return;
     setBusy(true);
     try {

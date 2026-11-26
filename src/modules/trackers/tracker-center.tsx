@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent, type ReactNode, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes } from "react";
+import { useEffect, useMemo, useState, type FormEvent, type ReactNode, type InputHTMLAttributes, type TextareaHTMLAttributes, type SelectHTMLAttributes } from "react";
 import {
   ArrowLeft, ArrowRight, BookMarked, BookOpen, Check, CheckCircle2,
   ChevronRight, Clock3, Compass, Heart, MoonStar, Plus, Save,
@@ -113,15 +113,16 @@ function QadaSettlementForm({ data, onCancel }: { data: LocalAppData; onCancel: 
   </form>;
 }
 
-function PrayerWizard({ data, onCancel }: { data: LocalAppData; onCancel: () => void }) {
-  const [prayer, setPrayer] = useState<PrayerId | "">("");
+function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = false }: { data: LocalAppData; onCancel: () => void; initialPrayer?: PrayerId | null; initialQada?: boolean }) {
+  const [prayer, setPrayer] = useState<PrayerId | "">(initialPrayer || "");
   const [partIndex, setPartIndex] = useState(0);
   const [componentResults, setComponentResults] = useState<PrayerComponentResult[]>([]);
   const [partDone, setPartDone] = useState<boolean | null>(null);
   const [partReason, setPartReason] = useState("");
   const [method, setMethod] = useState<"jamaat" | "home" | "not-prayed" | "home-partial" | "">("");
   const [extraMode, setExtraMode] = useState(false);
-  const [qadaMode, setQadaMode] = useState(false);
+  const [qadaMode, setQadaMode] = useState(initialQada);
+  useEffect(() => { if (initialPrayer) setPrayer(initialPrayer); if (initialQada) setQadaMode(true); }, [initialPrayer, initialQada]);
   const [takbir, setTakbir] = useState<PrayerEntry["takbirStatus"]>("not-applicable");
   const [caught, setCaught] = useState("4");
   const [completedAfter, setCompletedAfter] = useState("0");
@@ -190,7 +191,7 @@ function PrayerWizard({ data, onCancel }: { data: LocalAppData; onCancel: () => 
     setSaved(true);
   }
   if (qadaMode) return <QadaSettlementForm data={data} onCancel={() => setQadaMode(false)}/>;
-  if (saved) return <div className="tracker-success"><span><CheckCircle2 size={28}/></span><h3>সালাতের রেকর্ড সংরক্ষিত হয়েছে</h3><p>রেকর্ডটি তোমার ব্যক্তিগত অনলাইন ওয়ার্কস্পেসে সংরক্ষিত হয়েছে।</p><button className="tracker-primary-button" onClick={onCancel}>ট্র্যাকার তালিকায় ফিরো</button></div>;
+  if (saved) return <div className="tracker-success"><span><CheckCircle2 size={28}/></span><h3>সালাতের রেকর্ড সংরক্ষিত হয়েছে</h3><p>রেকর্ডটি অনলাইনে সংরক্ষিত হয়েছে।</p><button className="tracker-primary-button" onClick={onCancel}>ট্র্যাকার তালিকায় ফিরো</button></div>;
 
   return <div className="prayer-wizard">
     <div className="wizard-topline"><span>ধাপে ধাপে সালাতের হিসাব</span><span>{prayer ? `${bn(Math.min(partIndex + 1, Math.max(parts.length, 1)))} / ${bn(parts.length + 1)} ধাপ` : "প্রথম ধাপ"}</span></div>
@@ -317,28 +318,89 @@ function TrackerSummary({ kind, data }: { kind: TrackerKind; data: LocalAppData 
   return <div className="tracker-stat-grid"><div><strong>{bn(count)}</strong><small>{kind === "good" ? "ভালো কাজের রেকর্ড" : kind === "avoid" ? "ব্যক্তিগত লগ" : kind === "ilm" ? "অধ্যয়ন রেকর্ড" : kind === "habit" ? "অভ্যাসের রেকর্ড" : "মুহাসাবা এন্ট্রি"}</small></div></div>;
 }
 
-export function TrackerCenter({ data }: { data: LocalAppData }) {
+function readTrackerTarget() {
+  if (typeof window === "undefined") return { tracker: null as TrackerKind | null, prayer: null as PrayerId | null, qada: false };
+  const params = new URLSearchParams(window.location.search);
+  const trackerValue = params.get("tracker") as TrackerKind | null;
+  const prayerValue = params.get("prayer");
+  const validTracker = TRACKERS.some((item) => item.id === trackerValue) ? trackerValue : null;
+  const validPrayer = ["fajr", "dhuhr", "asr", "maghrib", "isha"].includes(prayerValue || "") ? prayerValue as PrayerId : null;
+  return { tracker: validTracker, prayer: validPrayer, qada: prayerValue === "qada" };
+}
+function writeTrackerTarget(tracker: TrackerKind | null, prayer?: PrayerId | "qada") {
+  const url = new URL(window.location.href);
+  if (tracker) {
+    url.searchParams.set("section", "journal");
+    url.searchParams.set("tracker", tracker);
+    url.searchParams.set("action", "new");
+  } else {
+    url.searchParams.delete("tracker"); url.searchParams.delete("action"); url.searchParams.delete("prayer");
+  }
+  if (prayer) url.searchParams.set("prayer", prayer);
+  window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
+export function TrackerCenter({ data, onBack }: { data: LocalAppData; onBack: () => void }) {
   const [selected, setSelected] = useState<TrackerKind | null>(null);
+  const [initialPrayer, setInitialPrayer] = useState<PrayerId | null>(null);
+  const [initialQada, setInitialQada] = useState(false);
   const [savedMessage, setSavedMessage] = useState("");
   const [search, setSearch] = useState("");
   const tracker = TRACKERS.find((item) => item.id === selected);
   const filtered = TRACKERS.filter((item) => `${item.title} ${item.description}`.toLowerCase().includes(search.toLowerCase()));
-  function saved() { setSavedMessage("রেকর্ড সংরক্ষিত হয়েছে।"); setSelected(null); window.setTimeout(() => setSavedMessage(""), 3000); }
+
+  useEffect(() => {
+    const applyTarget = () => {
+      const target = readTrackerTarget();
+      setSelected(target.tracker);
+      setInitialPrayer(target.prayer);
+      setInitialQada(target.qada);
+      setSavedMessage("");
+    };
+    applyTarget();
+    window.addEventListener("popstate", applyTarget);
+    window.addEventListener("amar-nfser-hisab:section-change", applyTarget);
+    return () => {
+      window.removeEventListener("popstate", applyTarget);
+      window.removeEventListener("amar-nfser-hisab:section-change", applyTarget);
+    };
+  }, []);
+
+  function chooseTracker(id: TrackerKind) {
+    setSelected(id); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false);
+    writeTrackerTarget(id);
+  }
+  function closeTracker() {
+    setSelected(null); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false);
+    writeTrackerTarget(null);
+  }
+  function saved() {
+    setSavedMessage("রেকর্ড সংরক্ষিত হয়েছে।");
+    setSelected(null); setInitialPrayer(null); setInitialQada(false); writeTrackerTarget(null);
+    window.setTimeout(() => setSavedMessage(""), 3000);
+  }
+
   return <div className="tracker-center">
-    <header className="tracker-page-heading"><div><span className="tracker-eyebrow">ব্যক্তিগত আমল ও আত্মশুদ্ধির রেকর্ড</span><h1>আত্মশুদ্ধি লিপি</h1><p>যে বিষয়টি রেকর্ড করতে চাও, সেটি বেছে নাও। প্রতিটি কাজের ফর্ম আলাদা করে খুলবে।</p></div><div className="tracker-heading-mark"><ScaleGlyph/></div></header>
+    <header className="tracker-page-heading">
+      <div className="tracker-page-heading-copy">
+        <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
+        <div><span className="tracker-eyebrow">ব্যক্তিগত আমল ও আত্মশুদ্ধির রেকর্ড</span><h1>আত্মশুদ্ধি লিপি</h1></div>
+      </div>
+      <div className="tracker-heading-mark"><ScaleGlyph/></div>
+    </header>
     {savedMessage && <Notice>{savedMessage}</Notice>}
     {selected && tracker ? <>
-      <div className="tracker-back-row"><button type="button" className="tracker-back-button" onClick={() => { setSelected(null); setSavedMessage(""); }}><ArrowLeft size={16}/> সব ট্র্যাকার</button><span>আত্মশুদ্ধি লিপি <ChevronRight size={14}/> {tracker.short}</span></div>
+      <div className="tracker-back-row"><button type="button" className="tracker-back-button" onClick={closeTracker}><ArrowLeft size={16}/> সব ট্র্যাকার</button><span>আত্মশুদ্ধি লিপি <ChevronRight size={14}/> {tracker.short}</span></div>
       <div className="tracker-detail-layout">
-        <section className="tracker-entry-column"><div className="tracker-detail-heading"><span className="tracker-detail-icon"><tracker.icon size={22}/></span><div><h2>{tracker.title}</h2><p>{tracker.description}</p></div></div>{savedMessage && <Notice>{savedMessage}</Notice>}
-          {selected === "prayer" ? <PrayerWizard data={data} onCancel={() => setSelected(null)}/> : selected === "quran" ? <QuranForm onSaved={saved}/> : selected === "dhikr" ? <DhikrForm data={data} onSaved={saved}/> : selected === "fasting" ? <FastingForm onSaved={saved}/> : selected === "good" ? <GoodDeedForm onSaved={saved}/> : selected === "avoid" ? <AvoidForm onSaved={saved}/> : selected === "ilm" ? <IlmForm onSaved={saved}/> : selected === "habit" ? <HabitForm data={data} onSaved={saved}/> : <ReflectionForm data={data} onSaved={saved}/ >}
+        <section className="tracker-entry-column"><div className="tracker-detail-heading"><span className="tracker-detail-icon"><tracker.icon size={22}/></span><div><h2>{tracker.title}</h2></div></div>
+          {selected === "prayer" ? <PrayerWizard data={data} initialPrayer={initialPrayer} initialQada={initialQada} onCancel={closeTracker}/> : selected === "quran" ? <QuranForm onSaved={saved}/> : selected === "dhikr" ? <DhikrForm data={data} onSaved={saved}/> : selected === "fasting" ? <FastingForm onSaved={saved}/> : selected === "good" ? <GoodDeedForm onSaved={saved}/> : selected === "avoid" ? <AvoidForm onSaved={saved}/> : selected === "ilm" ? <IlmForm onSaved={saved}/> : selected === "habit" ? <HabitForm data={data} onSaved={saved}/> : <ReflectionForm data={data} onSaved={saved}/>}
         </section>
-        <aside className="tracker-side-column"><Panel title="এই ট্র্যাকারের সারাংশ" description="সংরক্ষিত স্থানীয় ডেটা থেকে হিসাব"><TrackerSummary kind={selected} data={data}/></Panel><Panel title="সাম্প্রতিক রেকর্ড" action={<span className="tracker-mini-count">{bn(selected === "prayer" ? data.prayerEntries.length + data.extraPrayerEntries.length : selected === "quran" ? data.quranEntries.length : selected === "dhikr" ? data.dhikrSessions.length : selected === "fasting" ? data.fastingEntries.length : selected === "good" ? data.deedEntries.length : selected === "avoid" ? data.avoidEntries.length : selected === "ilm" ? data.studyEntries.length : selected === "habit" ? data.habitLogs.length : data.reflections.length)}টি</span>}><TrackerHistory kind={selected} data={data}/></Panel>{selected === "prayer" && <Panel title="কাজার হিসাব" description="বাকি ও আদায় করা কাজার তালিকা"><div className="qada-ledger-list">{data.qadaEntries.slice(0, 12).map((item) => <div key={item.id}><span><strong>{PRAYER_NAMES[item.prayer]}</strong><small>{item.missedDate} · {item.reason}</small></span><span className={`qada-status ${item.status === "pending" ? "pending" : "settled"}`}>{item.status === "pending" ? "বাকি" : "আদায় হয়েছে"}</span></div>)}</div></Panel>}</aside>
+        <aside className="tracker-side-column"><Panel title="সারাংশ"><TrackerSummary kind={selected} data={data}/></Panel><Panel title="সাম্প্রতিক রেকর্ড" action={<span className="tracker-mini-count">{bn(selected === "prayer" ? data.prayerEntries.length + data.extraPrayerEntries.length : selected === "quran" ? data.quranEntries.length : selected === "dhikr" ? data.dhikrSessions.length : selected === "fasting" ? data.fastingEntries.length : selected === "good" ? data.deedEntries.length : selected === "avoid" ? data.avoidEntries.length : selected === "ilm" ? data.studyEntries.length : selected === "habit" ? data.habitLogs.length : data.reflections.length)}টি</span>}><TrackerHistory kind={selected} data={data}/></Panel>{selected === "prayer" && <Panel title="কাজার হিসাব"><div className="qada-ledger-list">{data.qadaEntries.slice(0, 12).map((item) => <div key={item.id}><span><strong>{PRAYER_NAMES[item.prayer]}</strong><small>{item.missedDate} · {item.reason}</small></span><span className={`qada-status ${item.status === "pending" ? "pending" : "settled"}`}>{item.status === "pending" ? "বাকি" : "আদায় হয়েছে"}</span></div>)}</div></Panel>}</aside>
       </div>
     </> : <>
-      <div className="tracker-picker-tools"><label className="tracker-search"><Search size={17}/><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="ট্র্যাকার খুঁজে নাও"/></label><span>{bn(filtered.length)}টি বিভাগ</span></div>
-      <div className="tracker-picker-grid">{filtered.map((item) => { const Icon = item.icon; return <button type="button" className="tracker-picker-card" key={item.id} onClick={() => { setSelected(item.id); setSavedMessage(""); }}><span className="tracker-picker-icon"><Icon size={20}/></span><span className="tracker-picker-copy"><strong>{item.title}</strong><small>{item.description}</small></span><ChevronRight size={17} className="tracker-picker-arrow"/></button>; })}</div>
-      <div className="tracker-privacy-note"><ShieldCheck size={16}/><span>এন্ট্রি সরাসরি তোমার ব্যক্তিগত Supabase ওয়ার্কস্পেসে সংরক্ষিত হয়। ইন্টারনেট সংযোগ না থাকলে পরিবর্তন স্থায়ীভাবে সংরক্ষিত হবে না।</span></div>
+      <div className="tracker-picker-tools"><label className="tracker-search"><Search size={17}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ট্র্যাকার খুঁজে নাও"/></label><span>{bn(filtered.length)}টি বিভাগ</span></div>
+      <div className="tracker-picker-grid">{filtered.map((item) => { const Icon = item.icon; return <button type="button" className="tracker-picker-card" key={item.id} onClick={() => chooseTracker(item.id)}><span className="tracker-picker-icon"><Icon size={20}/></span><span className="tracker-picker-copy"><strong>{item.title}</strong><small>{item.description}</small></span><ChevronRight size={17} className="tracker-picker-arrow"/></button>; })}</div>
+      <div className="tracker-privacy-note"><span>তোমার পরিবর্তন অনলাইনে সংরক্ষিত হয়। সংযোগ না থাকলে নতুন রেকর্ড স্থায়ীভাবে সংরক্ষণ হবে না।</span></div>
     </>}
   </div>;
 }

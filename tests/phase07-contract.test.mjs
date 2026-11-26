@@ -33,8 +33,10 @@ test('waqt expiry asks for user confirmation before a qada record is created', (
   const reminders = read('../src/modules/trackers/prayer-settings.tsx');
   const notifications = read('../src/components/frontend-workspace.tsx');
   assert.match(reminders, /ওয়াক্ত শেষের নিশ্চিতকরণ/);
+  assert.match(reminders, /আদায় করেছ কি\?/);
   assert.match(notifications, /তুমি কি সালাত আদায় করেছ কি না/);
   assert.match(notifications, /WaqtNotPerformedForm/);
+  assert.match(notifications, /WaqtPrayerEntryForm data=\{data\} event=\{item\}/);
   assert.match(notifications, /qadaEntries:\s*exists\s*\?\s*current\.qadaEntries\s*:/);
   assert.match(notifications, /WaqtPrayerEntryForm/);
   assert.match(notifications, /not-prayed/);
@@ -70,7 +72,7 @@ test('legacy browser data can be read once for cloud migration and is cleared on
   assert.match(store, /DB_NAME = "amar-nfser-hisab-local"/);
   assert.match(store, /readLegacyBrowserData/);
   assert.match(store, /clearLegacyBrowserData/);
-  assert.match(store, /আগের রেকর্ডগুলো নিরাপদে Supabase-এ স্থানান্তর/);
+  assert.match(store, /আগের রেকর্ডগুলো অনলাইনে স্থানান্তর হয়েছে/);
   assert.doesNotMatch(store, /writeIndexedData/);
   assert.match(store, /schemaVersion: 3/);
   assert.ok(fs.existsSync(new URL('../supabase/MASTER_DATABASE_SETUP.sql', import.meta.url)));

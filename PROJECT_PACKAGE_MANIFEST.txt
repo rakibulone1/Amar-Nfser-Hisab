@@ -1,27 +1,25 @@
-Amar Nfser Hisab — Release 1.1.0 Project Package
+Amar Nfser Hisab — Release 1.2.2 Project Package
 
 Included:
 - Complete Next.js / React application source and public assets.
-- Supabase consolidated Master SQL: supabase/MASTER_DATABASE_SETUP.sql
-- Incremental atomic-save migration for existing Release 1.0 databases: supabase/migrations/001_atomic_workspace_snapshot.sql
-- Read-only account data audit query: supabase/WORKSPACE_DATA_AUDIT.sql
-- Authenticated online workspace snapshot with complete tracker array validation.
-- Atomic, user-scoped compare-and-save RPC to prevent simultaneous writes from silently overwriting data.
-- Legacy browser data is read only for one-time migration; no new local persistence for tracker data.
-- Maghrib-based Bangladesh day-key logic and Hanafi prayer-time settings.
-- Journey milestones, observations, rewards, deadline plans and bundled Hadith data.
-- Online theme preferences and cloud-save lifecycle handling.
-- Refined Bengali-first responsive interface with richer, distinct card surfaces and compact informational notes.
-- Contract, domain, and Release 1.1 online persistence tests.
-- Bengali setup/deployment notes in README_BN.md.
+- Per-record Supabase workspace tables, RLS policies and SECURITY INVOKER RPCs.
+- `supabase/migrations/002_relational_workspace.sql` for existing Release 1.1 databases.
+- Master SQL (`supabase/MASTER_DATABASE_SETUP.sql`) with the current relational schema integrated for new databases.
+- Read-only relational data audit query: `supabase/WORKSPACE_DATA_AUDIT_RELATIONAL.sql`.
+- One-time, non-destructive import from the legacy `user_workspace_snapshots` table; the archive is retained.
+- Static Bengali hadith JSON library with 20 entries and a source reference map.
+- Fixed 71-stage journey, module progress, milestone rewards, observations and non-overlapping deadline goals.
+- Maghrib-based Bangladesh date, Bengali Hijri month labels, prohibited prayer-time windows and exact tracker deep links.
+- Waqt-end notification opens the explicit prayed/not-prayed confirmation flow before recording qada.
+- Notification popover, section back navigation and personal two-line footer.
+- Release, regression, relational database and hadith-data tests.
+- Bengali setup and migration notes in README_RELEASE_1.2_BN.md.
 
 Excluded by design:
-- .env.local and all private Supabase keys/tokens.
-- node_modules, .next build output, and TypeScript cache files.
-- Historical patch archives and duplicate project packages.
-- No new Supabase tables, buckets, cron jobs, Edge Functions or paid services in the incremental migration.
+- `.env.local`, Supabase secrets/tokens, `node_modules`, `.next` and cache files.
+- No new paid service, Storage bucket, Cron or Edge Function.
 
 Database setup:
-- Existing Release 1.0 database: run supabase/migrations/001_atomic_workspace_snapshot.sql once.
-- New empty Supabase database: run supabase/MASTER_DATABASE_SETUP.sql once; do not also run the incremental migration.
-- Run supabase/WORKSPACE_DATA_AUDIT.sql (read-only) to inspect the snapshot array counts and legacy table counts for your sign-in email.
+- Existing Release 1.1 database: back up first, then run `supabase/migrations/002_relational_workspace.sql` exactly once.
+- New empty Supabase database: run `supabase/MASTER_DATABASE_SETUP.sql` exactly once; it already includes the Release 1.2 relational schema, so do not also run 001 or 002.
+- Use `supabase/WORKSPACE_DATA_AUDIT_RELATIONAL.sql` with your own sign-in email to inspect row counts after migration.

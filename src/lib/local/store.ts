@@ -48,10 +48,10 @@ export type Journey = { id: string; title: string; startDate: string; endDate: s
 export type JourneyMilestone = { id: string; journeyId: string; stageNumber: number; title: string; requiredDays: number; completedAt: string; rewardTitle: string; rewardAmount: number | null; rewardNote: string; badgeAwarded: boolean; createdAt: string };
 export type JourneyObservation = { id: string; journeyId: string; stageNumber: number; date: string; occurredAt: string; mood: "hopeful" | "calm" | "focused" | "restless" | "challenged" | "tired" | "mixed"; context: "positive" | "difficult" | "neutral"; situation: string; response: string; reflection: string; createdAt: string };
 export type DeadlineTask = { id: string; title: string; details: string; dueDate: string; completed: boolean; completedAt: string | null; createdAt: string };
-export type DeadlinePlan = { id: string; title: string; category: "exam" | "assignment" | "project" | "other"; deadline: string; description: string; tasks: DeadlineTask[]; createdAt: string; updatedAt: string };
+export type DeadlinePlan = { id: string; title: string; category: "exam" | "assignment" | "project" | "other"; startDate?: string; deadline: string; description: string; tasks: DeadlineTask[]; createdAt: string; updatedAt: string };
 export type MosqueTimes = Record<PrayerId, string>;
-export type PrayerTimesCache = { date: string; fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string; source: string; fetchedAt: string; latitude: number; longitude: number };
-export type ReminderEvent = { id: string; key: string; kind: "waqt-ended" | "jamaat-soon" | "night-qada"; date: string; prayer: PrayerId | null; title: string; message: string; createdAt: string; resolved: boolean; response: "prayed" | "not-prayed" | null };
+export type PrayerTimesCache = { date: string; fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string; forbiddenTimes?: { sunriseStart: string; sunriseEnd: string; zawalStart: string; zawalEnd: string; sunsetStart: string; sunsetEnd: string }; source: string; fetchedAt: string; latitude: number; longitude: number };
+export type ReminderEvent = { id: string; key: string; kind: "waqt-ended" | "jamaat-soon" | "night-qada"; date: string; prayer: PrayerId | null; title: string; message: string; createdAt: string; resolved: boolean; readAt?: string | null; response: "prayed" | "not-prayed" | null };
 
 export type LocalPreferences = {
   displayName: string; timeZone: string; maghribTime: string; maghribRollover: boolean;
@@ -114,6 +114,7 @@ let pendingSnapshot: LocalAppData | null = null;
 let onlineListenerAttached = false;
 let lifecycleListenerAttached = false;
 let remoteUpdatedAt: string | null = null;
+let syncedSnapshot: LocalAppData = EMPTY_DATA;
 let hasUnsavedChanges = false;
 let workspaceLoadError = "";
 function setCloudSyncState(state: CloudSyncState, message = "") { cloudSyncState = state; cloudSyncMessage = message; emitChange(); }
@@ -226,7 +227,7 @@ function normaliseData(value: unknown): LocalAppData {
       createdAt: typeof item.createdAt === "string" ? item.createdAt : new Date(0).toISOString()
     })),
     journeyObservations: arrayOrEmpty<JourneyObservation>(value.journeyObservations),
-    deadlinePlans: arrayOrEmpty<DeadlinePlan>(value.deadlinePlans).map((plan) => ({ ...plan, tasks: arrayOrEmpty<DeadlineTask>(plan.tasks) })),
+    deadlinePlans: arrayOrEmpty<DeadlinePlan>(value.deadlinePlans).filter(isObject).map((plan) => ({ ...plan, startDate: typeof plan.startDate === "string" ? plan.startDate : (typeof plan.createdAt === "string" ? plan.createdAt.slice(0, 10) : ""), tasks: arrayOrEmpty<DeadlineTask>(plan.tasks) })),
     prayerPreferences: {
       calculationMethod: 1, asrSchool: 1,
       locationLabel: typeof prayerPreferences.locationLabel === "string" ? prayerPreferences.locationLabel.slice(0, 100) : prayerFallback.locationLabel,
@@ -303,27 +304,87 @@ function clearLegacyBrowserData() {
   }
 }
 
+type WorkspaceDeltaRow = { id: string; record: Record<string, unknown> };
+type WorkspaceCollectionKey =
+  | "goals" | "records" | "prayerDays" | "notes" | "prayerEntries" | "qadaEntries"
+  | "quranEntries" | "extraPrayerEntries" | "dhikrTemplates" | "dhikrSessions" | "fastingEntries"
+  | "deedEntries" | "avoidEntries" | "duaItems" | "studyEntries" | "habitDefinitions" | "habitLogs"
+  | "reflections" | "journeys" | "journeyMilestones" | "journeyObservations" | "deadlinePlans"
+  | "deadlineTasks" | "prayerTimesCache" | "reminderEvents";
+
+const WORKSPACE_COLLECTION_KEYS: WorkspaceCollectionKey[] = [
+  "goals", "records", "prayerDays", "notes", "prayerEntries", "qadaEntries", "quranEntries",
+  "extraPrayerEntries", "dhikrTemplates", "dhikrSessions", "fastingEntries", "deedEntries",
+  "avoidEntries", "duaItems", "studyEntries", "habitDefinitions", "habitLogs", "reflections",
+  "journeys", "journeyMilestones", "journeyObservations", "deadlinePlans", "deadlineTasks",
+  "prayerTimesCache", "reminderEvents"
+];
+
+function rowKey(collection: WorkspaceCollectionKey, value: Record<string, unknown>): string {
+  if (typeof value.id === "string" && value.id) return value.id;
+  if (collection === "prayerTimesCache") {
+    return `${String(value.date ?? "")}:${String(value.latitude ?? "")}:${String(value.longitude ?? "")}`;
+  }
+  if (typeof value.date === "string" && value.date) return value.date;
+  return "";
+}
+
+function recordsForCollection(data: LocalAppData, collection: WorkspaceCollectionKey): WorkspaceDeltaRow[] {
+  if (collection === "deadlineTasks") {
+    return data.deadlinePlans.flatMap((plan) => plan.tasks.map((task) => ({
+      id: task.id,
+      record: { ...task, planId: plan.id } as unknown as Record<string, unknown>
+    })));
+  }
+  const source = data[collection as keyof LocalAppData];
+  if (!Array.isArray(source)) return [];
+  return source.map((item) => {
+    const value = item as unknown as Record<string, unknown>;
+    const id = rowKey(collection, value);
+    const record = collection === "deadlinePlans"
+      ? (({ tasks: _tasks, ...plan }) => plan)(value)
+      : value;
+    return id ? { id, record } : null;
+  }).filter((row): row is WorkspaceDeltaRow => row !== null);
+}
+
+function buildWorkspaceChanges(previous: LocalAppData, next: LocalAppData) {
+  const collections: Record<string, { upserts: WorkspaceDeltaRow[]; deletes: string[] }> = {};
+  for (const key of WORKSPACE_COLLECTION_KEYS) {
+    const before = new Map(recordsForCollection(previous, key).map((row) => [row.id, JSON.stringify(row.record)]));
+    const afterRows = recordsForCollection(next, key);
+    const after = new Set(afterRows.map((row) => row.id));
+    const upserts = afterRows.filter((row) => before.get(row.id) !== JSON.stringify(row.record));
+    const deletes = [...before.keys()].filter((id) => !after.has(id));
+    if (upserts.length || deletes.length) collections[key] = { upserts, deletes };
+  }
+  const previousSettings = { preferences: previous.preferences, prayerConfig: previous.prayerConfig, prayerPreferences: previous.prayerPreferences };
+  const nextSettings = { preferences: next.preferences, prayerConfig: next.prayerConfig, prayerPreferences: next.prayerPreferences };
+  const changes: { collections?: typeof collections; settings?: typeof nextSettings } = {};
+  if (Object.keys(collections).length) changes.collections = collections;
+  if (JSON.stringify(previousSettings) !== JSON.stringify(nextSettings)) changes.settings = nextSettings;
+  return changes;
+}
+
 function scheduleCloudSync(data: LocalAppData) {
   pendingSnapshot = data;
   if (!hydrated) return;
   if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
   if (typeof navigator !== "undefined" && !navigator.onLine) {
-    setCloudSyncState("offline", "ইন্টারনেট নেই। পরিবর্তন শুধু খোলা সেশনে আছে; অনলাইনে এলে সংরক্ষণ হবে।");
+    setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। পরিবর্তন অনলাইনে সংরক্ষিত হয়নি; সংযোগ ফিরলে আবার চেষ্টা হবে।");
     return;
   }
-  cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; void pushCloudSnapshot(pendingSnapshot ?? snapshot); }, 650);
+  cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; void pushCloudSnapshot(pendingSnapshot ?? snapshot); }, 220);
 }
+
 async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
   if (typeof window === "undefined") return;
   if (!navigator.onLine) {
     hasUnsavedChanges = true;
-    setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। পরিবর্তন অনলাইনে সংরক্ষিত হয়নি; Refresh কোরো না।");
+    setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। পরিবর্তন স্থায়ীভাবে সংরক্ষিত হয়নি; Refresh কোরো না।");
     return;
   }
   if (cloudSavePromise) {
-    // Only request a follow-up write when the in-memory snapshot actually
-    // moved beyond the payload currently being saved. Lifecycle events can
-    // call this more than once for the same revision; those calls are deduped.
     if (snapshot.updatedAt !== data.updatedAt) cloudSyncAgain = true;
     await cloudSavePromise;
     if (hasUnsavedChanges) {
@@ -334,23 +395,37 @@ async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
     }
     return;
   }
+
   const target = data;
+  const changes = buildWorkspaceChanges(syncedSnapshot, target);
+  if (!changes.collections && !changes.settings) {
+    syncedSnapshot = target;
+    hasUnsavedChanges = snapshot.updatedAt !== target.updatedAt;
+    if (!hasUnsavedChanges) {
+      pendingSnapshot = null;
+      setCloudSyncState("synced", "সব পরিবর্তন সংরক্ষিত আছে।");
+      clearLegacyBrowserData();
+    }
+    return;
+  }
+
   cloudSavePromise = (async () => {
-    setCloudSyncState("syncing", "Supabase-এ নিরাপদে সংরক্ষণ হচ্ছে…");
+    setCloudSyncState("syncing", "পরিবর্তন অনলাইনে সংরক্ষণ হচ্ছে…");
     try {
       const response = await fetch("/api/workspace", {
         method: "PUT", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: target, expectedUpdatedAt: remoteUpdatedAt }),
+        body: JSON.stringify({ changes, expectedUpdatedAt: remoteUpdatedAt }),
         cache: "no-store", credentials: "same-origin"
       });
       const result = await response.json().catch(() => ({})) as { message?: string; updatedAt?: string };
       if (response.status === 409) throw new Error(result.message || "অন্য ট্যাব বা ডিভাইসে তথ্য পরিবর্তিত হয়েছে। Refresh করে সর্বশেষ তথ্য নাও।");
       if (!response.ok) throw new Error(result.message || (response.status === 401 ? "সেশন যাচাই করা যায়নি। আবার লগইন করো।" : "অনলাইন সংরক্ষণ ব্যর্থ হয়েছে।"));
       remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : remoteUpdatedAt;
+      syncedSnapshot = target;
       hasUnsavedChanges = snapshot.updatedAt !== target.updatedAt;
       if (!hasUnsavedChanges) {
         pendingSnapshot = null;
-        setCloudSyncState("synced", "সর্বশেষ তথ্য Supabase-এ সংরক্ষিত হয়েছে।");
+        setCloudSyncState("synced", "সর্বশেষ পরিবর্তন অনলাইনে সংরক্ষিত হয়েছে।");
         clearLegacyBrowserData();
       } else {
         setCloudSyncState("syncing", "নতুন পরিবর্তনগুলোও অনলাইনে সংরক্ষণ হচ্ছে…");
@@ -371,19 +446,22 @@ async function synchronizeCloudSnapshot() {
   if (typeof window === "undefined") return;
   if (!navigator.onLine) { setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। অনলাইন তথ্য লোড করা যাচ্ছে না।"); return; }
   if (hasUnsavedChanges) { await pushCloudSnapshot(snapshot); return; }
-  setCloudSyncState("syncing", "অনলাইন তথ্য যাচাই হচ্ছে…");
+  setCloudSyncState("syncing", "সর্বশেষ তথ্য যাচাই হচ্ছে…");
   try {
     const response = await fetch("/api/workspace", { cache: "no-store", credentials: "same-origin" });
     if (!response.ok) throw new Error(response.status === 401 ? "সেশন যাচাই করা যায়নি। আবার লগইন করো।" : "অনলাইন তথ্য লোড করা যায়নি।");
     const result = await response.json() as { payload?: unknown | null; updatedAt?: string | null };
     if (result.payload) {
-      snapshot = normaliseData(result.payload);
+      const remote = normaliseData(result.payload);
+      snapshot = remote;
+      syncedSnapshot = remote;
       remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : null;
       hasUnsavedChanges = false;
       emitChange();
-      setCloudSyncState("synced", "সর্বশেষ অনলাইন তথ্য লোড হয়েছে।");
+      setCloudSyncState("synced", "সর্বশেষ তথ্য লোড হয়েছে।");
     } else {
       remoteUpdatedAt = null;
+      syncedSnapshot = normaliseData(EMPTY_DATA);
       hasUnsavedChanges = true;
       await pushCloudSnapshot(snapshot);
     }
@@ -440,11 +518,12 @@ export async function hydrateLocalData() {
     try {
       if (!navigator.onLine) throw new Error("ইন্টারনেট সংযোগ ছাড়া অনলাইন তথ্য খোলা যাবে না। সংযোগ চালু করে আবার চেষ্টা করো।");
       const response = await fetch("/api/workspace", { cache: "no-store", credentials: "same-origin" });
-      if (!response.ok) throw new Error(response.status === 401 ? "সেশন শেষ হয়েছে। আবার লগইন করো।" : "Supabase থেকে তথ্য লোড করা যায়নি। Database ও RLS সেটআপ পরীক্ষা করো।");
+      if (!response.ok) throw new Error(response.status === 401 ? "সেশন শেষ হয়েছে। আবার লগইন করো।" : "তথ্য লোড করা যায়নি। সংযোগ ও সংরক্ষণ সেটআপ পরীক্ষা করে আবার চেষ্টা করো।");
       const result = await response.json() as { payload?: unknown | null; updatedAt?: string | null };
       if (result.payload) {
         const remote = normaliseData(result.payload);
         remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : null;
+        syncedSnapshot = remote;
         const legacy = await readLegacyBrowserData();
         const localVersion = legacy ? (Date.parse(legacy.updatedAt) || 0) : 0;
         const remotePayloadVersion = Date.parse(remote.updatedAt) || 0;
@@ -457,7 +536,7 @@ export async function hydrateLocalData() {
           await pushCloudSnapshot(snapshot);
           if (!hasUnsavedChanges && cloudSyncState === "synced") {
             clearLegacyBrowserData();
-            setCloudSyncState("synced", "আগের নতুন রেকর্ডগুলো Supabase-এ স্থানান্তর হয়েছে।");
+            setCloudSyncState("synced", "আগের নতুন রেকর্ডগুলো অনলাইনে স্থানান্তর হয়েছে।");
           }
         } else {
           snapshot = remote;
@@ -469,13 +548,14 @@ export async function hydrateLocalData() {
       } else {
         const legacy = await readLegacyBrowserData();
         snapshot = legacy ?? { ...structuredClone(EMPTY_DATA), updatedAt: new Date().toISOString() };
+        syncedSnapshot = normaliseData(EMPTY_DATA);
         remoteUpdatedAt = null;
         hydrated = true;
         hasUnsavedChanges = true;
         await pushCloudSnapshot(snapshot);
         if (!hasUnsavedChanges && cloudSyncState === "synced") {
           clearLegacyBrowserData();
-          setCloudSyncState("synced", legacy ? "আগের রেকর্ডগুলো নিরাপদে Supabase-এ স্থানান্তর হয়েছে; ডিভাইসের পুরোনো কপি সরানো হয়েছে।" : "অনলাইন ব্যক্তিগত ওয়ার্কস্পেস তৈরি হয়েছে।");
+          setCloudSyncState("synced", legacy ? "আগের রেকর্ডগুলো অনলাইনে স্থানান্তর হয়েছে; পুরোনো ডিভাইস কপি সরানো হয়েছে।" : "অনলাইন ব্যক্তিগত ওয়ার্কস্পেস তৈরি হয়েছে।");
         }
       }
       attachOnlineListener();

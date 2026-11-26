@@ -59,6 +59,14 @@ export function nextDhakaDate(date: string) {
   return getDhakaDate(value);
 }
 
+
+export function shiftPrayerClock(value: string, offsetMinutes: number) {
+  if (!CLOCK_PATTERN.test(value) || !Number.isInteger(offsetMinutes)) return "";
+  const [hour, minute] = value.split(":").map(Number);
+  const total = (hour * 60 + minute + offsetMinutes + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export function getPrayerWaqtWindow(
   dateTimes: PrayerTimesCache | undefined,
   tomorrowTimes: PrayerTimesCache | undefined,
@@ -72,7 +80,7 @@ export function getPrayerWaqtWindow(
     maghrib: { start: dateTimes.maghrib, end: dateTimes.isha }
   };
   if (prayer === "isha") return dateTimes.isha && tomorrowTimes?.fajr
-    ? { start: dateTimes.isha, end: tomorrowTimes.fajr }
+    ? { start: dateTimes.isha, end: shiftPrayerClock(tomorrowTimes.fajr, -1) }
     : null;
   return windows[prayer];
 }

@@ -1,0 +1,45 @@
+Amar Nfser Hisab Release 1.2.2 Patch File Manifest
+Base: Amar Nfser Hisab(1).zip (package version 1.1.0)
+Changed files: 28
+Added files: 10
+Only files changed relative to the supplied base archive are included.
+No .env.local, credentials, node_modules, .next or generated TS build cache is included.
+
+PROJECT_PACKAGE_MANIFEST.txt | 1833 bytes | SHA256 f908c2f1d3c22885ac717669c80c7ffbce2c06700356b9d0f865bb16c7fc6078
+package-lock.json | 256486 bytes | SHA256 b1f8b3fd1f91aa666b99d3fabb1faec862b2e2b6b23499326096f4bfa17777d0
+package.json | 2790 bytes | SHA256 6bb39de01b881f38bd6c5afbb00c3c384d8d00db0c75d8521e459379793e04dc
+src/app/(protected)/notifications/page.tsx | 197 bytes | SHA256 0ad6d567f3fbd95211b8f7d24c56cb669d76e01d41d56b935ab5af1989ef70a6
+src/app/api/prayer-times/route.ts | 4290 bytes | SHA256 b8f2d28ce8f29f75cef05d4aa197de72673864f1da7f4a48bfd67d543f38c43b
+src/app/api/workspace/route.ts | 7758 bytes | SHA256 ccdd34de77e235586f6ed2078499456efa2ab34b9dc0e434f242462681d76917
+src/app/globals.css | 200960 bytes | SHA256 cd3b2ae45bca6e048936321f562fd0dd4a01dd6f244e07b2850b05a5393d6b56
+src/app/login/page.tsx | 1126 bytes | SHA256 f7e968e8bae825c93f67b269b9b52269af56fa284086e3c3b95057fcf33ace74
+src/components/frontend-workspace.tsx | 111919 bytes | SHA256 f3088da933d17cd09f6e839c82bba03aba1cf7ee0b2a0a99eb637f3c8dff19b9
+src/components/login-form.tsx | 3176 bytes | SHA256 85b4dd5e1fbe97c83523a3bc20f8e4aa2aa091dbdca27b32b24b578de88ac051
+src/components/settings-panel.tsx | 13072 bytes | SHA256 6f27de4a471be4103e6b3bcacc523b433445bf228bdd3ce3c156e3dd47d73414
+src/data/hadith-bn.json | 20540 bytes | SHA256 56e641bc967c8e7472cb9c946dac5a4e79173c0c6296ea3ef4241ca404945999
+src/lib/date/hijri.ts | 1679 bytes | SHA256 8c96c57db3255982d43242079e9e9e32d6cbb2808b64be49a72ce12579ab1ce5
+src/lib/journey/stages.ts | 9660 bytes | SHA256 7549ea44afc98b07466b18314474016bbe117e42120d8c169d7bdca7cedaf63b
+src/lib/local/store.ts | 42996 bytes | SHA256 73ec82c88588016a39eb590123a6b361cc7c3fb7e5f0080cc747715b54e9535d
+src/lib/prayer-time.ts | 3380 bytes | SHA256 c8c41526da4f5f4cce0a1eed3baaa0e4558e2d8ab91dc7a4b6e52dde29e77da1
+src/modules/trackers/prayer-time-widget.tsx | 10661 bytes | SHA256 5beca8d47d6280d7bcbbe0fa58265e7e5ee236ebdf6381ceb6e9ed5887b9cf96
+src/modules/trackers/tracker-center.tsx | 77793 bytes | SHA256 b9622fe5a2ce8e3109efc765db0de577db522e522c3d5199b3185f1ea6863620
+src/types/hadith.ts | 350 bytes | SHA256 8d0b87107983358b6d268dc6378397d44900f3e39726da5e46b3be085c3d7ed4
+supabase/MASTER_DATABASE_SETUP.sql | 64580 bytes | SHA256 e804200d39d7b6bc4c1d0ede2627f3122807c86d1e5df1f903bb46baf506ee0c
+supabase/WORKSPACE_DATA_AUDIT.sql | 5515 bytes | SHA256 a754225808422a3b612e1223be10ae8c4e68aab1f4fb6d93e601453fd41c2fb2
+tests/frontend-phase06.test.mjs | 967 bytes | SHA256 02771ce126efb2fd9db750f1026ac2f68918dcbdebbbbb22bd9a78d61320554d
+tests/phase02-contract.test.mjs | 3557 bytes | SHA256 bf0e12ef33e63b41f41b9a297fa49917b2063f67b754c6955f06316e499b2260
+tests/phase07-contract.test.mjs | 6161 bytes | SHA256 72b0ff9528b0ab2b9f324f4a9c536defcf667f706fb42ca9ce03f1e1ae87920f
+tests/phase08-followup.test.mjs | 4655 bytes | SHA256 6801121806a7f8f5715a4fe42a76a3e61d87bdb9d992bbc41773917763ec5122
+tests/phase09-semi-final.test.ts | 6441 bytes | SHA256 d7c990a363f100c0a669fd561d35fc67af66944a50ef4a994525d8ffb06445c1
+tests/phase10-cloud-only.test.mjs | 2184 bytes | SHA256 d4064e087632701f7ad26be6ff7eb28543d2daf1d37259bef6fb0872fc14a5ab
+tests/phase11-online-snapshot.test.mjs | 4228 bytes | SHA256 0d5733092f95b647207ca8d9a951e31a847cbdb8f8bc301d959b205a3e9eed32
+PATCH_BASE.txt | 167 bytes | SHA256 fec8d072d2a67ea7cecd51f13889a9907e0c70cd799902c55ce8f16ee8600930
+PATCH_README_BN.md | 5909 bytes | SHA256 1be15629d04525156cd7ab22f6777b6be6ae7548bf9f1e6949e07b67e1969981
+README_RELEASE_1.2_BN.md | 7493 bytes | SHA256 9cd0c0dfce9caa653353f4ebc255b309c03a3729aae4e7de3dff6fd1dac746f8
+src/app/(protected)/hadith/page.tsx | 387 bytes | SHA256 2ea5b5e92630a9bedfaa8f111cd020328d73010ea08bf4497e3b4ad61a5aa8d0
+src/data/HADITH_SOURCES_BN.md | 7144 bytes | SHA256 6d41338d021293b7a189d9d83f6f1f99276819d4ec971634c02068e5fdd04640
+src/modules/hadith/hadith-library.tsx | 6196 bytes | SHA256 331414748b0d2c2817c247bd76c98cd718f30350698fe57586d399c786ec294f
+supabase/WORKSPACE_DATA_AUDIT_RELATIONAL.sql | 9669 bytes | SHA256 81aafcacf7c18ec0a00fe68e3eb46c09cf8489af679570770a17874a7d3a3393
+supabase/migrations/002_relational_workspace.sql | 22728 bytes | SHA256 f2a1cf42c86ff15021ded0a890b930ee5daa0872955bd0fa7035ec40fd0d5b1e
+tests/phase12-release.test.mjs | 7417 bytes | SHA256 ba75c8964791fd5d59bc30cab1a5f44f82e10371296580735fc8dc5014f5306c
+tests/phase13-release-hardening.test.mjs | 4418 bytes | SHA256 f92dc232fd5ec5668b52e31152a35eaa60496c70262652201dc9e5e00f8007b5

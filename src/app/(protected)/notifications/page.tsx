@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
 export default function NotificationsPage() {
-  redirect("/dashboard?section=notifications");
+  // Notifications are managed in the workspace popover, not a separate page.
+  redirect("/dashboard");
 }

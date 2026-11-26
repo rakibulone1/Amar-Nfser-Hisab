@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlarmClock, CalendarClock, MapPin, RefreshCw } from "lucide-react";
 import { updateLocalData, type LocalAppData, type PrayerTimesCache, type PrayerId } from "@/lib/local/store";
+import { shiftPrayerClock } from "@/lib/prayer-time";
 
 const NAMES: Record<PrayerId, string> = { fajr: "ফজর", dhuhr: "যোহর", asr: "আসর", maghrib: "মাগরিব", isha: "ইশা" };
 const CHRONOLOGICAL_ORDER: PrayerId[] = ["fajr", "dhuhr", "asr", "maghrib", "isha"];
@@ -82,10 +83,14 @@ export function PrayerTimeWidget({ data }: { data: LocalAppData }) {
   return <section className="prayer-time-widget">
     <header><div><span className="tracker-eyebrow">বাংলাদেশ · হানাফি পদ্ধতি</span><h3>আজকের ওয়াক্তের সময়</h3><p><MapPin size={13}/> {data.prayerPreferences.locationLabel}</p></div><button type="button" className="tracker-icon-button" title="সময়সূচি আবার আনো" onClick={() => { updateLocalData((current) => ({ ...current, prayerTimesCache: current.prayerTimesCache.filter((item) => item.date !== date || item.latitude !== latitude || item.longitude !== longitude) })); setTimes(null); setProblem(""); setRefreshKey((value) => value + 1); }}><RefreshCw size={16}/></button></header>
     {currentTimes ? <><div className="prayer-time-next"><span>পরবর্তী ওয়াক্ত</span><strong>{NAMES[state?.next || "fajr"]}</strong><b>{state ? leftLabel(state.delta) : "—"} বাকি</b><small>{fmt(currentTimes[state?.next || "fajr"])}</small></div><div className="prayer-time-grid">{ACCOUNTING_ORDER.map((prayer) => {
-      const endTime = prayer === "fajr" ? currentTimes.sunrise : prayer === "dhuhr" ? currentTimes.asr : prayer === "asr" ? currentTimes.maghrib : prayer === "maghrib" ? currentTimes.isha : tomorrowTimes?.fajr;
+      const endTime = prayer === "fajr" ? currentTimes.sunrise : prayer === "dhuhr" ? currentTimes.asr : prayer === "asr" ? currentTimes.maghrib : prayer === "maghrib" ? currentTimes.isha : tomorrowTimes?.fajr ? shiftPrayerClock(tomorrowTimes.fajr, -1) : undefined;
       const endDate = prayer === "isha" ? tomorrowDate : date;
       return <div key={prayer} className={state?.next === prayer ? "is-next" : ""}><span>{NAMES[prayer]}</span><strong>{fmt(currentTimes[prayer], date)}</strong><small>শেষ {endTime ? fmt(endTime, endDate) : "পরের দিনের সময়সূচি আসছে"}</small></div>;
-    })}<div><span>সূর্যোদয়</span><strong>{fmt(currentTimes.sunrise, date)}</strong><small>ফজরের শেষ</small></div></div><div className="prayer-time-source"><CalendarClock size={13}/> {currentTimes.source} · {loading ? "আপডেট হচ্ছে" : `সর্বশেষ হালনাগাদ ${new Intl.DateTimeFormat("bn-BD", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(new Date(currentTimes.fetchedAt))}`}</div></> : <div className="prayer-time-empty"><AlarmClock size={20}/><strong>{loading ? "ওয়াক্তের সময় আনা হচ্ছে…" : "সময়সূচি এখনো পাওয়া যায়নি"}</strong><small>{problem || "ইন্টারনেট সংযোগ এবং Settings-এ অবস্থান যাচাই করো।"}</small></div>}
+    })}<div><span>সূর্যোদয়</span><strong>{fmt(currentTimes.sunrise, date)}</strong><small>ফজরের শেষ</small></div></div><div className="prayer-time-source"><CalendarClock size={13}/> {currentTimes.source} · {loading ? "আপডেট হচ্ছে" : `সর্বশেষ হালনাগাদ ${new Intl.DateTimeFormat("bn-BD", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(new Date(currentTimes.fetchedAt))}`}</div><div className="forbidden-prayer-times"><div className="forbidden-prayer-heading"><strong>নিষিদ্ধ সময়</strong><small>সময়গুলো আনুমানিক সতর্কতা হিসেবে দেখানো হয়েছে</small></div>{[
+      { key: "sunrise", title: "সূর্যোদয়", start: currentTimes.forbiddenTimes?.sunriseStart || currentTimes.sunrise, end: currentTimes.forbiddenTimes?.sunriseEnd || shiftPrayerClock(currentTimes.sunrise, 15) },
+      { key: "zawal", title: "মধ্যাহ্ন", start: currentTimes.forbiddenTimes?.zawalStart || shiftPrayerClock(currentTimes.dhuhr, -5), end: currentTimes.forbiddenTimes?.zawalEnd || currentTimes.dhuhr },
+      { key: "sunset", title: "সূর্যাস্ত", start: currentTimes.forbiddenTimes?.sunsetStart || shiftPrayerClock(currentTimes.maghrib, -5), end: currentTimes.forbiddenTimes?.sunsetEnd || currentTimes.maghrib }
+    ].map((item) => <div key={item.key}><span>{item.title}</span><strong>{fmt(item.start, date)} – {fmt(item.end, date)}</strong></div>)}</div></> : <div className="prayer-time-empty"><AlarmClock size={20}/><strong>{loading ? "ওয়াক্তের সময় আনা হচ্ছে…" : "সময়সূচি এখনো পাওয়া যায়নি"}</strong><small>{problem || "ইন্টারনেট সংযোগ এবং Settings-এ অবস্থান যাচাই করো।"}</small></div>}
     <div className="mosque-jamaat-inline"><span>স্থানীয় মসজিদের জামাত</span><small>সেটিংসে সময়গুলো হাতে লিখে রাখবে</small>{ACCOUNTING_ORDER.map((prayer) => <div key={prayer}><span>{NAMES[prayer]}</span><strong>{data.prayerPreferences.mosqueTimes[prayer] ? fmt(data.prayerPreferences.mosqueTimes[prayer]) : "নির্ধারিত নয়"}</strong></div>)}</div>
   </section>;
 }

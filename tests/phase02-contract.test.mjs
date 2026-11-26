@@ -24,6 +24,14 @@ test('Master SQL contains every relational tracker table and enables owner-scope
   assert.match(masterSql, /using \(user_id = auth\.uid\(\)\)/i);
   assert.match(masterSql, /with check \(user_id = auth\.uid\(\)\)/i);
   assert.match(masterSql, /drop policy if exists/i);
+  for (const table of [
+    "workspace_prayer_entries", "workspace_qada_entries", "workspace_quran_entries",
+    "workspace_dhikr_sessions", "workspace_fasting_entries", "workspace_deed_entries",
+    "workspace_avoid_entries", "workspace_journey_observations", "workspace_deadline_plans",
+    "workspace_deadline_tasks", "workspace_sync_state", "workspace_user_settings"
+  ]) assert.ok(masterSql.includes(table), `${table} must be included for new database setup`);
+  assert.match(masterSql, /create or replace function public\.load_relational_workspace/);
+  assert.match(masterSql, /create or replace function public\.save_relational_workspace_changes/);
 });
 
 test('Prayer and Qada writes use the atomic RPC and immutable settlement ledger', () => {

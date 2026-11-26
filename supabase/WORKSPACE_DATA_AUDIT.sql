@@ -1,7 +1,8 @@
 -- Amar Nfser Hisab · read-only online data audit
 -- Replace YOUR_LOGIN_EMAIL with the email used to sign in to the app.
 -- Run in Supabase SQL Editor. This query does not modify any data.
--- Active Release 1.x tracker records are stored in user_workspace_snapshots.payload (JSONB).
+-- Legacy pre-1.2 audit only. After Release 1.2 Migration 002, use WORKSPACE_DATA_AUDIT_RELATIONAL.sql.
+-- The old user_workspace_snapshots.payload is retained as a migration archive; it is no longer the runtime data store.
 -- The normalized tables at the end belong to legacy/relational endpoints and may remain empty.
 
 with target_user as (
@@ -59,9 +60,6 @@ from target_user u
 left join public.user_workspace_snapshots s on s.user_id = u.id;
 
 -- Interpretation:
--- 1) has_workspace_snapshot = false means active cloud snapshot is missing.
--- 2) Non-zero snapshot counters mean those tracker records are online in JSONB.
--- 3) Legacy table counters can be zero while snapshot counters are non-zero; this is expected
---    for the active Release 1.x UI and does not prove that the active tracker data is missing.
--- 4) If all snapshot counters unexpectedly show zero, check the Cloud Save status in Settings,
---    then run this query again after saving one test record and refreshing the app.
+-- 1) Use this query only before 002 migration to inspect the legacy snapshot archive.
+-- 2) After 002, compare the archive with WORKSPACE_DATA_AUDIT_RELATIONAL.sql.
+-- 3) Do not infer current runtime storage from this legacy query after migration.

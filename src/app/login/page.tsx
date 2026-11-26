@@ -17,5 +17,6 @@ export default async function LoginPage() {
       <Image className="login-minimal-logo" src="/brand/logo.svg" alt="Amar Nfser Hisab" width={58} height={58} priority />
       <LoginForm configured={configured}/>
     </div>
+    <footer className="login-personal-footer"><span>রাকিব তুমি তোমার বাবা-মায়ের বিশ্বাসটা ভেঙ্গোনা।</span><span>তাহলে তাদের আর যাওয়ার মতো জায়গা থাকবে না!</span></footer>
   </main>;
 }

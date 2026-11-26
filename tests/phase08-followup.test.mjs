@@ -32,12 +32,14 @@ test('static hadith card replaces the unused personal dua collection and rotates
   const tracker = read('../src/modules/trackers/tracker-center.tsx');
   const workspace = read('../src/components/frontend-workspace.tsx');
   const hadith = JSON.parse(read('../src/data/hadith-bn.json'));
-  assert.equal(hadith.length, 10);
-  assert.equal(new Set(hadith.map((item) => item.id)).size, 10);
+  assert.equal(hadith.hadiths.length, 20);
+  assert.equal(new Set(hadith.hadiths.map((item) => item.id)).size, 20);
   assert.doesNotMatch(tracker, /function DuaForm|দোয়া সংগ্রহ/);
   assert.match(workspace, /function DailyHadithCard/);
-  assert.match(workspace, /setInterval\(\(\) =>/);
-  assert.match(workspace, /পরবর্তী হাদিস/);
+  assert.match(workspace, /useEffect\(\(\) => \{ setItem\(chooseRandomHadith\(\)\); \}, \[\]\)/);
+  assert.match(workspace, /onClick=\{\(\) => setItem\(chooseRandomHadith\(item\.id\)\)\}/);
+  assert.match(workspace, /অন্য হাদিস/);
+  assert.doesNotMatch(workspace, /setInterval\(.*hadith/i);
 });
 
 test('proxy only uses cookie options on the response cookie jar', () => {

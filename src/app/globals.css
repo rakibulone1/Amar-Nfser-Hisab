@@ -2276,3 +2276,363 @@ body { font-size: 15px; line-height: 1.7; }
 /* Keep highlighted cards tactile and natural: solid color surfaces, not gradients. */
 .hadith-daily-card { border: 1px solid var(--surface-sand-border); background: var(--surface-sand); }
 .journey-summary-card, .journey-stage-card { background: var(--surface-mint); }
+
+/* Release 1.2 — calmer, clearer, colored surfaces and generous spacing */
+:root {
+  --release-ink: #20332a;
+  --release-muted: #718078;
+  --release-line: #e3eae5;
+  --release-surface: #ffffff;
+  --release-canvas: #f5f8f5;
+  --release-green: #347a54;
+  --release-blue: #4b7295;
+  --release-lilac: #756493;
+  --release-sand: #9a713c;
+}
+
+body { color: var(--release-ink); background: var(--release-canvas); }
+.view-stack { gap: 22px; }
+.view-stack > *, .goals-workspace > *, .tracker-center > * { min-width: 0; }
+.page-intro { margin-bottom: 2px; }
+.page-intro h1, .tracker-page-heading h1, .goals-page-heading h1 { letter-spacing: -.035em; line-height: 1.22; }
+.page-intro p, .tracker-page-heading > p { display: none !important; }
+.workspace-section-back { display: flex; align-items: center; min-height: 30px; margin: 0 0 -5px; }
+.section-back-button, .tracker-back-button {
+  display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 13px;
+  border: 1px solid #e1e9e3; border-radius: 11px; background: #fff; color: #42614e;
+  font-weight: 650; font-size: 13px; cursor: pointer; transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.section-back-button:hover, .tracker-back-button:hover { background: #f0f6f1; border-color: #cbded0; transform: translateY(-1px); }
+
+.dashboard-date-card {
+  display: flex; align-items: center; justify-content: center; gap: 13px; width: fit-content; max-width: 100%;
+  min-height: 36px; padding: 7px 14px; border: 1px solid #e4ebe5; border-radius: 999px;
+  background: rgba(255,255,255,.84); color: #55685c; font-size: 12px; font-weight: 650;
+}
+.dashboard-date-divider { width: 1px; height: 14px; background: #d8e2da; }
+.dashboard-journey-card {
+  --hero-bg: #edf6ef; --hero-border: #d8e9dc; --hero-accent: #367a52;
+  display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(230px, .8fr); gap: 22px;
+  padding: clamp(20px, 3vw, 30px); border: 1px solid var(--hero-border); border-radius: 23px;
+  background: var(--hero-bg); color: #20392b; box-shadow: 0 8px 24px rgba(30,63,42,.045);
+}
+.dashboard-journey-card .dashboard-journey-overline, .journey-current-kicker { color: var(--hero-accent); font-size: 12px; font-weight: 750; letter-spacing: .02em; }
+.dashboard-journey-main h1 { margin: 8px 0 6px; color: #1f3d2b; font-size: clamp(24px, 3vw, 34px); font-weight: 800; letter-spacing: -.04em; }
+.dashboard-journey-dates { color: #64756a; font-size: 12px; }
+.dashboard-journey-progress, .journey-current-track, .journey-module-track, .journey-stage-mini-track, .deadline-progress {
+  overflow: hidden; height: 8px; border-radius: 999px; background: rgba(47,88,59,.12);
+}
+.dashboard-journey-progress { margin-top: 22px; }
+.dashboard-journey-progress span, .journey-current-track span, .journey-module-track span, .journey-stage-mini-track i, .deadline-progress span {
+  display: block; height: 100%; border-radius: inherit; background: var(--hero-accent, #367a52); transition: width .25s ease;
+}
+.dashboard-journey-progress-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; color: #53695a; font-size: 11px; font-weight: 650; }
+.dashboard-journey-side { display: grid; grid-template-columns: 95px 1fr; align-content: start; gap: 10px; }
+.dashboard-journey-stage-number { display: grid; align-content: center; justify-items: center; gap: 1px; min-height: 106px; padding: 12px; border-radius: 17px; background: rgba(255,255,255,.68); }
+.dashboard-journey-stage-number small, .dashboard-journey-next-goal small { color: #63746a; font-size: 10px; }
+.dashboard-journey-stage-number strong { color: var(--hero-accent); font-size: 34px; line-height: 1.1; }
+.dashboard-journey-stage-number span { color: #627268; font-size: 10px; }
+.dashboard-journey-days, .dashboard-journey-next-goal { display: grid; align-content: center; gap: 3px; padding: 13px 15px; border-radius: 16px; background: rgba(255,255,255,.68); }
+.dashboard-journey-days strong, .dashboard-journey-next-goal strong { color: #2e4737; font-size: 13px; line-height: 1.4; }
+.dashboard-journey-days span, .dashboard-journey-next-goal span { color: #718176; font-size: 10px; }
+.dashboard-journey-next-goal { grid-column: 1 / -1; }
+.dashboard-journey-open { grid-column: 1 / -1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; justify-self: end; min-height: 36px; padding: 8px 14px; border: 0; border-radius: 11px; background: var(--hero-accent); color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.module-tone-1 { --hero-bg: #edf6ef; --hero-border: #d7e8dc; --hero-accent: #367a52; --module-bg: #f3f8f3; --module-border: #dceadf; --module-accent: #367a52; }
+.module-tone-2 { --hero-bg: #f1eef8; --hero-border: #e2dcef; --hero-accent: #76649b; --module-bg: #f7f4fb; --module-border: #e5def0; --module-accent: #76649b; }
+.module-tone-3 { --hero-bg: #edf3f9; --hero-border: #dbe6f0; --hero-accent: #4c769b; --module-bg: #f3f7fb; --module-border: #dce7f0; --module-accent: #4c769b; }
+
+/* Dashboard metric cards: color is semantic and restrained. */
+.metric-grid { gap: 14px; }
+.metric-card { border: 1px solid #e5ebe6; border-radius: 18px; box-shadow: 0 5px 18px rgba(31,56,40,.035); transition: transform .18s ease, box-shadow .18s ease; }
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 9px 24px rgba(31,56,40,.07); }
+.metric-grid .metric-card:nth-child(1) { background: #edf6ef; border-color: #d9eadf; }
+.metric-grid .metric-card:nth-child(2) { background: #f5eef0; border-color: #ecdee2; }
+.metric-grid .metric-card:nth-child(3) { background: #edf3f9; border-color: #dbe7f1; }
+.metric-grid .metric-card:nth-child(4) { background: #f7f1e7; border-color: #eee3d1; }
+.panel-card, .workspace-panel, .tracker-panel { border: 1px solid #e5ebe6; border-radius: 19px; background: #fff; box-shadow: 0 5px 18px rgba(31,56,40,.03); }
+
+/* Hadith — static bundled content, no API dependency. */
+.hadith-daily-card { overflow: hidden; border: 1px solid #dce8df; border-radius: 20px; background: #f1f7f2; box-shadow: 0 6px 20px rgba(31,65,42,.035); }
+.hadith-daily-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 19px 0; }
+.hadith-daily-head > span { color: #477354; font-size: 12px; font-weight: 800; }
+.hadith-refresh-button { padding: 6px 10px; border: 1px solid #d7e5da; border-radius: 999px; background: rgba(255,255,255,.75); color: #477354; font-size: 11px; font-weight: 700; cursor: pointer; }
+.hadith-daily-summary { display: grid; width: 100%; gap: 8px; padding: 12px 19px 18px; text-align: left; border: 0; background: transparent; cursor: pointer; }
+.hadith-daily-category { color: #6a8170; font-size: 10px; font-weight: 700; }
+.hadith-daily-summary > strong { max-width: 940px; color: #294333; font-size: clamp(15px, 1.5vw, 18px); font-weight: 700; line-height: 1.7; }
+.hadith-daily-reference { color: #61796a; font-size: 11px; }
+.hadith-daily-open { display: inline-flex; align-items: center; gap: 6px; margin-top: 3px; color: #38764e; font-size: 12px; font-weight: 750; }
+.hadith-library { max-width: 1050px; margin: 0 auto; }
+.hadith-page-heading { display: grid; gap: 10px; }
+.hadith-page-heading h1 { margin: 0; font-size: clamp(24px, 3vw, 34px); letter-spacing: -.035em; }
+.hadith-page-heading p { margin: 0; color: var(--release-muted); font-size: 12px; }
+.hadith-detail-card { display: grid; gap: 15px; padding: clamp(18px, 3vw, 30px); border: 1px solid #dfebe1; border-radius: 22px; background: #f4f8f4; }
+.hadith-detail-kicker { display: flex; align-items: center; gap: 8px; color: #4d7959; font-size: 12px; font-weight: 750; }
+.hadith-detail-summary { margin: 0; color: #2c4934; font-size: clamp(16px, 1.8vw, 20px); line-height: 1.8; font-weight: 700; }
+.hadith-detail-divider { height: 1px; background: #dfe9e1; }
+.hadith-detail-card h2 { margin: 0; color: #405f49; font-size: 14px; }
+.hadith-detail-text { margin: 0; color: #37493d; font-size: 15px; line-height: 2; white-space: pre-wrap; }
+.hadith-detail-meta { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin: 4px 0 0; }
+.hadith-detail-meta > div { padding: 11px 13px; border: 1px solid #e2ebe4; border-radius: 13px; background: rgba(255,255,255,.76); }
+.hadith-detail-meta dt { margin-bottom: 5px; color: #7a8a7f; font-size: 10px; }
+.hadith-detail-meta dd { margin: 0; color: #304a38; font-size: 12px; font-weight: 700; }
+.hadith-detail-navigation { display: flex; justify-content: space-between; gap: 12px; }
+.hadith-category-section { display: grid; gap: 14px; }
+.hadith-category-section h2 { margin: 2px 0 0; font-size: 18px; }
+.hadith-category-grid { display: flex; flex-wrap: wrap; gap: 9px; }
+.hadith-category-chip { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 36px; padding: 8px 13px; border: 1px solid #e1e8e2; border-radius: 999px; background: #fff; color: #53665a; font-size: 12px; font-weight: 650; cursor: pointer; }
+.hadith-category-chip.selected { border-color: #b9d2bf; background: #eaf4ec; color: #316c47; }
+.hadith-list-grid { display: grid; gap: 10px; }
+.hadith-list-card { display: grid; grid-template-columns: 34px 1fr 18px; align-items: center; gap: 12px; width: 100%; padding: 15px; border: 1px solid #e5ebe6; border-radius: 16px; background: #fff; text-align: left; cursor: pointer; transition: border-color .18s ease, transform .18s ease; }
+.hadith-list-card:hover { border-color: #c8dccd; transform: translateY(-1px); }
+.hadith-list-number { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 11px; background: #eef5ef; color: #4c7656; font-size: 12px; font-weight: 800; }
+.hadith-list-copy { display: grid; gap: 5px; }
+.hadith-list-copy small { color: #7b8c80; font-size: 10px; }
+.hadith-list-copy strong { color: #30453a; font-size: 13px; line-height: 1.6; }
+.hadith-list-copy em { color: #718176; font-size: 10px; font-style: normal; }
+
+/* Goals and the 71-stage journey. */
+.goals-page-heading h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); }
+.goals-mode-tabs { display: flex; gap: 6px; width: fit-content; padding: 5px; border: 1px solid #e3eae4; border-radius: 15px; background: #edf2ee; }
+.goals-mode-tabs button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 17px; border: 0; border-radius: 11px; background: transparent; color: #6b7d71; font-size: 13px; font-weight: 700; cursor: pointer; }
+.goals-mode-tabs button.selected { background: #fff; color: #2f6f46; box-shadow: 0 2px 8px rgba(32,56,38,.08); }
+.journey-current-hero { --hero-accent: var(--module-accent); display: grid; gap: 12px; padding: clamp(21px, 3vw, 32px); border: 1px solid var(--module-border); border-radius: 23px; background: var(--module-bg); text-align: center; }
+.journey-current-kicker { color: var(--module-accent); }
+.journey-current-hero h2 { margin: 0; color: #2c4134; font-size: clamp(22px, 2.6vw, 30px); letter-spacing: -.03em; }
+.journey-current-dates { margin: 0; color: #758278; font-size: 11px; }
+.journey-current-index, .journey-current-meta { display: flex; justify-content: space-between; gap: 15px; width: min(100%, 760px); margin: 0 auto; color: #637469; font-size: 11px; font-weight: 700; }
+.journey-current-track { width: min(100%, 760px); height: 10px; margin: 0 auto; background: rgba(57,94,66,.12); }
+.journey-current-track span { background: var(--module-accent); }
+.journey-current-meta { padding-top: 2px; }
+.journey-current-meta div { display: grid; gap: 3px; }
+.journey-current-meta div:last-child { text-align: right; }
+.journey-current-meta strong { color: #31483a; font-size: 13px; }
+.journey-current-meta small { color: #728176; font-size: 10px; }
+.journey-module-intro, .goal-section-heading, .stage-section-head, .goal-linked-stages { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.journey-module-intro h2, .goal-section-heading h2, .stage-section-head h2 { margin: 3px 0 0; font-size: 19px; letter-spacing: -.02em; }
+.journey-module-intro > span { color: #718176; font-size: 11px; font-weight: 650; }
+.journey-modules-list { display: grid; gap: 24px; }
+.journey-module-card { padding: 18px; border: 1px solid var(--module-border); border-radius: 20px; background: var(--module-bg); }
+.journey-module-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+.journey-module-heading span { color: var(--module-accent); font-size: 11px; font-weight: 800; }
+.journey-module-heading h3 { margin: 3px 0 0; color: #304439; font-size: 18px; }
+.journey-module-heading > strong { color: var(--module-accent); font-size: 12px; }
+.journey-module-track { height: 6px; margin-bottom: 14px; background: rgba(54,91,65,.1); }
+.journey-module-track span { background: var(--module-accent); }
+.journey-stage-list { display: grid; gap: 8px; }
+.journey-stage-row { display: grid; grid-template-columns: 34px minmax(0,1fr) auto 16px; align-items: center; gap: 11px; width: 100%; min-height: 76px; padding: 11px 13px; border: 1px solid rgba(225,234,227,.9); border-radius: 14px; background: rgba(255,255,255,.9); text-align: left; cursor: pointer; transition: border-color .18s ease, transform .18s ease, box-shadow .18s ease; }
+.journey-stage-row:hover { border-color: var(--module-accent); transform: translateY(-1px); box-shadow: 0 5px 15px rgba(36,57,42,.055); }
+.journey-stage-index { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 10px; background: #eef2ef; color: #68786d; font-size: 12px; font-weight: 800; }
+.journey-stage-row.stage-completed .journey-stage-index { background: #e4f3e8; color: #328050; }
+.journey-stage-row.stage-current { border-color: color-mix(in srgb, var(--module-accent), white 45%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--module-accent), white 72%); }
+.journey-stage-row.stage-current .journey-stage-index { background: var(--module-bg); color: var(--module-accent); }
+.journey-stage-main { display: grid; gap: 3px; min-width: 0; }
+.journey-stage-main strong { color: #304539; font-size: 12px; line-height: 1.4; }
+.journey-stage-main small { color: #7a887e; font-size: 10px; }
+.journey-stage-main em { color: var(--module-accent); font-size: 10px; font-style: normal; }
+.journey-stage-mini-track { height: 4px; margin-top: 3px; background: #edf1ee; }
+.journey-stage-mini-track i { background: var(--module-accent); }
+.journey-stage-trailing { display: grid; gap: 3px; justify-items: end; text-align: right; }
+.journey-stage-trailing b { color: var(--module-accent); font-size: 11px; }
+.journey-stage-trailing small { color: #78867d; font-size: 9px; }
+.stage-detail-heading { display: grid; gap: 9px; }
+.stage-detail-heading h1 { margin: 0; color: #2d4235; font-size: clamp(23px, 3vw, 31px); }
+.stage-detail-heading p { margin: 0; color: #7b887f; font-size: 11px; }
+.stage-detail-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 18px; border: 1px solid var(--module-border); border-radius: 16px; background: var(--module-bg); }
+.stage-detail-status span { color: #66766c; font-size: 11px; }
+.stage-detail-status strong { color: var(--module-accent); font-size: 12px; }
+.stage-observation-summary { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+.stage-observation-summary > div { display: grid; gap: 4px; min-height: 72px; align-content: center; padding: 12px; border: 1px solid #e5ebe6; border-radius: 14px; background: #fff; }
+.stage-observation-summary strong { color: #365c43; font-size: 16px; }
+.stage-observation-summary span { color: #7a887f; font-size: 10px; }
+.stage-observation-panel, .stage-reward-panel, .goal-plans-section { display: grid; gap: 15px; padding: 19px; border: 1px solid #e4ebe5; border-radius: 19px; background: #fff; }
+.stage-mood-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 7px; }
+.stage-mood-option { display: grid; justify-items: center; gap: 5px; min-height: 67px; padding: 9px 4px; border: 1px solid #e6ece7; border-radius: 12px; background: #fafcfb; cursor: pointer; }
+.stage-mood-option span { font-size: 20px; }
+.stage-mood-option small { color: #718075; font-size: 9px; }
+.stage-mood-option.selected { border-color: #a9cdb1; background: #edf6ef; box-shadow: inset 0 0 0 1px #d5e9d9; }
+.stage-observation-form, .stage-reward-panel form { display: grid; gap: 12px; }
+.stage-observation-list { display: grid; gap: 10px; }
+.stage-observation-item { display: grid; gap: 9px; padding: 14px; border: 1px solid #e5ebe6; border-radius: 15px; background: #fbfcfb; }
+.stage-observation-item-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.stage-observation-item-head > div { display: grid; gap: 4px; }
+.stage-observation-item-head strong { color: #344d3c; font-size: 12px; }
+.stage-observation-item-head span { color: #849087; font-size: 10px; }
+.stage-observation-item p { margin: 0; color: #516258; font-size: 12px; line-height: 1.7; white-space: pre-wrap; }
+.stage-observation-item p b { color: #364e3d; }
+.stage-context-chip { padding: 5px 8px; border-radius: 999px; font-size: 9px !important; font-weight: 700; }
+.stage-context-chip.context-positive { background: #e8f4e9; color: #39744a; }
+.stage-context-chip.context-difficult { background: #f7eee9; color: #986644; }
+.stage-context-chip.context-neutral { background: #eef2f0; color: #687970; }
+.stage-observation-actions { display: flex; gap: 12px; }
+.stage-observation-actions button { padding: 4px 0; border: 0; background: transparent; color: #557a60; font-size: 11px; font-weight: 700; cursor: pointer; }
+.stage-observation-actions button:last-child { color: #a46b69; }
+.stage-empty-state, .goal-empty-state { margin: 0; padding: 17px; border: 1px solid #e6ece7; border-radius: 14px; background: #f8faf8; color: #78867d; font-size: 12px; line-height: 1.7; }
+.stage-feedback { margin: 0; color: #40734d; font-size: 11px; }
+.stage-reward-panel { background: #f7f9f6; }
+.stage-reward-panel h2 { margin: 2px 0 0; font-size: 17px; }
+.stage-verified-badge { display: inline-flex; align-items: center; gap: 7px; width: fit-content; padding: 7px 11px; border: 1px solid #cbe5d1; border-radius: 999px; background: #e9f6ec; color: #2f7b49; font-size: 11px; font-weight: 750; }
+
+/* Date-bounded goals / academic planning. */
+.metric-grid-three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+.goal-section-heading h2 { margin: 0; }
+.goal-create-form { padding: 17px; border: 1px solid #dfe8e1; border-radius: 16px; background: #f6f9f6; }
+.deadline-plan-list { display: grid; gap: 13px; }
+.deadline-plan-card { display: grid; gap: 12px; padding: 18px; border: 1px solid #e4ebe5; border-radius: 18px; background: #fff; box-shadow: 0 4px 15px rgba(35,55,40,.025); }
+.deadline-plan-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.deadline-plan-heading h3 { margin: 3px 0 0; color: #30453a; font-size: 16px; }
+.deadline-plan-heading p { margin: 5px 0 0; color: #7b887f; font-size: 11px; line-height: 1.6; }
+.deadline-category { color: #64836b; font-size: 10px; font-weight: 750; }
+.deadline-goal-actions { display: flex; gap: 6px; }
+.deadline-countdown { display: flex; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 12px; background: #f5f8f5; }
+.deadline-countdown strong { color: #396a46; font-size: 12px; }
+.deadline-countdown span { color: #7b887e; font-size: 10px; }
+.goal-linked-stages { flex-wrap: wrap; justify-content: flex-start; gap: 6px; }
+.goal-linked-stages > span:first-child { color: #7b897f; font-size: 10px; margin-right: 3px; }
+.goal-linked-stages > button, .goal-linked-stages > .goal-linked-more { display: inline-flex; align-items: center; min-height: 25px; padding: 4px 8px; border: 1px solid #dce8df; border-radius: 999px; background: #f1f7f2; color: #4f7657; font-size: 9px; font-weight: 700; }
+.goal-linked-stages > button { cursor: pointer; }
+.goal-linked-stages > button:hover { border-color: #a9c9b0; background: #e8f3ea; }
+.goal-linked-stages > .goal-linked-more { background: #f5f6f4; color: #78867d; }
+.deadline-progress { height: 6px; }
+.deadline-progress span { background: #4e8b5d; }
+.deadline-progress-label { display: flex; justify-content: space-between; color: #75847a; font-size: 10px; }
+.deadline-progress-label strong { color: #467a50; }
+.deadline-task-list { display: grid; gap: 7px; }
+.deadline-task-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 9px 10px; border: 1px solid #edf1ed; border-radius: 11px; background: #fcfdfc; }
+.deadline-task-row label { display: flex; align-items: flex-start; gap: 9px; min-width: 0; cursor: pointer; }
+.deadline-task-row label > span { display: grid; gap: 3px; }
+.deadline-task-row strong { color: #415449; font-size: 11px; }
+.deadline-task-row small { color: #89948d; font-size: 9px; }
+.deadline-task-row.is-done strong { color: #89948d; text-decoration: line-through; }
+.deadline-add-task { justify-self: start; }
+.goal-empty-state strong { display: block; margin-bottom: 5px; color: #4d6855; }
+.goal-empty-state p { margin: 0; }
+
+/* Notification popover: no standalone notification page. */
+.notification-popover-wrap { position: relative; display: inline-flex; }
+.notification-trigger { position: relative; }
+.notification-trigger > i { position: absolute; top: 7px; right: 7px; width: 7px; height: 7px; border: 1px solid #fff; border-radius: 50%; background: #d56d64; }
+.notification-popover { position: absolute; z-index: 150; top: calc(100% + 12px); right: -48px; display: grid; gap: 10px; width: min(400px, calc(100vw - 24px)); max-height: min(620px, calc(100vh - 90px)); padding: 14px; border: 1px solid #e1e8e2; border-radius: 18px; background: #fff; box-shadow: 0 18px 48px rgba(24,44,30,.16); }
+.notification-popover-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.notification-popover-header > div { display: grid; gap: 3px; }
+.notification-popover-header strong { color: #2f4336; font-size: 15px; }
+.notification-popover-header small { color: #809086; font-size: 10px; }
+.notification-popover-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.notification-popover-actions button { padding: 6px 9px; border: 1px solid #e5ebe6; border-radius: 9px; background: #f8faf8; color: #5e7164; font-size: 10px; font-weight: 650; cursor: pointer; }
+.notification-popover-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.notification-popover-list { display: grid; gap: 7px; overflow: auto; min-height: 80px; }
+.notification-popover-item { position: relative; display: grid; grid-template-columns: minmax(0,1fr) 28px; gap: 6px; padding: 10px; border: 1px solid #e8ede9; border-radius: 12px; background: #fff; }
+.notification-popover-item.unread { background: #f4f8f4; border-color: #dbe8dd; }
+.notification-item-main { display: grid; gap: 5px; min-width: 0; padding: 0; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.notification-item-title { color: #34483a; font-size: 12px; font-weight: 750; }
+.notification-item-summary { color: #708077; font-size: 10px; line-height: 1.55; }
+.notification-item-main small { color: #929e95; font-size: 9px; }
+.notification-delete-button { align-self: start; display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #edf0ed; border-radius: 8px; background: #fff; color: #9a7874; cursor: pointer; }
+.notification-item-detail { grid-column: 1 / -1; padding: 9px 10px; border-radius: 9px; background: #f7f9f7; color: #566a5d; font-size: 10px; line-height: 1.7; }
+.notification-item-detail small { display: block; margin-top: 4px; color: #78867c; }
+.notification-empty { padding: 22px 10px; text-align: center; color: #87948b; font-size: 11px; }
+.notification-list-foot { margin: 0; color: #87938a; font-size: 9px; text-align: center; }
+
+/* Three-column prohibited prayer windows. */
+.forbidden-prayer-times { display: grid; gap: 9px; margin-top: 4px; padding: 13px; border: 1px solid #eee2d5; border-radius: 14px; background: #fbf7f1; }
+.forbidden-prayer-heading { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 7px; }
+.forbidden-prayer-heading strong { color: #8a6135; font-size: 12px; }
+.forbidden-prayer-heading small { color: #a08d78; font-size: 9px; }
+.forbidden-prayer-times > div:not(.forbidden-prayer-heading) { display: flex; justify-content: space-between; gap: 12px; padding-top: 7px; border-top: 1px solid #f0e7dc; }
+.forbidden-prayer-times > div > span { color: #7d715f; font-size: 10px; }
+.forbidden-prayer-times > div > strong { color: #80613e; font-size: 10px; }
+
+.workspace-footer, .login-personal-footer { display: grid; justify-items: center; gap: 3px; padding: 24px 16px calc(24px + env(safe-area-inset-bottom)); border-top: 1px solid #e7ece8; color: #7a877e; text-align: center; }
+.workspace-footer span, .login-personal-footer span { font-size: 11px; line-height: 1.6; font-weight: 650; }
+.login-personal-footer { width: min(100%, 540px); margin: 18px auto 0; padding-top: 15px; border-top: 0; }
+
+@media (max-width: 800px) {
+  .dashboard-journey-card { grid-template-columns: 1fr; gap: 14px; }
+  .dashboard-journey-side { grid-template-columns: 88px 1fr; }
+  .stage-observation-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .stage-mood-grid { grid-template-columns: repeat(4,minmax(0,1fr)); }
+  .metric-grid-three { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 600px) {
+  .view-stack { gap: 17px; }
+  .dashboard-date-card { width: 100%; justify-content: center; min-height: 34px; padding: 6px 9px; font-size: 10px; }
+  .dashboard-journey-card { padding: 18px; border-radius: 18px; }
+  .dashboard-journey-main h1 { font-size: 24px; }
+  .dashboard-journey-progress-meta { font-size: 9px; }
+  .dashboard-journey-side { grid-template-columns: 78px 1fr; }
+  .dashboard-journey-stage-number { min-height: 92px; }
+  .dashboard-journey-stage-number strong { font-size: 29px; }
+  .metric-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+  .metric-card { min-height: 118px; padding: 13px; border-radius: 15px; }
+  .hadith-daily-head { padding: 13px 14px 0; }
+  .hadith-daily-summary { padding: 10px 14px 15px; }
+  .hadith-daily-summary > strong { font-size: 14px; line-height: 1.75; }
+  .goals-mode-tabs { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+  .goals-mode-tabs button { justify-content: center; padding-inline: 8px; }
+  .journey-current-hero { padding: 20px 15px; border-radius: 18px; }
+  .journey-current-hero h2 { font-size: 22px; }
+  .journey-current-index { font-size: 9px; }
+  .journey-current-meta strong { font-size: 11px; }
+  .journey-module-card { padding: 12px; border-radius: 16px; }
+  .journey-stage-row { grid-template-columns: 29px minmax(0,1fr) 68px; gap: 8px; padding: 10px 9px; }
+  .journey-stage-row > svg:last-child { display: none; }
+  .journey-stage-index { width: 27px; height: 27px; font-size: 10px; }
+  .journey-stage-main strong { font-size: 11px; }
+  .journey-stage-main small { font-size: 9px; }
+  .journey-stage-trailing b { font-size: 10px; }
+  .journey-stage-trailing small { font-size: 8px; }
+  .stage-observation-summary { gap: 7px; }
+  .stage-observation-summary > div { min-height: 63px; padding: 9px; }
+  .stage-observation-summary strong { font-size: 13px; }
+  .stage-observation-summary span { font-size: 9px; }
+  .stage-observation-panel, .stage-reward-panel, .goal-plans-section { padding: 14px; border-radius: 16px; }
+  .stage-section-head { align-items: flex-start; }
+  .stage-section-head h2 { font-size: 15px; }
+  .stage-mood-grid { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 6px; }
+  .stage-mood-option { min-height: 58px; }
+  .stage-mood-option small { font-size: 8px; }
+  .tracker-form-grid { grid-template-columns: 1fr 1fr; }
+  .metric-grid-three { grid-template-columns: 1fr; }
+  .goal-section-heading { align-items: flex-start; }
+  .deadline-plan-card { padding: 14px; border-radius: 16px; }
+  .deadline-countdown { flex-direction: column; gap: 4px; }
+  .hadith-detail-meta { grid-template-columns: 1fr 1fr; }
+  .hadith-detail-text { font-size: 14px; }
+  .hadith-detail-navigation .button-secondary { flex: 1; justify-content: center; padding-inline: 8px; }
+  .hadith-list-card { grid-template-columns: 29px 1fr 15px; gap: 8px; padding: 12px; }
+  .hadith-list-number { width: 28px; height: 28px; }
+  .notification-popover { right: -84px; width: min(370px, calc(100vw - 20px)); }
+  .workspace-section-back { margin-bottom: -3px; }
+  .workspace-footer { padding-bottom: calc(95px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-journey-progress span, .journey-current-track span, .journey-module-track span, .journey-stage-mini-track i,
+  .metric-card, .journey-stage-row, .section-back-button { transition: none !important; }
+}
+
+/* Release 1.2.2: consistent section entry and return controls. */
+.page-intro { align-items: flex-start; }
+.page-intro-main { display: grid; justify-items: start; gap: 11px; min-width: 0; }
+.page-intro-main > div { min-width: 0; }
+.goals-page-heading { display: grid; justify-items: start; gap: 11px; }
+.goals-page-heading > div { display: grid; gap: 4px; }
+.tracker-page-heading { align-items: flex-start; }
+.tracker-page-heading-copy { display: grid; justify-items: start; gap: 11px; min-width: 0; }
+.tracker-page-heading-copy > div { display: grid; gap: 4px; }
+.page-intro-main .section-back-button,
+.goals-page-heading .section-back-button,
+.tracker-page-heading .section-back-button { min-height: 36px; padding: 7px 12px; font-size: 12px; }
+@media (max-width: 600px) {
+  .page-intro { align-items: flex-start; }
+  .page-intro-main { width: 100%; gap: 10px; }
+  .goals-page-heading { width: 100%; gap: 10px; }
+  .tracker-page-heading { gap: 10px; }
+  .tracker-page-heading-copy { gap: 10px; }
+  .tracker-heading-mark { flex: 0 0 auto; width: 40px; height: 40px; }
+  .page-intro-main .section-back-button,
+  .goals-page-heading .section-back-button,
+  .tracker-page-heading .section-back-button { min-height: 34px; padding: 6px 10px; font-size: 11px; }
+}
+
+.dashboard-date-card > span:first-child { direction: ltr; font-variant-numeric: tabular-nums; letter-spacing: .005em; }
+.goals-page-heading { gap: 12px; }
+.goal-linked-stages { flex-wrap: wrap; justify-content: flex-start; }

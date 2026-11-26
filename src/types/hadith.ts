@@ -1,9 +1,9 @@
-export interface HadithCategory {
+export type HadithCategory = {
   id: string;
   name: string;
-}
+};
 
-export interface HadithRecord {
+export type HadithRecord = {
   id: string;
   category_id: string;
   summary: string;
@@ -12,14 +12,9 @@ export interface HadithRecord {
   book: string;
   hadith_number: string;
   chapter: string;
-  source_edition?: string;
-  grading?: string;
-  reference_url?: string;
-  translator?: string;
-  arabic_text?: string;
-}
+};
 
-export interface HadithDataset {
+export type HadithDataset = {
   categories: HadithCategory[];
   hadiths: HadithRecord[];
-}
+};

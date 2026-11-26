@@ -16,7 +16,7 @@ test('workspace uses a versioned online-first workspace snapshot', () => {
   const source = read('../src/lib/local/store.ts');
   assert.match(source, /schemaVersion: 3/);
   assert.match(source, /fetch\("\/api\/workspace"/);
-  assert.match(source, /Supabase-এ নিরাপদে সংরক্ষণ হচ্ছে/);
+  assert.match(source, /পরিবর্তন অনলাইনে সংরক্ষণ হচ্ছে/);
   assert.doesNotMatch(source, /writeIndexedData/);
   assert.doesNotMatch(source, /localStorage\.setItem/);
 });

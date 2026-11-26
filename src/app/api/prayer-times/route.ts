@@ -12,6 +12,11 @@ function cleanTime(value: unknown): string {
 function json(body: object, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, max-age=300, stale-while-revalidate=3600" } });
 }
+function shiftClock(value: string, offset: number) {
+  const [hour, minute] = value.split(":").map(Number);
+  const total = (hour * 60 + minute + offset + 1440) % 1440;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
 
 /**
  * Prayer time adapter: AlAdhan, Karachi calculation method (1), Hanafi Asr school (1).
@@ -44,6 +49,11 @@ export async function GET(request: NextRequest) {
     const normalized = {
       date, fajr: cleanTime(timings.Fajr), sunrise: cleanTime(timings.Sunrise), dhuhr: cleanTime(timings.Dhuhr),
       asr: cleanTime(timings.Asr), maghrib: cleanTime(timings.Maghrib), isha: cleanTime(timings.Isha),
+      forbiddenTimes: {
+        sunriseStart: cleanTime(timings.Sunrise), sunriseEnd: shiftClock(cleanTime(timings.Sunrise), 15),
+        zawalStart: shiftClock(cleanTime(timings.Dhuhr), -5), zawalEnd: cleanTime(timings.Dhuhr),
+        sunsetStart: shiftClock(cleanTime(timings.Maghrib), -5), sunsetEnd: cleanTime(timings.Maghrib)
+      },
       source: "আলআযান সেবা · করাচি গণনা (১) · হানাফি আসর (১)", fetchedAt: new Date().toISOString(),
       latitude: lat, longitude: lon, method: 1, school: 1
     };

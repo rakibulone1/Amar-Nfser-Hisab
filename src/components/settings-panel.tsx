@@ -95,7 +95,7 @@ export function SettingsPanel({ displayName, phone, timeZone, maghribTime, maghr
         <div className="theme-options">
           {themeOptions.map(({ value, label, icon: Icon }) => <button key={value} type="button" className={`theme-option ${theme === value ? "selected" : ""}`} onClick={() => setTheme(value)}><Icon size={18} /><span>{label}</span>{theme === value && <span className="selected-dot" />}</button>)}
         </div>
-        <p className="settings-hint">থিমের পছন্দ Supabase অ্যাকাউন্টে সংরক্ষিত হয় এবং অন্য ডিভাইসেও একইভাবে ফিরে আসে।</p>
+        <p className="settings-hint">থিমের পছন্দ তোমার অ্যাকাউন্টে অনলাইনে সংরক্ষিত হয় এবং অন্য ডিভাইসেও ফিরে আসে।</p>
       </section>
 
       <section className="panel settings-card">
