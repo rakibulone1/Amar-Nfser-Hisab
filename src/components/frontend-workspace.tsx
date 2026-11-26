@@ -19,7 +19,7 @@ import { SURAHS } from "@/modules/journal/surahs";
 import { PrayerTimeWidget } from "@/modules/trackers/prayer-time-widget";
 import { PrayerSettingsPanel, PrayerReminderEngine } from "@/modules/trackers/prayer-settings";
 import {
-  createLocalId, getCloudSyncMessage, getCloudSyncState, getLocalDataSnapshot, getLocalJournalDate, getWorkspaceLoadError,
+  createLocalId, getCloudSyncMessage, getCloudSyncState, getLocalDataSnapshot, getLocalDataServerSnapshot, getLocalJournalDate, getWorkspaceLoadError,
   hydrateLocalData, replaceLocalData, subscribeLocalData, updateLocalData, flushLocalData,
   type AppSection, type DeadlinePlan, type DeadlineTask, type JourneyMilestone, type JourneyObservation, type PrayerId, type PrayerEntry, type ReminderEvent
 } from "@/lib/local/store";

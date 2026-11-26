@@ -17,7 +17,7 @@
     "test:phase03": "node --test tests/phase03-contract.test.mjs",
     "test:phase04": "node --test tests/phase04-env-ui-contract.test.mjs",
     "test:frontend": "node --test tests/frontend-phase06.test.mjs",
-    "test:all": "npm run test:phase02 && npm run test:phase03 && npm run test:phase04 && npm run test:phase05 && npm run test:phase06 && npm run test:phase07 && npm run test:phase08 && npm run test:phase08followup && npm run test:phase10 && npm run test:release-ui && npm run test:phase11 && npm run test:phase12 && npm run test:phase13 && npm test",
+    "test:all": "npm run test:phase02 && npm run test:phase03 && npm run test:phase04 && npm run test:phase05 && npm run test:phase06 && npm run test:phase07 && npm run test:phase08 && npm run test:phase08followup && npm run test:phase10 && npm run test:release-ui && npm run test:phase11 && npm run test:phase12 && npm run test:phase13 && npm test && npm run test:phase14",
     "test:phase05": "node --test tests/phase05-performance.test.mjs",
     "test:phase07": "node --test tests/phase07-contract.test.mjs",
     "test:phase06": "node --test tests/frontend-phase06.test.mjs",
@@ -29,7 +29,8 @@
     "verify:release": "npm run test:all && npm run typecheck && npm run lint && npm run build",
     "test:phase11": "node --test tests/phase11-online-snapshot.test.mjs",
     "test:phase12": "node --test tests/phase12-release.test.mjs",
-    "test:phase13": "node --test tests/phase13-release-hardening.test.mjs"
+    "test:phase13": "node --test tests/phase13-release-hardening.test.mjs",
+    "test:phase14": "node --test tests/phase14-server-snapshot-import.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

@@ -1,4 +1,4 @@
-Base archive: Amar Nfser Hisab(1).zip
-Base package version: 1.1.0
-Target package version: 1.2.2
-Patch type: Incremental overlay (only changed and added project files)
+Base: Amar Nfser Hisab Release 1.2.2 (after applying Release 1.2.2 Relational Journey & Hadith patch)
+Hotfix: Release 1.2.2 Build Fix 01
+Scope: Missing named import for getLocalDataServerSnapshot and regression coverage.
+No database changes. No environment changes.
