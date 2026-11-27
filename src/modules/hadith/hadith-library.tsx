@@ -38,16 +38,18 @@ export function HadithLibrary() {
     const next = group[index + 1] ?? null;
     const category = DATA.categories.find((item) => item.id === current.category_id);
     return <main className="hadith-library view-stack">
-      <div className="hadith-page-heading">
-        <button type="button" className="section-back-button" onClick={() => router.push("/dashboard")} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
-        <div className="hadith-page-title"><span className="eyebrow">{category?.name || "হাদিস পাঠ"}</span><h1>হাদিসের বিস্তারিত</h1></div>
-      </div>
+      <header className="hadith-page-heading section-heading-unified">
+        <button type="button" className="section-back-button" onClick={() => router.push("/dashboard")} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={16}/><span>ফিরে যাও</span></button>
+        <div className="page-intro-title-chip"><h1>হাদিসের বিস্তারিত</h1></div>
+        <span className="section-heading-spacer" aria-hidden="true"/>
+      </header>
       <article className="hadith-detail-card">
         <div className="hadith-detail-kicker"><BookOpen size={17}/><span>{category?.name || "হাদিস"}</span></div>
         <p className="hadith-detail-summary">{current.summary}</p>
         <div className="hadith-detail-divider"/>
         <h2>হাদিসের বাংলা অর্থ</h2>
         <p className="hadith-detail-text">{current.full_text_bn}</p>
+        <div className="hadith-reference-ribbon"><span>মূল সূত্র</span><strong>{referenceLine(current)}</strong></div>
         <dl className="hadith-detail-meta">
           <div><dt>বর্ণনাকারী</dt><dd>{current.narrator}</dd></div>
           <div><dt>গ্রন্থ</dt><dd>{current.book}</dd></div>
@@ -70,10 +72,11 @@ export function HadithLibrary() {
   }
 
   return <main className="hadith-library view-stack">
-    <div className="hadith-page-heading">
-      <button type="button" className="section-back-button" onClick={() => router.push("/dashboard")} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
-      <div className="hadith-page-title"><span className="eyebrow">বিশুদ্ধ হাদিসের পাঠ</span><h1>{activeCategory ? activeCategory.name : "হাদিসের সংগ্রহ"}</h1></div>
-    </div>
+    <header className="hadith-page-heading section-heading-unified">
+      <button type="button" className="section-back-button" onClick={() => router.push("/dashboard")} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={16}/><span>ফিরে যাও</span></button>
+      <div className="page-intro-title-chip"><h1>{activeCategory ? activeCategory.name : "হাদিসের সংগ্রহ"}</h1></div>
+      <span className="section-heading-spacer" aria-hidden="true"/>
+    </header>
     <div className="hadith-category-grid">
       <button type="button" className={`hadith-category-chip ${!categoryId ? "selected" : ""}`} onClick={() => openList()}>সব হাদিস</button>
       {DATA.categories.map((item) => <button type="button" key={item.id} className={`hadith-category-chip ${categoryId === item.id ? "selected" : ""}`} onClick={() => openList(item.id)}>{item.name}</button>)}

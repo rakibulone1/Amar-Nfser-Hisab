@@ -40,7 +40,7 @@ const tabItems: { id: JournalKind; label: string; icon: typeof MoonStar }[] = [
   { id: "daily", label: "দৈনিক জার্নাল", icon: FileText }
 ];
 function currentLocalDate() { const now = new Date(); return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`; }
-function dateLabel(value?: string) { if (!value) return ""; return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`)); }
+function dateLabel(value?: string) { if (!value) return ""; return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${value}T12:00:00`)); }
 async function parseResponse<T>(response: Response) { return response.json() as Promise<T & { message?: string }>; }
 
 async function compressImage(source: File): Promise<File> {

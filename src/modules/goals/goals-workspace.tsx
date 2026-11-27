@@ -23,7 +23,7 @@ function daysBetween(start: string, end = todayKey()) {
   return Math.max(0, Math.floor((b.getTime() - a.getTime()) / 86_400_000));
 }
 function dateLabel(value: string) {
-  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", year: "numeric" }).format(new Date(`${value}T12:00:00`));
+  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "long", year: "numeric" }).format(new Date(`${value}T12:00:00`));
 }
 async function responseData<T>(response: Response): Promise<T & { message?: string }> {
   return response.json() as Promise<T & { message?: string }>;

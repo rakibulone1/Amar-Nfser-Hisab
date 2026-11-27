@@ -9,6 +9,7 @@ import {
 import { SURAHS } from "@/modules/journal/surahs";
 import {
   createWorkspaceRecordId, getWorkspaceData, getJournalDate, PRAYER_NAMES, updateWorkspaceData,
+  flushWorkspaceChanges, getCloudSyncState, getCloudSyncMessage,
   type AvoidEntry, type DeedEntry, type DhikrSession, type FastingEntry,
   type HabitDefinition, type HabitLog, type WorkspaceData, type PrayerComponentResult,
   type PrayerEntry, type PrayerId,
@@ -35,6 +36,10 @@ const GOOD_CATEGORIES = ["সদকা ও দান", "কাউকে সা�
 const AVOIDANCE_STATUSES = [{ value: "avoided", label: "এড়িয়ে থাকতে পেরেছি" }, { value: "challenging", label: "কঠিন পরিস্থিতি এসেছে" }, { value: "slipped", label: "পরিকল্পনা অনুযায়ী হয়নি" }] as const;
 const today = () => { const data = getWorkspaceData(); return getJournalDate(new Date(), data.preferences.timeZone || "Asia/Dhaka", data.preferences.maghribTime || null); };
 const bn = (value: number) => value.toLocaleString("bn-BD");
+function formatTrackerDate(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(`${value}T12:00:00.000Z`));
+}
 const makeId = () => createWorkspaceRecordId();
 function isFutureInstant(value: Date): boolean { return value.getTime() > Date.now(); }
 
@@ -411,16 +416,139 @@ function ReflectionForm({ data, onSaved }: { data: WorkspaceData; onSaved: () =>
   return <form className="tracker-form" onSubmit={submit}><Field label="তারিখ"><TextInput type="date" value={date} onChange={(e) => { setDate(e.target.value); const value = data.reflections.find((x) => x.date === e.target.value); setGood(value?.goodToday || ""); setMistake(value?.mistakeToday || ""); setLesson(value?.lesson || ""); setGratitude(value?.gratitude || ""); setTomorrow(value?.tomorrowFocus || ""); setMood(value?.mood || ""); }}/></Field><Field label="আজকের ভালো কাজ কী ছিল?"><TextArea rows={2} value={goodToday} onChange={(e) => setGood(e.target.value)}/></Field><Field label="কোন বিষয়টি আরও ভালো করতে পারতাম?"><TextArea rows={2} value={mistakeToday} onChange={(e) => setMistake(e.target.value)}/></Field><Field label="আজ কী শিখেছি?"><TextArea rows={2} value={lesson} onChange={(e) => setLesson(e.target.value)}/></Field><Field label="কোন বিষয়ে কৃতজ্ঞ? (ঐচ্ছিক)"><TextArea rows={2} value={gratitude} onChange={(e) => setGratitude(e.target.value)}/></Field><Field label="আগামীকালের একটি অগ্রাধিকার"><TextInput value={tomorrowFocus} onChange={(e) => setTomorrow(e.target.value)}/></Field><Field label="আজকের অনুভূতি (ঐচ্ছিক)"><Select value={mood} onChange={(e) => setMood(e.target.value)}><option value="">নির্বাচন করিনি</option><option value="calm">শান্ত</option><option value="hopeful">আশাবাদী</option><option value="tired">ক্লান্ত</option><option value="focused">মনোযোগী</option><option value="mixed">মিশ্র অনুভূতি</option></Select></Field><SaveButton>মুহাসাবা সংরক্ষণ</SaveButton></form>;
 }
 
-function TrackerHistory({ kind, data, onEditPrayer }: { kind: TrackerKind; data: WorkspaceData; onEditPrayer?: (entry: PrayerEntry) => void }) {
-  if (kind === "prayer") return <div className="tracker-history-list">{data.prayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{PRAYER_NAMES[item.prayer]} · {item.method === "jamaat" ? "জামাতে" : item.method === "qada" ? "কাজা" : item.method === "not-performed" ? "আদায় হয়নি" : "একাকী"}</strong><small>{item.date} · {item.components.reduce((n, part) => n + part.performedRakats, 0)} রাকাত · {item.takbirStatus === "with-takbir" ? "তাকবিরে উলা" : item.takbirStatus === "late-join" ? `${item.caughtRakats} রাকাত পেয়েছ` : item.takbirStatus === "without-takbir" ? "তাকবিরে উলা ছাড়া" : ""}</small></div><div className="tracker-history-actions">{item.method !== "qada" && <button className="tracker-icon-button" type="button" onClick={() => onEditPrayer?.(item)} aria-label="সালাত সম্পাদনা"><Pencil size={14}/></button>}<button className="tracker-icon-button" type="button" onClick={() => deleteLocal(kind, item.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}{data.extraPrayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{item.type}</strong><small>{item.date} · {bn(item.rakats)} রাকাত · {CATEGORY_LABELS[item.category]}</small></div><button className="tracker-icon-button" type="button" onClick={() => updateWorkspaceData((current) => ({ ...current, extraPrayerEntries: current.extraPrayerEntries.filter((x) => x.id !== item.id) }))} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "quran") return <div className="tracker-history-list">{data.quranEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{SURAHS[x.surahFrom - 1]?.name || "সূরা"} · {bn(x.ayahFrom)}–{bn(x.ayahTo)}</strong><small>{x.date} · {bn(x.ayahTo - x.ayahFrom + 1)} আয়াত{ x.pageFrom ? ` · পৃষ্ঠা ${bn(x.pageFrom)}–${bn(x.pageTo || x.pageFrom)}` : ""}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "dhikr") return <div className="tracker-history-list">{data.dhikrSessions.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.title}</strong><small>{x.date} · {bn(x.count)} / {bn(x.target)} বার {x.completed ? "· লক্ষ্য পূর্ণ" : ""}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "fasting") return <div className="tracker-history-list">{data.fastingEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{{ fard: "ফরজ", nafl: "নফল", qada: "কাজা" }[x.category]} · {x.date}</strong><small>{{ completed: "সম্পন্ন", planned: "পরিকল্পিত", "not-kept": "রাখা হয়নি" }[x.status]}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "good") return <div className="tracker-history-list">{data.deedEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.title}</strong><small>{x.category} · {x.date}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "avoid") return <div className="tracker-history-list">{data.avoidEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.habitName}</strong><small>{x.date} · {{ avoided: "এড়িয়ে থাকতে পেরেছি", challenging: "কঠিন পরিস্থিতি", slipped: "পরিকল্পনা অনুযায়ী হয়নি" }[x.status]}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "ilm") return <div className="tracker-history-list">{data.studyEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.resource}</strong><small>{x.date} · {x.subject} · {bn(x.minutes)} মিনিট</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  if (kind === "habit") return <div className="tracker-history-list">{data.habitLogs.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{data.habitDefinitions.find((d) => d.id === x.habitId)?.title || "অভ্যাস"}</strong><small>{x.date} · {x.completed ? "সম্পন্ন" : "অসম্পন্ন"}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
-  return <div className="tracker-history-list">{data.reflections.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.date} · দৈনিক মুহাসাবা</strong><small>{x.tomorrowFocus || x.lesson || "প্রতিফলন সংরক্ষিত"}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
+type EditableTrackerKind = Exclude<TrackerKind, "prayer">;
+type EditableTrackerRecord = Record<string, unknown> & { id: string };
+type EditField = { key: string; label: string; type: "text" | "textarea" | "date" | "number" | "select" | "checkbox"; options?: { value: string; label: string }[]; max?: number };
+const EDIT_COLLECTIONS = {
+  quran: "quranEntries", dhikr: "dhikrSessions", fasting: "fastingEntries", good: "deedEntries",
+  avoid: "avoidEntries", ilm: "studyEntries", habit: "habitLogs", reflection: "reflections"
+} as const;
+const EDIT_FIELDS: Record<EditableTrackerKind, EditField[]> = {
+  quran: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "surahFrom", label: "শুরুর সূরা নম্বর", type: "number" },
+    { key: "ayahFrom", label: "শুরুর আয়াত", type: "number" }, { key: "surahTo", label: "শেষ সূরা নম্বর", type: "number" },
+    { key: "ayahTo", label: "শেষ আয়াত", type: "number" }, { key: "pageFrom", label: "শুরুর পৃষ্ঠা", type: "number" },
+    { key: "pageTo", label: "শেষ পৃষ্ঠা", type: "number" }, { key: "juz", label: "পারা", type: "number" },
+    { key: "note", label: "নোট", type: "textarea", max: 1200 }
+  ],
+  dhikr: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "title", label: "জিকিরের নাম", type: "text", max: 120 },
+    { key: "target", label: "লক্ষ্যমাত্রা", type: "number" }, { key: "count", label: "গণনা", type: "number" },
+    { key: "note", label: "নোট", type: "textarea", max: 1200 }
+  ],
+  fasting: [
+    { key: "date", label: "তারিখ", type: "date" },
+    { key: "category", label: "রোজার ধরন", type: "select", options: [{ value: "fard", label: "ফরজ" }, { value: "nafl", label: "নফল" }, { value: "qada", label: "কাজা" }] },
+    { key: "status", label: "অবস্থা", type: "select", options: [{ value: "planned", label: "পরিকল্পিত" }, { value: "completed", label: "সম্পন্ন" }, { value: "not-kept", label: "রাখা হয়নি" }] },
+    { key: "linkedMissedDate", label: "যে রোজার কাজা (ঐচ্ছিক)", type: "date" }, { key: "reason", label: "কারণ", type: "textarea", max: 1200 }, { key: "note", label: "নোট", type: "textarea", max: 1200 }
+  ],
+  good: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "category", label: "ক্যাটাগরি", type: "text", max: 100 },
+    { key: "title", label: "কাজের নাম", type: "text", max: 140 }, { key: "details", label: "বিবরণ", type: "textarea", max: 1600 }
+  ],
+  avoid: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "habitName", label: "ব্যক্তিগত অভ্যাসের নাম", type: "text", max: 140 },
+    { key: "status", label: "অবস্থা", type: "select", options: [{ value: "avoided", label: "এড়িয়ে থাকতে পেরেছি" }, { value: "challenging", label: "কঠিন পরিস্থিতি এসেছে" }, { value: "slipped", label: "পরিকল্পনা অনুযায়ী হয়নি" }] },
+    { key: "trigger", label: "প্রভাবক পরিস্থিতি", type: "textarea", max: 1200 }, { key: "response", label: "কীভাবে সামলেছ", type: "textarea", max: 1200 }, { key: "note", label: "নোট", type: "textarea", max: 1200 }
+  ],
+  ilm: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "resource", label: "বই / কোর্স / লেকচার", type: "text", max: 160 },
+    { key: "subject", label: "বিষয়", type: "text", max: 120 }, { key: "chapter", label: "অধ্যায় / অংশ", type: "text", max: 160 },
+    { key: "pages", label: "পৃষ্ঠা", type: "number" }, { key: "minutes", label: "সময় (মিনিট)", type: "number" },
+    { key: "takeaway", label: "আজ কী শিখেছ", type: "textarea", max: 1600 }, { key: "note", label: "নোট", type: "textarea", max: 1200 }
+  ],
+  habit: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "completed", label: "অভ্যাস সম্পন্ন", type: "checkbox" },
+    { key: "note", label: "নোট", type: "textarea", max: 1200 }
+  ],
+  reflection: [
+    { key: "date", label: "তারিখ", type: "date" }, { key: "goodToday", label: "আজকের ভালো কাজ", type: "textarea", max: 1600 },
+    { key: "mistakeToday", label: "যে বিষয়টি ভালো করা যেত", type: "textarea", max: 1600 }, { key: "lesson", label: "আজকের শিক্ষা", type: "textarea", max: 1600 },
+    { key: "gratitude", label: "কৃতজ্ঞতার বিষয়", type: "textarea", max: 1200 }, { key: "tomorrowFocus", label: "আগামীকালের অগ্রাধিকার", type: "textarea", max: 1200 },
+    { key: "mood", label: "অনুভূতি", type: "select", options: [{ value: "", label: "নির্বাচন করিনি" }, { value: "calm", label: "শান্ত" }, { value: "hopeful", label: "আশাবাদী" }, { value: "tired", label: "ক্লান্ত" }, { value: "focused", label: "মনোযোগী" }, { value: "mixed", label: "মিশ্র অনুভূতি" }] }
+  ]
+};
+function TrackerRecordEditor({ kind, record, onClose }: { kind: EditableTrackerKind; record: EditableTrackerRecord; onClose: () => void }) {
+  const fields = EDIT_FIELDS[kind];
+  const [values, setValues] = useState<Record<string, string | boolean>>(() => Object.fromEntries(fields.map((field) => {
+    const value = record[field.key];
+    return [field.key, field.type === "checkbox" ? value === true : value == null ? "" : String(value)];
+  })));
+  const [error, setError] = useState("");
+  const title = ({ quran: "কুরআন পাঠ", dhikr: "জিকির", fasting: "সিয়াম", good: "ভালো কাজ", avoid: "ব্যক্তিগত লগ", ilm: "অধ্যয়ন", habit: "অভ্যাস", reflection: "মুহাসাবা" } as const)[kind];
+  function updateField(key: string, value: string | boolean) { setValues((current) => ({ ...current, [key]: value })); }
+  function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const patch: Record<string, unknown> = {};
+    for (const field of fields) {
+      const value = values[field.key];
+      if (field.type === "checkbox") patch[field.key] = value === true;
+      else if (field.type === "number") {
+        const optionalQuranPage = kind === "quran" && ["pageFrom", "pageTo", "juz"].includes(field.key);
+        patch[field.key] = value === "" ? (optionalQuranPage ? null : 0) : Math.max(0, Number(value) || 0);
+      }
+      else patch[field.key] = String(value ?? "").trim();
+    }
+    if (kind === "quran") {
+      const surahFrom = Number(patch.surahFrom); const surahTo = Number(patch.surahTo);
+      const ayahFrom = Number(patch.ayahFrom); const ayahTo = Number(patch.ayahTo);
+      if (surahFrom < 1 || surahFrom > 114 || surahTo < 1 || surahTo > 114 || ayahFrom < 1 || ayahTo < ayahFrom || (surahFrom === surahTo && ayahTo > 300)) { setError("সূরা ও আয়াতের পরিসর সঠিকভাবে দাও।"); return; }
+      for (const key of ["pageFrom", "pageTo", "juz"] as const) if (patch[key] === null || patch[key] === 0) patch[key] = null;
+    }
+    if (kind === "dhikr") {
+      const target = Math.max(1, Number(patch.target) || 1); const count = Math.max(0, Number(patch.count) || 0);
+      patch.target = target; patch.count = count; patch.completed = count >= target;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(patch.date || ""))) { setError("সঠিক তারিখ নির্বাচন করো।"); return; }
+    const collection = EDIT_COLLECTIONS[kind];
+    updateWorkspaceData((current) => {
+      const source = current[collection] as unknown as EditableTrackerRecord[];
+      const updated = source.map((item) => item.id === record.id ? { ...item, ...patch, ...( "updatedAt" in item ? { updatedAt: new Date().toISOString() } : {}) } : item);
+      return { ...current, [collection]: updated } as WorkspaceData;
+    });
+    onClose();
+  }
+  return <div className="tracker-edit-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section className="tracker-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="tracker-edit-title">
+      <header><div><small>রেকর্ড সংশোধন</small><h2 id="tracker-edit-title">{title}</h2></div><button type="button" className="tracker-icon-button" aria-label="বন্ধ করো" onClick={onClose}><X size={17}/></button></header>
+      <form onSubmit={save}>
+        <div className="tracker-edit-fields">{fields.map((field) => <label className={`tracker-field tracker-edit-field-${field.type}`} key={field.key}><span>{field.label}</span>{field.type === "textarea" ? <textarea className="tracker-input tracker-textarea" rows={3} maxLength={field.max || 1600} value={String(values[field.key] ?? "")} onChange={(event) => updateField(field.key, event.target.value)}/> : field.type === "select" ? <select className="tracker-input" value={String(values[field.key] ?? "")} onChange={(event) => updateField(field.key, event.target.value)}>{(field.options || []).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select> : field.type === "checkbox" ? <span className="tracker-edit-checkbox"><input type="checkbox" checked={values[field.key] === true} onChange={(event) => updateField(field.key, event.target.checked)}/><span>হ্যাঁ</span></span> : <input className="tracker-input" type={field.type} maxLength={field.max} value={String(values[field.key] ?? "")} onChange={(event) => updateField(field.key, event.target.value)}/>}</label>)}</div>
+        {error && <Notice type="error">{error}</Notice>}
+        <div className="tracker-edit-actions"><button type="button" className="tracker-quiet-button" onClick={onClose}>বাতিল</button><button type="submit" className="tracker-primary-button"><Save size={15}/> পরিবর্তন সংরক্ষণ</button></div>
+      </form>
+    </section>
+  </div>;
+}
+
+function ExtraPrayerRecordEditor({ record, onClose }: { record: ExtraPrayerEntry; onClose: () => void }) {
+  const [date, setDate] = useState(record.date);
+  const [type, setType] = useState(record.type);
+  const [category, setCategory] = useState<ExtraPrayerEntry["category"]>(record.category);
+  const [rakats, setRakats] = useState(String(record.rakats));
+  const [note, setNote] = useState(record.note);
+  const [error, setError] = useState("");
+  function save(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const count = Number(rakats);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !type.trim() || !Number.isInteger(count) || count < 1 || count > 100) {
+      setError("তারিখ, সালাতের নাম ও রাকাত সঠিকভাবে দাও।"); return;
+    }
+    updateWorkspaceData((current) => ({ ...current, extraPrayerEntries: current.extraPrayerEntries.map((item) => item.id === record.id ? { ...item, date, type: type.trim(), category, rakats: count, note: note.trim() } : item) }));
+    onClose();
+  }
+  return <div className="tracker-edit-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="tracker-edit-dialog" role="dialog" aria-modal="true" aria-labelledby="extra-prayer-edit-title"><header><div><small>রেকর্ড সংশোধন</small><h2 id="extra-prayer-edit-title">অতিরিক্ত সালাত</h2></div><button type="button" className="tracker-icon-button" aria-label="বন্ধ করো" onClick={onClose}><X size={17}/></button></header><form onSubmit={save}><div className="tracker-edit-fields"><Field label="তারিখ"><TextInput type="date" value={date} onChange={(event) => setDate(event.target.value)}/></Field><Field label="সালাতের নাম"><TextInput value={type} onChange={(event) => setType(event.target.value)}/></Field><Field label="ধরন"><Select value={category} onChange={(event) => setCategory(event.target.value as ExtraPrayerEntry["category"])}><option value="sunnah">সুন্নত</option><option value="wajib">ওয়াজিব</option><option value="nafl">নফল</option></Select></Field><Field label="রাকাত"><TextInput type="number" min="1" max="100" value={rakats} onChange={(event) => setRakats(event.target.value)}/></Field><Field label="নোট"><TextArea rows={2} value={note} onChange={(event) => setNote(event.target.value)}/></Field></div>{error && <Notice type="error">{error}</Notice>}<div className="tracker-edit-actions"><button type="button" className="tracker-quiet-button" onClick={onClose}>বাতিল</button><SaveButton>পরিবর্তন সংরক্ষণ</SaveButton></div></form></section></div>;
+}
+
+function TrackerHistory({ kind, data, onEditPrayer, onEditRecord, onEditExtraPrayer }: { kind: TrackerKind; data: WorkspaceData; onEditPrayer?: (entry: PrayerEntry) => void; onEditRecord?: (kind: EditableTrackerKind, record: EditableTrackerRecord) => void; onEditExtraPrayer?: (entry: ExtraPrayerEntry) => void }) {
+  if (kind === "prayer") return <div className="tracker-history-list">{data.prayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{PRAYER_NAMES[item.prayer]} · {item.method === "jamaat" ? "জামাতে" : item.method === "qada" ? "কাজা" : item.method === "not-performed" ? "আদায় হয়নি" : "একাকী"}</strong><small>{formatTrackerDate(item.date)} · {item.components.reduce((n, part) => n + part.performedRakats, 0)} রাকাত · {item.takbirStatus === "with-takbir" ? "তাকবিরে উলা" : item.takbirStatus === "late-join" ? `${item.caughtRakats} রাকাত পেয়েছ` : item.takbirStatus === "without-takbir" ? "তাকবিরে উলা ছাড়া" : ""}</small></div><div className="tracker-history-actions">{item.method !== "qada" && <button className="tracker-icon-button" type="button" onClick={() => onEditPrayer?.(item)} aria-label="সালাত সম্পাদনা"><Pencil size={14}/></button>}<button className="tracker-icon-button" type="button" onClick={() => deleteLocal(kind, item.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}{data.extraPrayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{item.type}</strong><small>{formatTrackerDate(item.date)} · {bn(item.rakats)} রাকাত · {CATEGORY_LABELS[item.category]}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditExtraPrayer?.(item)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" type="button" onClick={() => updateWorkspaceData((current) => ({ ...current, extraPrayerEntries: current.extraPrayerEntries.filter((x) => x.id !== item.id) }))} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "quran") return <div className="tracker-history-list">{data.quranEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{SURAHS[x.surahFrom - 1]?.name || "সূরা"} · {bn(x.ayahFrom)}–{bn(x.ayahTo)}</strong><small>{formatTrackerDate(x.date)} · {bn(x.ayahTo - x.ayahFrom + 1)} আয়াত{ x.pageFrom ? ` · পৃষ্ঠা ${bn(x.pageFrom)}–${bn(x.pageTo || x.pageFrom)}` : ""}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("quran", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" type="button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "dhikr") return <div className="tracker-history-list">{data.dhikrSessions.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.title}</strong><small>{formatTrackerDate(x.date)} · {bn(x.count)} / {bn(x.target)} বার {x.completed ? "· লক্ষ্য পূর্ণ" : ""}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("dhikr", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "fasting") return <div className="tracker-history-list">{data.fastingEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{{ fard: "ফরজ", nafl: "নফল", qada: "কাজা" }[x.category]} · {formatTrackerDate(x.date)}</strong><small>{{ completed: "সম্পন্ন", planned: "পরিকল্পিত", "not-kept": "রাখা হয়নি" }[x.status]}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("fasting", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" type="button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "good") return <div className="tracker-history-list">{data.deedEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.title}</strong><small>{x.category} · {formatTrackerDate(x.date)}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("good", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "avoid") return <div className="tracker-history-list">{data.avoidEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.habitName}</strong><small>{formatTrackerDate(x.date)} · {{ avoided: "এড়িয়ে থাকতে পেরেছি", challenging: "কঠিন পরিস্থিতি", slipped: "পরিকল্পনা অনুযায়ী হয়নি" }[x.status]}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("avoid", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "ilm") return <div className="tracker-history-list">{data.studyEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.resource}</strong><small>{formatTrackerDate(x.date)} · {x.subject} · {bn(x.minutes)} মিনিট</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("ilm", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  if (kind === "habit") return <div className="tracker-history-list">{data.habitLogs.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{data.habitDefinitions.find((d) => d.id === x.habitId)?.title || "অভ্যাস"}</strong><small>{formatTrackerDate(x.date)} · {x.completed ? "সম্পন্ন" : "অসম্পন্ন"}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("habit", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
+  return <div className="tracker-history-list">{data.reflections.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{formatTrackerDate(x.date)} · দৈনিক মুহাসাবা</strong><small>{x.tomorrowFocus || x.lesson || "প্রতিফলন সংরক্ষিত"}</small></div><div className="tracker-history-actions"><button className="tracker-icon-button" type="button" onClick={() => onEditRecord?.("reflection", x as unknown as EditableTrackerRecord)} aria-label="সম্পাদনা"><Pencil size={14}/></button><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}</div>;
 }
 
 function TrackerSummary({ kind, data }: { kind: TrackerKind; data: WorkspaceData }) {
@@ -475,6 +603,8 @@ export function TrackerCenter({ data, onBack }: { data: WorkspaceData; onBack: (
   const [initialQada, setInitialQada] = useState(false);
   const [initialDate, setInitialDate] = useState<string | null>(null);
   const [initialEditingEntry, setInitialEditingEntry] = useState<PrayerEntry | null>(null);
+  const [editingRecord, setEditingRecord] = useState<{ kind: EditableTrackerKind; record: EditableTrackerRecord } | null>(null);
+  const [editingExtraPrayer, setEditingExtraPrayer] = useState<ExtraPrayerEntry | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
   const [search, setSearch] = useState("");
   const tracker = TRACKERS.find((item) => item.id === selected);
@@ -507,37 +637,37 @@ export function TrackerCenter({ data, onBack }: { data: WorkspaceData; onBack: (
     setSelected(null); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false); setInitialDate(null); setInitialEditingEntry(null);
     writeTrackerTarget(null);
   }
-  function saved() {
-    setSavedMessage("রেকর্ড সংরক্ষিত হয়েছে।");
+  async function saved() {
+    await flushWorkspaceChanges();
+    if (getCloudSyncState() !== "synced") {
+      setSavedMessage(getCloudSyncMessage() || "রেকর্ড অনলাইনে সংরক্ষণ করা যায়নি। সংযোগ যাচাই করে আবার চেষ্টা করো।");
+      return;
+    }
+    setSavedMessage("");
     setSelected(null); setInitialPrayer(null); setInitialQada(false); setInitialDate(null); setInitialEditingEntry(null); writeTrackerTarget(null);
-    window.setTimeout(() => setSavedMessage(""), 3000);
   }
 
   return <div className="tracker-center">
-    <header className="tracker-page-heading">
-      <div className="tracker-page-heading-copy">
-        <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
-        <div><h1>আত্মশুদ্ধি লিপি</h1></div>
-      </div>
-      <div className="tracker-heading-mark"><ScaleGlyph/></div>
+    <header className="tracker-page-heading section-heading-unified">
+      <div className="tracker-page-heading-copy"><button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={16}/><span>ফিরে যাও</span></button></div>
+      <div className="page-intro-title-chip"><h1>আত্মশুদ্ধি লিপি</h1></div>
+      <span className="section-heading-spacer" aria-hidden="true"/>
     </header>
     {savedMessage && <Notice>{savedMessage}</Notice>}
     {selected && tracker ? <>
-      <div className="tracker-back-row"><button type="button" className="tracker-back-button" onClick={closeTracker}><ArrowLeft size={16}/> সব ট্র্যাকার</button><span>আত্মশুদ্ধি লিপি <ChevronRight size={14}/> {tracker.short}</span></div>
+      <div className="tracker-back-row"><button type="button" className="tracker-back-button" onClick={closeTracker}><ArrowLeft size={16}/> সব ট্র্যাকার</button><span className="tracker-back-section-chip">আত্মশুদ্ধি লিপি <ChevronRight size={14}/> {tracker.short}</span></div>
       <div className="tracker-detail-layout">
         <section className="tracker-entry-column"><div className="tracker-detail-heading"><span className="tracker-detail-icon"><tracker.icon size={22}/></span><div><h2>{tracker.title}</h2></div></div>
           {selected === "prayer" ? <PrayerWizard key={`${initialPrayer || "default"}:${initialQada ? "qada" : "regular"}:${initialDate || "today"}:${initialEditingEntry?.id || "new"}`} data={data} initialPrayer={initialPrayer} initialQada={initialQada} initialDate={initialDate} initialEditingEntry={initialEditingEntry} onCancel={closeTracker}/> : selected === "quran" ? <QuranForm onSaved={saved}/> : selected === "dhikr" ? <DhikrForm data={data} onSaved={saved}/> : selected === "fasting" ? <FastingForm onSaved={saved}/> : selected === "good" ? <GoodDeedForm onSaved={saved}/> : selected === "avoid" ? <AvoidForm onSaved={saved}/> : selected === "ilm" ? <IlmForm onSaved={saved}/> : selected === "habit" ? <HabitForm data={data} onSaved={saved}/> : <ReflectionForm data={data} onSaved={saved}/>}
         </section>
-        <aside className="tracker-side-column"><Panel title="সারাংশ"><TrackerSummary kind={selected} data={data}/></Panel><Panel title="সাম্প্রতিক রেকর্ড" action={<span className="tracker-mini-count">{bn(selected === "prayer" ? data.prayerEntries.length + data.extraPrayerEntries.length : selected === "quran" ? data.quranEntries.length : selected === "dhikr" ? data.dhikrSessions.length : selected === "fasting" ? data.fastingEntries.length : selected === "good" ? data.deedEntries.length : selected === "avoid" ? data.avoidEntries.length : selected === "ilm" ? data.studyEntries.length : selected === "habit" ? data.habitLogs.length : data.reflections.length)}টি</span>}><TrackerHistory kind={selected} data={data} onEditPrayer={selected === "prayer" ? (entry) => { setInitialDate(entry.date); setInitialPrayer(entry.prayer); setInitialEditingEntry(entry); writeTrackerTarget("prayer", entry.prayer, entry.date); } : undefined}/></Panel>{selected === "prayer" && <Panel title="কাজার হিসাব"><div className="qada-ledger-list">{data.qadaEntries.slice(0, 12).map((item) => <div key={item.id}><span><strong>{PRAYER_NAMES[item.prayer]}</strong><small>{item.missedDate} · {item.reason}</small></span><span className={`qada-status ${item.status === "pending" ? "pending" : "settled"}`}>{item.status === "pending" ? "বাকি" : "আদায় হয়েছে"}</span></div>)}</div></Panel>}</aside>
+        <aside className="tracker-side-column"><Panel title="সারাংশ"><TrackerSummary kind={selected} data={data}/></Panel><Panel title="সাম্প্রতিক রেকর্ড" action={<span className="tracker-mini-count">{bn(selected === "prayer" ? data.prayerEntries.length + data.extraPrayerEntries.length : selected === "quran" ? data.quranEntries.length : selected === "dhikr" ? data.dhikrSessions.length : selected === "fasting" ? data.fastingEntries.length : selected === "good" ? data.deedEntries.length : selected === "avoid" ? data.avoidEntries.length : selected === "ilm" ? data.studyEntries.length : selected === "habit" ? data.habitLogs.length : data.reflections.length)}টি</span>}><TrackerHistory kind={selected} data={data} onEditPrayer={selected === "prayer" ? (entry) => { setInitialDate(entry.date); setInitialPrayer(entry.prayer); setInitialEditingEntry(entry); writeTrackerTarget("prayer", entry.prayer, entry.date); } : undefined} onEditRecord={(kind, record) => setEditingRecord({ kind, record })} onEditExtraPrayer={setEditingExtraPrayer}/></Panel>{selected === "prayer" && <Panel title="কাজার হিসাব"><div className="qada-ledger-list">{data.qadaEntries.slice(0, 12).map((item) => <div key={item.id}><span><strong>{PRAYER_NAMES[item.prayer]}</strong><small>{formatTrackerDate(item.missedDate)} · {item.reason}</small></span><span className={`qada-status ${item.status === "pending" ? "pending" : "settled"}`}>{item.status === "pending" ? "বাকি" : "আদায় হয়েছে"}</span></div>)}</div></Panel>}</aside>
       </div>
     </> : <>
       <div className="tracker-picker-tools"><label className="tracker-search"><Search size={17}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ট্র্যাকার খুঁজে নাও"/></label><span>{bn(filtered.length)}টি বিভাগ</span></div>
       <div className="tracker-picker-grid">{filtered.map((item) => { const Icon = item.icon; return <button type="button" className="tracker-picker-card" key={item.id} onClick={() => chooseTracker(item.id)}><span className="tracker-picker-icon"><Icon size={20}/></span><span className="tracker-picker-copy"><strong>{item.title}</strong><small>{item.description}</small></span><ChevronRight size={17} className="tracker-picker-arrow"/></button>; })}</div>
       <div className="tracker-privacy-note"><span>তোমার পরিবর্তন অনলাইনে সংরক্ষিত হয়। সংযোগ না থাকলে নতুন রেকর্ড স্থায়ীভাবে সংরক্ষণ হবে না।</span></div>
     </>}
+    {editingRecord && <TrackerRecordEditor kind={editingRecord.kind} record={editingRecord.record} onClose={() => setEditingRecord(null)}/>}
+    {editingExtraPrayer && <ExtraPrayerRecordEditor record={editingExtraPrayer} onClose={() => setEditingExtraPrayer(null)}/>}
   </div>;
-}
-
-function ScaleGlyph() {
-  return <svg viewBox="0 0 64 64" width="44" height="44" fill="none" aria-hidden="true"><path d="M32 8v43M20 54h24M25 13h14M32 15 13 23m19-8 19 8" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/><path d="m13 23-8 17h16l-8-17Zm38 0-8 17h16l-8-17Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M5 40c1 7 15 7 16 0m22 0c1 7 15 7 16 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>;
 }

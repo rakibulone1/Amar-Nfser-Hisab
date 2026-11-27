@@ -1,3 +1,5 @@
+import { showAppToast } from "../ui/toast.ts";
+
 export type AppSection = "home" | "goals" | "journal" | "mirror" | "notifications" | "settings";
 export type PrayerId = "fajr" | "dhuhr" | "asr" | "maghrib" | "isha";
 export type PrayerMethod = "jamaat" | "home" | "qada" | "not-performed";
@@ -110,6 +112,7 @@ let pendingWorkspaceState: WorkspaceData | null = null;
 let onlineListenerAttached = false;
 let lifecycleListenerAttached = false;
 let remoteUpdatedAt: string | null = null;
+let lastSuccessfulSyncAt: string | null = null;
 let confirmedWorkspaceState: WorkspaceData = EMPTY_DATA;
 let hasUnsavedChanges = false;
 let workspaceLoadError = "";
@@ -121,6 +124,14 @@ function safeTimeZone(value: unknown): string {
   const requested = typeof value === "string" ? value.trim() : "";
   if (requested === "Asia/Dhaka") return requested;
   return "Asia/Dhaka";
+}
+function getBanglaSyncError(error: unknown) {
+  const detail = error instanceof Error ? error.message.toLowerCase() : String(error || "").toLowerCase();
+  if (detail.includes("auth_required") || detail.includes("unauthorized") || detail.includes("401") || detail.includes("সেশন")) return "তোমার লগইন সেশন শেষ হয়েছে। আবার লগইন করে কাজটি সংরক্ষণ করো।";
+  if (detail.includes("version_conflict") || detail.includes("concurrent") || detail.includes("revision_conflict") || detail.includes("অন্য ট্যাব") || detail.includes("সংঘর্ষ")) return "অন্য ট্যাব বা ডিভাইসে নতুন পরিবর্তন হয়েছে। পৃষ্ঠা রিফ্রেশ করে আবার চেষ্টা করো।";
+  if (detail.includes("too_large") || detail.includes("payload_size") || detail.includes("413")) return "রেকর্ডের আকার সংরক্ষণ সীমা ছাড়িয়েছে। অপ্রয়োজনীয় সংযুক্তি বা তথ্য কমিয়ে আবার চেষ্টা করো।";
+  if (detail.includes("fetch") || detail.includes("network") || detail.includes("offline") || detail.includes("timeout")) return "ইন্টারনেট বা সার্ভার সংযোগে সমস্যা হয়েছে। পরিবর্তন অনলাইনে সংরক্ষণ হয়নি।";
+  return "পরিবর্তন অনলাইনে সংরক্ষণ করা যায়নি। সংযোগ যাচাই করে আবার চেষ্টা করো।";
 }
 function validClock(value: unknown, fallback = "") { return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value) ? value : fallback; }
 function normalisePrayerConfig(value: unknown): PrayerConfig {
@@ -250,6 +261,7 @@ export function getWorkspaceData() { return workspaceState; }
 export function getWorkspaceServerData() { return EMPTY_DATA; }
 export function getCloudSyncState() { return cloudSyncState; }
 export function getCloudSyncMessage() { return cloudSyncMessage; }
+export function getLastSuccessfulSyncAt() { return lastSuccessfulSyncAt; }
 export function getWorkspaceLoadError() { return workspaceLoadError; }
 // Cleanup-only compatibility step. Current durable data is stored in the
 // authenticated Supabase relational workspace; browser persistence is never read or written.
@@ -335,7 +347,9 @@ function scheduleWorkspaceSync(data: WorkspaceData) {
   if (!hydrated) return;
   if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
   if (typeof navigator !== "undefined" && !navigator.onLine) {
-    setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। পরিবর্তন অনলাইনে সংরক্ষিত হয়নি; সংযোগ ফিরলে আবার চেষ্টা হবে।");
+    const message = "ইন্টারনেট সংযোগ নেই। পরিবর্তন অনলাইনে সংরক্ষিত হয়নি; সংযোগ ফিরলে আবার চেষ্টা করো।";
+    setCloudSyncState("offline", message);
+    showAppToast("error", message);
     return;
   }
   cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; void pushWorkspaceChanges(pendingWorkspaceState ?? workspaceState); }, 220);
@@ -345,7 +359,9 @@ async function pushWorkspaceChanges(data: WorkspaceData): Promise<void> {
   if (typeof window === "undefined") return;
   if (!navigator.onLine) {
     hasUnsavedChanges = true;
-    setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। পরিবর্তন স্থায়ীভাবে সংরক্ষিত হয়নি; Refresh কোরো না।");
+    const message = "ইন্টারনেট সংযোগ নেই। পরিবর্তন অনলাইনে সংরক্ষিত হয়নি। সংযোগ ফিরলে আবার চেষ্টা করো।";
+    setCloudSyncState("offline", message);
+    showAppToast("error", message);
     return;
   }
   if (cloudSavePromise) {
@@ -385,18 +401,22 @@ async function pushWorkspaceChanges(data: WorkspaceData): Promise<void> {
       if (response.status === 409) throw new Error(result.message || "অন্য ট্যাব বা ডিভাইসে তথ্য পরিবর্তিত হয়েছে। Refresh করে সর্বশেষ তথ্য নাও।");
       if (!response.ok) throw new Error(result.message || (response.status === 401 ? "সেশন যাচাই করা যায়নি। আবার লগইন করো।" : "অনলাইন সংরক্ষণ ব্যর্থ হয়েছে।"));
       remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : remoteUpdatedAt;
+      lastSuccessfulSyncAt = remoteUpdatedAt;
       confirmedWorkspaceState = target;
       hasUnsavedChanges = workspaceState.updatedAt !== target.updatedAt;
       if (!hasUnsavedChanges) {
         pendingWorkspaceState = null;
         setCloudSyncState("synced", "সর্বশেষ পরিবর্তন অনলাইনে সংরক্ষিত হয়েছে।");
+        showAppToast("success", "পরিবর্তন সফলভাবে অনলাইনে সংরক্ষিত হয়েছে।");
         purgeLegacyBrowserStorage();
       } else {
         setCloudSyncState("syncing", "নতুন পরিবর্তনগুলোও অনলাইনে সংরক্ষণ হচ্ছে…");
       }
     } catch (error) {
       hasUnsavedChanges = true;
-      setCloudSyncState(navigator.onLine ? "error" : "offline", error instanceof Error ? error.message : "অনলাইন সংরক্ষণ ব্যর্থ হয়েছে। Refresh করলে অসম্প্রেরিত পরিবর্তন হারাতে পারে।");
+      const message = getBanglaSyncError(error);
+      setCloudSyncState(navigator.onLine ? "error" : "offline", message);
+      showAppToast("error", message);
     }
   })();
   await cloudSavePromise;
@@ -408,7 +428,12 @@ async function pushWorkspaceChanges(data: WorkspaceData): Promise<void> {
 }
 async function synchronizeWorkspace() {
   if (typeof window === "undefined") return;
-  if (!navigator.onLine) { setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। অনলাইন তথ্য লোড করা যাচ্ছে না।"); return; }
+  if (!navigator.onLine) {
+    const message = "ইন্টারনেট সংযোগ নেই। অনলাইন তথ্য লোড করা যাচ্ছে না।";
+    setCloudSyncState("offline", message);
+    showAppToast("error", message);
+    return;
+  }
   if (hasUnsavedChanges) { await pushWorkspaceChanges(workspaceState); return; }
   setCloudSyncState("syncing", "সর্বশেষ তথ্য যাচাই হচ্ছে…");
   try {
@@ -420,17 +445,21 @@ async function synchronizeWorkspace() {
       workspaceState = remote;
       confirmedWorkspaceState = remote;
       remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : null;
+      lastSuccessfulSyncAt = remoteUpdatedAt;
       hasUnsavedChanges = false;
       emitChange();
       setCloudSyncState("synced", "সর্বশেষ তথ্য লোড হয়েছে।");
     } else {
       remoteUpdatedAt = null;
+      lastSuccessfulSyncAt = null;
       confirmedWorkspaceState = normaliseData(EMPTY_DATA);
       hasUnsavedChanges = true;
       await pushWorkspaceChanges(workspaceState);
     }
   } catch (error) {
-    setCloudSyncState(navigator.onLine ? "error" : "offline", error instanceof Error ? error.message : "অনলাইন তথ্য লোড করা যায়নি।");
+    const message = getBanglaSyncError(error);
+    setCloudSyncState(navigator.onLine ? "error" : "offline", message);
+    showAppToast("error", message);
   }
 }
 export async function syncCloudNow() {
@@ -492,6 +521,7 @@ export async function hydrateWorkspaceData() {
         workspaceState = remote;
         confirmedWorkspaceState = remote;
         remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : null;
+        lastSuccessfulSyncAt = remoteUpdatedAt;
         hasUnsavedChanges = false;
         hydrated = true;
         setCloudSyncState("synced", "সর্বশেষ তথ্য অনলাইন অ্যাকাউন্ট থেকে লোড হয়েছে।");

@@ -55,10 +55,10 @@ test("light and dark palettes are both defined with reduced-motion support", () 
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("Release 1.2.7 changes no runtime or development dependencies", () => {
-  assert.equal(pkg.version, "1.2.7");
-  assert.equal(lock.version, "1.2.7");
-  assert.equal(lock.packages[""].version, "1.2.7");
+test("Release 1.2.8 changes no runtime or development dependencies", () => {
+  assert.equal(pkg.version, "1.2.8");
+  assert.equal(lock.version, "1.2.8");
+  assert.equal(lock.packages[""].version, "1.2.8");
   assert.deepEqual(pkg.dependencies, lock.packages[""].dependencies);
   assert.deepEqual(pkg.devDependencies, lock.packages[""].devDependencies);
   assert.match(pkg.scripts["test:all"], /test:phase20/);

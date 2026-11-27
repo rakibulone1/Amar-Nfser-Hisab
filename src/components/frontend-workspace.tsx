@@ -2,9 +2,9 @@
 
 import {
   Activity, ArrowDownToLine, ArrowLeft, ArrowRight, Bell, BookOpen, CalendarDays,
-  Check, CheckCircle2, ChevronRight, Clock3, Cloud, CloudOff, Compass,
+  Check, CheckCircle2, ChevronRight, Clock3, Cloud, Compass,
   Download, Heart, LockKeyhole, LogOut, LoaderCircle, Moon, Trash2,
-  MoreHorizontal, Plus, Settings, ShieldCheck, Sparkles, Sun, Target,
+  MoreHorizontal, Pencil, Plus, Settings, ShieldCheck, Sparkles, Sun, Target,
   Upload, X, type LucideIcon
 } from "lucide-react";
 import Image from "next/image";
@@ -14,16 +14,18 @@ import hadithData from "@/data/hadith-bn.json";
 import type { HadithDataset, HadithRecord } from "@/types/hadith";
 import { formatHijriDate } from "@/lib/date/hijri";
 import { useTheme } from "@/providers/theme-provider";
+import { AppToastViewport } from "@/components/app-toast-viewport";
+import { showAppToast } from "@/lib/ui/toast";
 import { TrackerCenter } from "@/modules/trackers/tracker-center";
 import { SURAHS } from "@/modules/journal/surahs";
 import { PrayerTimeWidget } from "@/modules/trackers/prayer-time-widget";
 import { PrayerSettingsPanel, PrayerReminderEngine } from "@/modules/trackers/prayer-settings";
 import {
-  createWorkspaceRecordId, getCloudSyncMessage, getCloudSyncState, getWorkspaceData, getWorkspaceServerData, getJournalDate, getWorkspaceLoadError,
+  createWorkspaceRecordId, getCloudSyncMessage, getCloudSyncState, getLastSuccessfulSyncAt, getWorkspaceData, getWorkspaceServerData, getJournalDate, getWorkspaceLoadError,
   hydrateWorkspaceData, replaceWorkspaceData, subscribeWorkspaceData, updateWorkspaceData, flushWorkspaceChanges,
-  type AppSection, type DeadlinePlan, type DeadlineTask, type JourneyMilestone, type JourneyObservation, type PrayerId, type PrayerEntry, type ReminderEvent
+  type AppSection, type DeadlinePlan, type DeadlineTask, type JourneyMilestone, type JourneyObservation, type PrayerId, type ReminderEvent
 } from "@/lib/workspace/store";
-import { getDhakaDateTimeInput, getPrayerCivilDate, getPrayerWaqtWindow, nextDhakaDate, toDhakaIso } from "@/lib/prayer-time";
+import { getDhakaDateTimeInput, toDhakaIso } from "@/lib/prayer-time";
 import { addDaysToDateKey, differenceInDateKeys, FIXED_JOURNEY_END_DATE, FIXED_JOURNEY_ID, FIXED_JOURNEY_START_DATE, FIXED_JOURNEY_STAGES, getFixedJourneyProgress } from "@/lib/journey/stages";
 
 const NAV_ITEMS: { id: AppSection; label: string; shortLabel: string; description: string; icon: LucideIcon }[] = [
@@ -60,7 +62,7 @@ function navigateSection(section: AppSection, tracker?: string, prayer?: PrayerI
   url.pathname = "/dashboard";
   if (section === "home") url.searchParams.delete("section");
   else url.searchParams.set("section", section);
-  for (const key of ["tracker", "action", "prayer", "entryDate"]) url.searchParams.delete(key);
+  for (const key of ["tracker", "action", "prayer", "entryDate", "tab", "goalId"]) url.searchParams.delete(key);
   if (section === "journal" && tracker) {
     url.searchParams.set("tracker", tracker);
     url.searchParams.set("action", "new");
@@ -85,7 +87,26 @@ function todayKey(timeZone: string, maghribTime: string) {
   return getJournalDate(new Date(), timeZone || "Asia/Dhaka", maghribTime || null);
 }
 function formatCompactDate(value: string) {
-  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }).format(new Date(`${value}T12:00:00Z`));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const date = new Date(`${value}T12:00:00.000Z`);
+  if (!Number.isFinite(date.getTime())) return value;
+  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
+}
+function formatLastSyncTime(value: string | null) {
+  if (!value) return "এখনো সিঙ্ক হয়নি";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "এখনো সিঙ্ক হয়নি";
+  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(date);
+}
+function navigateToGoalPlan(planId: string) {
+  const url = new URL(window.location.href);
+  url.pathname = "/dashboard";
+  url.searchParams.set("section", "goals");
+  url.searchParams.set("tab", "goals");
+  url.searchParams.set("goalId", planId);
+  for (const key of ["tracker", "action", "prayer", "entryDate"]) url.searchParams.delete(key);
+  window.history.pushState({ section: "goals", tab: "goals", goalId: planId }, "", `${url.pathname}${url.search}${url.hash}`);
+  window.dispatchEvent(new Event(SECTION_EVENT));
 }
 function getInitials(name: string) {
   const clean = name.trim();
@@ -102,15 +123,14 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function PageIntro({ eyebrow, title, action, onBack }: { eyebrow: string; title: string; description: string; action?: React.ReactNode; onBack: () => void }) {
+function PageIntro({ title, action, onBack, variant }: { eyebrow?: string; title: string; description?: string; action?: React.ReactNode; onBack: () => void; variant?: "goals" }) {
+  const headingClass = variant === "goals" ? "goals-page-heading release-page-heading page-intro section-heading-unified" : "page-intro release-page-heading section-heading-unified";
   return (
-    <div className="page-intro release-page-heading">
-      <div className="page-intro-main">
-        <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
-        <div className="page-intro-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1></div>
-      </div>
-      {action && <div className="page-intro-action">{action}</div>}
-    </div>
+    <header className={headingClass}>
+      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={16}/><span>ফিরে যাও</span></button>
+      <div className="page-intro-title-chip"><h1>{title}</h1></div>
+      <div className="page-intro-action">{action || null}</div>
+    </header>
   );
 }
 
@@ -200,9 +220,10 @@ function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof get
     ? `${progress.stageRemainingDays.toLocaleString("bn-BD")} দিন বাকি`
     : progress.status === "upcoming" ? "শুরু হতে বাকি" : "সম্পন্ন";
   return <section className={`dashboard-journey-card dashboard-journey-card-compact module-tone-${journeyModule}`}>
+    <button type="button" className="dashboard-journey-card-link" onClick={() => navigateSection("goals")} aria-label="আত্মশুদ্ধির যাত্রা খুলুন" tabIndex={0}/>
     <div className="dashboard-journey-header">
       <div><span className="dashboard-journey-overline">আত্মশুদ্ধির যাত্রা</span><small>{stage ? `মডিউল ${stage.module.toLocaleString("bn-BD")} · পর্যায় ${stage.stageNumber.toLocaleString("bn-BD")}` : progress.status === "upcoming" ? "শুরুর প্রস্তুতি" : "যাত্রা সম্পন্ন"}</small></div>
-      <button type="button" className="dashboard-journey-open" onClick={() => navigateSection("goals")}>বিস্তারিত <ArrowRight size={14}/></button>
+      <span className="dashboard-journey-open">যাত্রা দেখো <ArrowRight size={14}/></span>
     </div>
     <div className="dashboard-journey-title">
       <h1>{statusTitle}</h1>
@@ -213,7 +234,7 @@ function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof get
       <div><small>পর্যায়</small><strong>{stage ? `${stage.stageNumber.toLocaleString("bn-BD")} / ৭১` : progress.status === "completed" ? "৭১ / ৭১" : "—"}</strong></div>
       <div><small>এই পর্যায়</small><strong>{stageDayText}</strong></div>
       <div><small>পরবর্তী ধাপ</small><strong>{remainingText}</strong></div>
-      <div className="dashboard-journey-next-plan"><small>পরবর্তী লক্ষ্য</small><strong>{nextPlan?.title || "এখনো নির্ধারিত নয়"}</strong><span>{nextPlan ? (daysToPlan === 0 ? "আজ শেষ তারিখ" : `${daysToPlan?.toLocaleString("bn-BD")} দিন বাকি`) : "লক্ষ্য যোগ করলে এখানে দেখাবে"}</span></div>
+      <button type="button" className="dashboard-journey-next-plan" onClick={() => { if (nextPlan) navigateToGoalPlan(nextPlan.id); else navigateSection("goals"); }}><small>পরবর্তী লক্ষ্য</small><strong>{nextPlan?.title || "এখনো নির্ধারিত নয়"}</strong><span>{nextPlan ? (daysToPlan === 0 ? "আজ শেষ তারিখ" : `${daysToPlan?.toLocaleString("bn-BD")} দিন বাকি`) : "লক্ষ্য যোগ করতে দেখো"}</span></button>
     </div>
   </section>;
 }
@@ -299,7 +320,6 @@ function DashboardView({ data }: { data: ReturnType<typeof getWorkspaceData> }) 
     <Panel eyebrow="একাডেমিক ও ব্যক্তিগত পরিকল্পনা" title="আসন্ন সময়সীমা" action={<button className="text-action" type="button" onClick={() => navigateSection("goals")}>সব পরিকল্পনা <ArrowRight size={15}/></button>}>
       {activeDeadlinePlans.length ? <div className="goal-preview-list">{activeDeadlinePlans.map((plan) => { const done = plan.tasks.filter((task) => task.completed).length; const progress = plan.tasks.length ? Math.round(done / plan.tasks.length * 100) : 0; const left = Math.ceil((new Date(`${plan.deadline}T12:00:00Z`).getTime() - new Date(`${date}T12:00:00Z`).getTime()) / 86400000); return <div className="goal-preview-row" key={plan.id}><div><strong>{plan.title}</strong><small>{left === 0 ? "আজ শেষ তারিখ" : `${left.toLocaleString("bn-BD")} দিন বাকি`} · {formatCompactDate(plan.deadline)}</small></div><span className="goal-progress-label">{progress.toLocaleString("bn-BD")}%</span></div>; })}</div> : <EmptyState icon={Target} title="এখনো কোনো সময়সীমা যোগ করা হয়নি" description="পরীক্ষা বা গুরুত্বপূর্ণ কাজের শেষ তারিখ যোগ করলে এখানে দেখা যাবে।"/>}
     </Panel>
-    <div className={`local-data-note cloud-sync-note cloud-sync-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? <Cloud size={15}/> : <CloudOff size={15}/>}<span>{getCloudSyncMessage() || "তোমার পরিবর্তন অনলাইনে সংরক্ষিত হবে।"}</span></div>
   </div>;
 }
 
@@ -481,11 +501,10 @@ function StageDetailView({
     .sort((a, b) => b.count - a.count)[0];
 
   return <div className="stage-detail-view view-stack">
-    <div className="stage-detail-heading release-page-heading">
-      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
-      <span className="eyebrow">মডিউল {stage.module.toLocaleString("bn-BD")} · পর্যায় {stage.stageNumber.toLocaleString("bn-BD")}</span>
-      <h1>{stage.title}</h1>
-      <p>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)} · {stage.durationDays.toLocaleString("bn-BD")} দিন</p>
+    <div className="stage-detail-heading release-page-heading section-heading-unified">
+      <button type="button" className="section-back-button" onClick={onBack} aria-label="লক্ষ্যে ফিরে যাও" title="লক্ষ্যে ফিরে যাও"><ArrowLeft size={16}/><span>ফিরে যাও</span></button>
+      <div className="page-intro-title-chip stage-title-chip"><span>মডিউল {stage.module.toLocaleString("bn-BD")} · পর্যায় {stage.stageNumber.toLocaleString("bn-BD")}</span><h1>{stage.title}</h1><small>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)}</small></div>
+      <span className="section-heading-spacer" aria-hidden="true"/>
     </div>
     <section className={`stage-detail-status module-tone-${stage.module}`}>
       <span>{complete ? "সম্পন্ন পর্যায়" : currentDate >= stage.startDate && currentDate <= stage.endDate ? "চলমান পর্যায়" : "পরবর্তী পর্যায়"}</span>
@@ -535,8 +554,10 @@ function StageDetailView({
 function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const dateNow = todayKey(data.preferences.timeZone, data.preferences.maghribTime);
   const progress = getFixedJourneyProgress(dateNow);
-  const [activeTab, setActiveTab] = useState<"journey" | "goals">("journey");
+  const [activeTab, setActiveTab] = useState<"journey" | "goals">(() => typeof window !== "undefined" && new URL(window.location.href).searchParams.get("tab") === "goals" ? "goals" : "journey");
+  const [focusGoalId, setFocusGoalId] = useState<string | null>(() => typeof window !== "undefined" ? new URL(window.location.href).searchParams.get("goalId") : null);
   const [selectedStageNumber, setSelectedStageNumber] = useState<number | null>(null);
+  const [stageReturnTab, setStageReturnTab] = useState<"journey" | "goals">("journey");
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [goalTitle, setGoalTitle] = useState("");
@@ -546,6 +567,7 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const [goalDescription, setGoalDescription] = useState("");
   const [goalError, setGoalError] = useState("");
   const [taskPlanId, setTaskPlanId] = useState("");
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDetails, setTaskDetails] = useState("");
   const [taskDueDate, setTaskDueDate] = useState("");
@@ -562,6 +584,22 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
     }));
     if (missing.length) updateWorkspaceData((current) => ({ ...current, journeyMilestones: [...current.journeyMilestones, ...missing] }));
   }, [completedStages, milestonesSnapshot]);
+
+  useEffect(() => {
+    const applyGoalTarget = () => {
+      const url = new URL(window.location.href);
+      const requestedTab = url.searchParams.get("tab");
+      const requestedGoal = url.searchParams.get("goalId");
+      if (requestedTab === "goals" || requestedGoal) setActiveTab("goals");
+      if (requestedGoal) setFocusGoalId(requestedGoal);
+    };
+    window.addEventListener("popstate", applyGoalTarget);
+    window.addEventListener(SECTION_EVENT, applyGoalTarget);
+    return () => {
+      window.removeEventListener("popstate", applyGoalTarget);
+      window.removeEventListener(SECTION_EVENT, applyGoalTarget);
+    };
+  }, []);
 
   function stageGoal(stage: (typeof FIXED_JOURNEY_STAGES)[number]) {
     return data.deadlinePlans.find((plan) => {
@@ -621,10 +659,22 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
     event.preventDefault();
     if (!taskTitle.trim()) return;
     const now = new Date().toISOString();
-    const task: DeadlineTask = { id: uid(), title: taskTitle.trim(), details: taskDetails.trim(), dueDate: taskDueDate,
-      completed: false, completedAt: null, createdAt: now };
-    updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: [...plan.tasks, task], updatedAt: now } : plan) }));
-    setTaskTitle(""); setTaskDetails(""); setTaskDueDate(""); setTaskPlanId("");
+    if (editingTaskId) {
+      updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id !== planId ? plan : {
+        ...plan, updatedAt: now, tasks: plan.tasks.map((task) => task.id === editingTaskId ? { ...task, title: taskTitle.trim(), details: taskDetails.trim(), dueDate: taskDueDate } : task)
+      }) }));
+    } else {
+      const task: DeadlineTask = { id: uid(), title: taskTitle.trim(), details: taskDetails.trim(), dueDate: taskDueDate,
+        completed: false, completedAt: null, createdAt: now };
+      updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: [...plan.tasks, task], updatedAt: now } : plan) }));
+    }
+    setTaskTitle(""); setTaskDetails(""); setTaskDueDate(""); setTaskPlanId(""); setEditingTaskId(null);
+  }
+  function editTask(planId: string, task: DeadlineTask) {
+    setTaskPlanId(planId); setEditingTaskId(task.id); setTaskTitle(task.title); setTaskDetails(task.details); setTaskDueDate(task.dueDate);
+  }
+  function cancelTaskEdit() {
+    setTaskPlanId(""); setEditingTaskId(null); setTaskTitle(""); setTaskDetails(""); setTaskDueDate("");
   }
   function toggleTask(planId: string, taskId: string) {
     const now = new Date().toISOString();
@@ -635,37 +685,45 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   function removeTask(planId: string, taskId: string) {
     if (!window.confirm("এই কাজটি মুছে ফেলবে?")) return;
     updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: plan.tasks.filter((task) => task.id !== taskId), updatedAt: new Date().toISOString() } : plan) }));
+    if (editingTaskId === taskId) cancelTaskEdit();
   }
   function removeGoal(planId: string) {
     if (!window.confirm("এই লক্ষ্য ও এর কাজগুলো মুছে ফেলবে?")) return;
     updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.filter((plan) => plan.id !== planId) }));
+    if (taskPlanId === planId) cancelTaskEdit();
   }
 
   const sortedPlans = [...data.deadlinePlans].sort((a, b) => (a.startDate || a.createdAt.slice(0, 10)).localeCompare(b.startDate || b.createdAt.slice(0, 10)));
   const completedGoals = sortedPlans.filter((plan) => plan.tasks.length > 0 && plan.tasks.every((task) => task.completed)).length;
   const selectedStage = selectedStageNumber ? FIXED_JOURNEY_STAGES.find((stage) => stage.stageNumber === selectedStageNumber) ?? null : null;
   const categoryLabel = (category: DeadlinePlan["category"]) => ({ exam: "পরীক্ষা", assignment: "অ্যাসাইনমেন্ট", project: "প্রজেক্ট", other: "অন্যান্য" })[category];
+  useEffect(() => {
+    if (!focusGoalId || activeTab !== "goals") return;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(`deadline-plan-${focusGoalId}`);
+      target?.scrollIntoView({ behavior: "smooth", block: "center" });
+      target?.classList.add("is-focused");
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [focusGoalId, activeTab, sortedPlans.length]);
 
-  if (selectedStage) return <div className="view-stack"><StageDetailView stage={selectedStage} data={data} currentDate={dateNow} onBack={() => navigateSection("home")}/></div>;
+  if (selectedStage) return <div className="view-stack"><StageDetailView stage={selectedStage} data={data} currentDate={dateNow} onBack={() => { setSelectedStageNumber(null); setActiveTab(stageReturnTab); }}/></div>;
 
   return <div className="view-stack goals-workspace">
-    <div className="goals-page-heading release-page-heading">
-      <button type="button" className="section-back-button" onClick={() => navigateSection("home")} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
-      <div><span className="eyebrow">নিজের পথ ও পরিকল্পনা</span><h1>লক্ষ্য</h1></div>
-    </div>
+    <PageIntro title="লক্ষ্য" variant="goals" onBack={() => navigateSection("home")} />
     <div className="goals-mode-tabs" role="tablist" aria-label="লক্ষ্যের বিভাগ">
-      <button type="button" role="tab" aria-selected={activeTab === "journey"} className={activeTab === "journey" ? "selected" : ""} onClick={() => setActiveTab("journey")}><ShieldCheck size={17}/> আত্মশুদ্ধি</button>
-      <button type="button" role="tab" aria-selected={activeTab === "goals"} className={activeTab === "goals" ? "selected" : ""} onClick={() => setActiveTab("goals")}><Target size={17}/> লক্ষ্য</button>
+      <button type="button" role="tab" aria-selected={activeTab === "journey"} className={activeTab === "journey" ? "selected" : ""} onClick={() => { setActiveTab("journey"); setFocusGoalId(null); const url = new URL(window.location.href); url.searchParams.delete("tab"); url.searchParams.delete("goalId"); window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`); }}><ShieldCheck size={17}/> আত্মশুদ্ধি</button>
+      <button type="button" role="tab" aria-selected={activeTab === "goals"} className={activeTab === "goals" ? "selected" : ""} onClick={() => { setActiveTab("goals"); const url = new URL(window.location.href); url.searchParams.set("tab", "goals"); window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`); }}><Target size={17}/> লক্ষ্য</button>
     </div>
 
     {activeTab === "journey" ? <>
-      <section className={`journey-current-hero journey-current-hero-compact module-tone-${progress.currentStage?.module ?? 1}`}>
+      <section className={`journey-current-hero journey-current-hero-compact module-tone-${progress.currentStage?.module ?? 1}`} role="button" tabIndex={0} onClick={() => { setStageReturnTab("journey"); if (progress.currentStage) { setSelectedStageNumber(progress.currentStage.stageNumber); } else { setActiveTab("goals"); } }} onKeyDown={(event) => { if (event.key !== "Enter" && event.key !== " ") return; event.preventDefault(); setStageReturnTab("journey"); if (progress.currentStage) { setSelectedStageNumber(progress.currentStage.stageNumber); } else { setActiveTab("goals"); } }} aria-label="বর্তমান আত্মশুদ্ধির পর্যায়ের বিস্তারিত খুলুন">
         <span className="journey-current-kicker">{progress.status === "completed" ? "অর্জনের স্বীকৃতি" : progress.status === "upcoming" ? "শুরুর প্রস্তুতি" : `মডিউল ${progress.currentStage?.module.toLocaleString("bn-BD")} · বর্তমান পর্যায়`}</span>
         <h2>{progress.currentStage?.title || (progress.status === "completed" ? "নতুন অধ্যায়ের সূচনা" : "আত্মশুদ্ধির যাত্রা")}</h2>
         <p className="journey-current-dates">{formatCompactDate(progress.currentStage?.startDate || FIXED_JOURNEY_START_DATE)} — {formatCompactDate(progress.currentStage?.endDate || FIXED_JOURNEY_END_DATE)}</p>
         <div className="journey-current-index"><span>পর্যায় {progress.currentStage?.stageNumber.toLocaleString("bn-BD") || (progress.status === "completed" ? "৭১" : "—")} / ৭১</span><span>{progress.currentStage ? `দিন ${progress.stageDay.toLocaleString("bn-BD")} / ${progress.currentStage.durationDays.toLocaleString("bn-BD")}` : progress.status === "upcoming" ? "শুরু হয়নি" : "সব পর্যায় সম্পন্ন"}</span></div>
         <div className="journey-current-track"><span style={{ width: `${progress.currentStage ? progress.stagePercent : progress.percent}%` }}/></div>
-        <div className="journey-current-meta"><div><strong>{progress.currentStage ? `${progress.stagePercent.toLocaleString("bn-BD")}٪ সম্পন্ন` : progress.status === "upcoming" ? "প্রস্তুতির সময়" : "১০০٪ সম্পন্ন"}</strong><small>এই পর্যায়ের অগ্রগতি</small></div><div><strong>{progress.stageRemainingDays.toLocaleString("bn-BD")} দিন</strong><small>পরবর্তী পর্যায়ে বাকি</small></div><div className="journey-overall-progress"><strong>{progress.percent.toLocaleString("bn-BD")}٪</strong><small>সামগ্রিক অগ্রগতি</small></div></div>
+        <div className="journey-current-meta"><div><strong>{progress.currentStage ? `${progress.stagePercent.toLocaleString("bn-BD")}٪ সম্পন্ন` : progress.status === "upcoming" ? "প্রস্তুতির সময়" : "১০০٪ সম্পন্ন"}</strong><small>এই পর্যায়ের অগ্রগতি</small></div><div><strong>{progress.stageRemainingDays.toLocaleString("bn-BD")} দিন</strong><small>পরবর্তী পর্যায়ে বাকি</small></div><div className="journey-overall-progress" title="শুরুর তারিখ থেকে নির্ধারিত মোট যাত্রার দিনের তুলনায় অতিক্রান্ত দিনের অনুপাত"><strong>{progress.percent.toLocaleString("bn-BD")}٪</strong><small>সামগ্রিক অগ্রগতি</small><span>শুরুর দিন থেকে অতিক্রান্ত দিন ÷ মোট নির্ধারিত দিন</span></div></div>
       </section>
       <div className="journey-module-intro"><div><span className="eyebrow">৭১টি পর্যায়</span><h2>তোমার অগ্রযাত্রা</h2></div><span>{completedStages.toLocaleString("bn-BD")} / ৭১ সম্পন্ন</span></div>
       <div className="journey-modules-list">
@@ -683,7 +741,7 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
               const remainingDays = Math.max(0, stage.durationDays - elapsedDays);
               const linkedGoal = stageGoal(stage);
               const statusLabel = status === "completed" ? "সম্পন্ন ব্যাচ" : status === "current" ? "চলমান ব্যাচ" : "পরবর্তী ব্যাচ";
-              return <button type="button" className={`journey-stage-row stage-${status}`} key={stage.stageNumber} onClick={() => setSelectedStageNumber(stage.stageNumber)} aria-label={`পর্যায় ${stage.stageNumber}: ${stage.title}, ${statusLabel}`}>
+              return <button type="button" className={`journey-stage-row stage-${status}`} key={stage.stageNumber} onClick={() => { setStageReturnTab("journey"); setSelectedStageNumber(stage.stageNumber); }} aria-label={`পর্যায় ${stage.stageNumber}: ${stage.title}, ${statusLabel}`}>
                 <span className="journey-stage-index">{status === "completed" ? <CheckCircle2 size={18}/> : stage.stageNumber.toLocaleString("bn-BD")}</span>
                 <span className="journey-stage-main">
                   <span className="journey-stage-title-line"><strong>{stage.title}</strong><em className={`journey-stage-status-chip stage-chip-${status}`}>{statusLabel}</em></span>
@@ -718,17 +776,17 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
           const percent = plan.tasks.length ? Math.round(done / plan.tasks.length * 100) : 0;
           const left = differenceInDateKeys(dateNow, plan.deadline);
           const linked = FIXED_JOURNEY_STAGES.filter((stage) => start <= stage.endDate && plan.deadline >= stage.startDate);
-          return <article className="deadline-plan-card" key={plan.id}>
+          return <article id={`deadline-plan-${plan.id}`} className={`deadline-plan-card ${focusGoalId === plan.id ? "is-focused" : ""}`} key={plan.id}>
             <div className="deadline-plan-heading"><div><span className="deadline-category">{categoryLabel(plan.category)}</span><h3>{plan.title}</h3>{plan.description && <p>{plan.description}</p>}</div><div className="deadline-goal-actions"><button type="button" className="icon-button-soft" aria-label="লক্ষ্য সম্পাদনা" onClick={() => editGoal(plan)}>✎</button><button type="button" className="icon-button-soft" aria-label="লক্ষ্য মুছুন" onClick={() => removeGoal(plan.id)}><X size={16}/></button></div></div>
             <div className="deadline-countdown"><strong>{left < 0 ? `${Math.abs(left).toLocaleString("bn-BD")} দিন পেরিয়েছে` : left === 0 ? "আজ শেষ তারিখ" : `${left.toLocaleString("bn-BD")} দিন বাকি`}</strong><span>{formatCompactDate(start)} – {formatCompactDate(plan.deadline)}</span></div>
             {linked.length > 0 && <div className="goal-linked-stages"><span>সম্পর্কিত পর্যায়</span>{linked.slice(0, 6).map((stage) => {
               const shortTitle = stage.title.length > 12 ? `${stage.title.slice(0, 12)}…` : stage.title;
-              return <button type="button" key={stage.stageNumber} title={stage.title} onClick={() => setSelectedStageNumber(stage.stageNumber)}>পর্যায় {stage.stageNumber.toLocaleString("bn-BD")} · {shortTitle}</button>;
+              return <button type="button" key={stage.stageNumber} title={stage.title} onClick={() => { setStageReturnTab("goals"); setSelectedStageNumber(stage.stageNumber); }}>পর্যায় {stage.stageNumber.toLocaleString("bn-BD")} · {shortTitle}</button>;
             })}{linked.length > 6 && <span className="goal-linked-more">+{(linked.length - 6).toLocaleString("bn-BD")} আরও</span>}</div>}
             <div className="deadline-progress"><span style={{ width: `${percent}%` }}/></div>
             <div className="deadline-progress-label"><span>{done.toLocaleString("bn-BD")} / {plan.tasks.length.toLocaleString("bn-BD")} কাজ সম্পন্ন</span><strong>{percent.toLocaleString("bn-BD")}%</strong></div>
-            <div className="deadline-task-list">{plan.tasks.map((task) => <div className={`deadline-task-row ${task.completed ? "is-done" : ""}`} key={task.id}><label><input type="checkbox" checked={task.completed} onChange={() => toggleTask(plan.id, task.id)}/><span><strong>{task.title}</strong>{task.details && <small>{task.details}</small>}{task.dueDate && <small>শেষ তারিখ: {formatCompactDate(task.dueDate)}</small>}</span></label><button type="button" className="tracker-icon-button" aria-label="কাজ মুছুন" onClick={() => removeTask(plan.id, task.id)}><X size={14}/></button></div>)}</div>
-            {taskPlanId === plan.id ? <form className="deadline-task-form" onSubmit={(event) => addTask(event, plan.id)}><label className="tracker-field"><span>কাজের নাম</span><input className="tracker-input" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} maxLength={160} placeholder="যেমন: প্রথম অধ্যায় শেষ করা" required/></label><label className="tracker-field"><span>বিস্তারিত (ঐচ্ছিক)</span><input className="tracker-input" value={taskDetails} onChange={(event) => setTaskDetails(event.target.value)} maxLength={600}/></label><label className="tracker-field"><span>কাজের শেষ তারিখ (ঐচ্ছিক)</span><input className="tracker-input" type="date" min={start} max={plan.deadline} value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)}/></label><div className="form-actions"><button type="button" className="tracker-quiet-button" onClick={() => setTaskPlanId("")}>বাতিল</button><button type="submit" className="tracker-primary-button" disabled={!taskTitle.trim()}>কাজ যোগ করো</button></div></form> : <button type="button" className="text-action deadline-add-task" onClick={() => { setTaskPlanId(plan.id); setTaskTitle(""); setTaskDetails(""); setTaskDueDate(""); }}><Plus size={15}/> পরিকল্পনায় কাজ যোগ করো</button>}
+            <div className="deadline-task-list">{plan.tasks.map((task) => <div className={`deadline-task-row ${task.completed ? "is-done" : ""}`} key={task.id}><label><input type="checkbox" checked={task.completed} onChange={() => toggleTask(plan.id, task.id)}/><span><strong>{task.title}</strong>{task.details && <small>{task.details}</small>}{task.dueDate && <small>শেষ তারিখ: {formatCompactDate(task.dueDate)}</small>}</span></label><div className="deadline-task-actions"><button type="button" className="tracker-icon-button" aria-label="কাজ সম্পাদনা" onClick={() => editTask(plan.id, task)}><Pencil size={14}/></button><button type="button" className="tracker-icon-button" aria-label="কাজ মুছুন" onClick={() => removeTask(plan.id, task.id)}><X size={14}/></button></div></div>)}</div>
+            {taskPlanId === plan.id ? <form className="deadline-task-form" onSubmit={(event) => addTask(event, plan.id)}><label className="tracker-field"><span>কাজের নাম</span><input className="tracker-input" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} maxLength={160} placeholder="যেমন: প্রথম অধ্যায় শেষ করা" required/></label><label className="tracker-field"><span>বিস্তারিত (ঐচ্ছিক)</span><input className="tracker-input" value={taskDetails} onChange={(event) => setTaskDetails(event.target.value)} maxLength={600}/></label><label className="tracker-field"><span>কাজের শেষ তারিখ (ঐচ্ছিক)</span><input className="tracker-input" type="date" min={start} max={plan.deadline} value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)}/></label><div className="form-actions"><button type="button" className="tracker-quiet-button" onClick={cancelTaskEdit}>বাতিল</button><button type="submit" className="tracker-primary-button" disabled={!taskTitle.trim()}>{editingTaskId ? "কাজ আপডেট" : "কাজ যোগ করো"}</button></div></form> : <button type="button" className="text-action deadline-add-task" onClick={() => { setTaskPlanId(plan.id); setEditingTaskId(null); setTaskTitle(""); setTaskDetails(""); setTaskDueDate(""); }}><Plus size={15}/> পরিকল্পনায় কাজ যোগ করো</button>}
           </article>;
         })}</div> : <div className="goal-empty-state"><strong>এখনো কোনো লক্ষ্য যোগ করা হয়নি</strong><p>শুরু ও শেষ তারিখ নির্ধারণ করে তোমার পরিকল্পনা সাজাও। একই সময়ে একটি লক্ষ্য রাখা যাবে।</p></div>}
       </section>
@@ -759,7 +817,7 @@ function MirrorView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const days = Array.from({ length: 7 }, (_, index) => { const key = addDaysToDateKey(end, index - 6); const d = new Date(`${key}T12:00:00Z`); const count = prayers.filter((x) => x.date === key).length + quran.filter((x) => x.date === key).length + dhikr.filter((x) => x.date === key).length + good.filter((x) => x.date === key).length + fasting.filter((x) => x.date === key).length; return { key, label: new Intl.DateTimeFormat("bn-BD", { weekday: "short", timeZone: "UTC" }).format(d), count }; });
   const max = Math.max(1, ...days.map((x) => x.count));
   return <div className="view-stack">
-    <PageIntro eyebrow="নিজের রেকর্ডের বিশ্লেষণ" title="নফস আয়না" description="" onBack={() => navigateSection("home")}/>
+    <PageIntro title="নফস আয়না" onBack={() => navigateSection("home")}/>
     <div className="range-control" role="group" aria-label="বিশ্লেষণের সময়সীমা">{[{ value: "7", label: "৭ দিন" }, { value: "30", label: "৩০ দিন" }, { value: "90", label: "৯০ দিন" }].map((item) => <button type="button" key={item.value} onClick={() => setRange(item.value as typeof range)} className={range === item.value ? "active" : ""}>{item.label}</button>)}</div>
     <div className="metric-grid"><MetricCard label="আদায়কৃত রাকাত" value={rakatTotal.toLocaleString("bn-BD")} detail={`শেষ ${range} দিনের সালাত রেকর্ড`} icon={Moon}/><MetricCard label="কুরআনের আয়াত" value={ayahTotal.toLocaleString("bn-BD")} detail={`${quran.length.toLocaleString("bn-BD")}টি পাঠ`} icon={BookOpen} accent="sand"/><MetricCard label="জিকিরের সংখ্যা" value={dhikrTotal.toLocaleString("bn-BD")} detail={`${dhikr.length.toLocaleString("bn-BD")}টি সেশন`} icon={Sparkles} accent="blue"/><MetricCard label="ভালো কাজের রেকর্ড" value={good.length.toLocaleString("bn-BD")} detail={`${avoid.length.toLocaleString("bn-BD")}টি ব্যক্তিগত আত্মসংযম লগ`} icon={Heart} accent="rose"/><MetricCard label="কাজা আদায়" value={qadaPrayers.length.toLocaleString("bn-BD")} detail="নির্বাচিত সময়ে সম্পন্ন কাজার রেকর্ড" icon={Clock3} accent="sand"/></div>
     <div className="content-grid"><Panel eyebrow="দৈনিক কার্যক্রম" title="সাম্প্রতিক সাত দিনের ধারা"><div className="weekly-bars">{days.map((bar) => <div className="weekly-bar-column" key={bar.key}><span className="weekly-bar-value">{bar.count ? bar.count.toLocaleString("bn-BD") : "—"}</span><div className="weekly-bar-track"><span style={{ height: `${Math.max(bar.count ? 8 : 3, bar.count / max * 100)}%` }}/></div><small>{bar.label}</small></div>)}</div><p className="chart-caption">এই চার্টে দৈনিক Tracker Entry-এর সংখ্যা দেখানো হয়েছে; এটি ইবাদতের মান নির্ধারণ করে না।</p></Panel>
@@ -891,8 +949,10 @@ function SettingsView({ data, userEmail, onLogout, loggingOut }: { data: ReturnT
       await flushWorkspaceChanges();
       if (getCloudSyncState() !== "synced") throw new Error(getCloudSyncMessage() || "প্রোফাইলের নাম Workspace-এ সংরক্ষণ হয়নি।");
       setProfileMessage("প্রোফাইল অনলাইনে সংরক্ষিত হয়েছে।");
-    } catch (error) {
-      setProfileMessage(error instanceof Error ? error.message : "প্রোফাইল সংরক্ষণ করা যায়নি।");
+    } catch {
+      const message = "প্রোফাইল আপডেট করা যায়নি। সংযোগ ও তথ্য যাচাই করে আবার চেষ্টা করো।";
+      setProfileMessage(message);
+      showAppToast("error", message);
     } finally {
       setProfileBusy(false);
     }
@@ -903,7 +963,10 @@ function SettingsView({ data, userEmail, onLogout, loggingOut }: { data: ReturnT
     updateWorkspaceData((current) => ({ ...current, preferences: { ...current.preferences, timeZone: "Asia/Dhaka", maghribTime } }));
     await flushWorkspaceChanges();
     setSaved(getCloudSyncState() === "synced");
-    if (getCloudSyncState() !== "synced") setBackupMessage(getCloudSyncMessage() || "অনলাইন সংরক্ষণ সম্পন্ন হয়নি। সংযোগ যাচাই করো।");
+    if (getCloudSyncState() !== "synced") {
+      const message = getCloudSyncMessage() || "অনলাইন সংরক্ষণ সম্পন্ন হয়নি। সংযোগ যাচাই করো।";
+      setBackupMessage(message);
+    }
     window.setTimeout(() => setSaved(false), 1800);
   }
 
@@ -937,7 +1000,7 @@ function SettingsView({ data, userEmail, onLogout, loggingOut }: { data: ReturnT
 
   return (
     <div className="view-stack settings-view">
-      <PageIntro eyebrow="ব্যক্তিগত পছন্দ" title="সেটিংস" description="" onBack={() => navigateSection("home")} />
+      <PageIntro title="সেটিংস" onBack={() => navigateSection("home")} />
       <section className="settings-profile-panel">
         <div className="settings-profile-heading"><span className="settings-profile-avatar">{getInitials(displayName)}</span><div><span className="eyebrow">অ্যাকাউন্ট</span><h2>ব্যক্তিগত প্রোফাইল</h2><p>তোমার পরিচিতি ও যোগাযোগের তথ্য</p></div></div>
         <form className="workspace-form settings-profile-form" onSubmit={saveProfile}>
@@ -955,7 +1018,6 @@ function SettingsView({ data, userEmail, onLogout, loggingOut }: { data: ReturnT
       </div>
       <Panel eyebrow="অনলাইন সংরক্ষণ" title="ব্যক্তিগত ওয়ার্কস্পেস"><div className="backup-summary"><span className="backup-summary-icon"><ShieldCheck size={20}/></span><div><strong>{getCloudSyncState() === "synced" ? "সব তথ্য অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" ? "অনলাইনে সংরক্ষণ চলছে" : getCloudSyncState() === "offline" ? "ইন্টারনেট সংযোগ নেই" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত হচ্ছে"}</strong><p>{data.prayerEntries.length + data.extraPrayerEntries.length}টি সালাত · {data.quranEntries.length}টি কুরআন পাঠ · {data.dhikrSessions.length}টি জিকির · {data.deadlinePlans.length}টি সময়সীমা · {data.journeys.length}টি যাত্রা</p></div><span className={`local-badge cloud-status-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? "অনলাইনে আছে" : getCloudSyncState() === "offline" ? "সংযোগ নেই" : getCloudSyncState() === "error" ? "সমস্যা" : getCloudSyncState() === "syncing" ? "সংরক্ষণ হচ্ছে" : "প্রস্তুতি"}</span></div><div className="backup-actions"><button type="button" className="button-secondary" onClick={exportData}><Download size={15}/> JSON ব্যাকআপ ডাউনলোড</button><label className="button-secondary upload-button"><Upload size={15}/>{importing ? "পড়া হচ্ছে…" : "ব্যাকআপ পুনরুদ্ধার"}<input type="file" accept="application/json,.json" onChange={(event) => void importData(event.target.files?.[0])} disabled={importing}/></label></div>{backupMessage && <p className="inline-feedback" role="status">{backupMessage}</p>}<p className="security-caption"><LockKeyhole size={14}/> রেকর্ড অনলাইনে সংরক্ষিত হয়; ইন্টারনেট না থাকলে নতুন পরিবর্তন সংরক্ষণ হয় না। JSON ব্যাকআপ এনক্রিপ্ট করা নয়—নিরাপদে রাখো।</p></Panel>
       <section className="settings-logout-panel"><div><span className="settings-logout-icon"><LogOut size={18}/></span><div><strong>এই ডিভাইস থেকে লগআউট</strong><p>তোমার অনলাইন রেকর্ড অ্যাকাউন্টে নিরাপদ থাকবে।</p></div></div><button type="button" className="button-secondary settings-logout-button" onClick={onLogout} disabled={loggingOut}>{loggingOut ? <LoaderCircle className="spin" size={15}/> : <LogOut size={15}/>} {loggingOut ? "লগআউট হচ্ছে…" : "লগআউট"}</button></section>
-      <div className={`local-data-note cloud-sync-note cloud-sync-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? <Cloud size={15}/> : <CloudOff size={15}/>} {getCloudSyncMessage() || "তোমার পরিবর্তন অনলাইনে সংরক্ষিত হয়।"}</div>
     </div>
   );
 }
@@ -1002,9 +1064,10 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
   return (
     <>
     <PrayerReminderEngine userName={displayName}/>
+    <AppToastViewport />
     <div className="workspace-app">
       <main className="workspace-main">
-        <header className="workspace-topbar"><div className="desktop-brand"><BrandMark/></div><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label cloud-status-${getCloudSyncState()}`}><span/>{getCloudSyncState() === "synced" ? "অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "অনলাইনে সংরক্ষণ হচ্ছে" : getCloudSyncState() === "offline" ? "অফলাইন · সংরক্ষিত নয়" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত"}</span><NotificationPopover events={data.reminderEvents}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
+        <header className="workspace-topbar"><div className="desktop-brand"><BrandMark/></div><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label last-sync-label cloud-status-${getCloudSyncState()}`} title={getCloudSyncState() === "syncing" ? "অনলাইন তথ্য সিঙ্ক হচ্ছে" : getCloudSyncState() === "error" ? getCloudSyncMessage() : `সার্ভার নিশ্চিত করেছে: ${formatLastSyncTime(getLastSuccessfulSyncAt())}`}><span/>{getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "সিঙ্ক হচ্ছে…" : getCloudSyncState() === "offline" ? `শেষ সিঙ্ক · ${formatLastSyncTime(getLastSuccessfulSyncAt())}` : getCloudSyncState() === "error" ? `সিঙ্ক সমস্যা · ${formatLastSyncTime(getLastSuccessfulSyncAt())}` : `সর্বশেষ সিঙ্ক · ${formatLastSyncTime(getLastSuccessfulSyncAt())}`}</span><NotificationPopover events={data.reminderEvents}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
         <nav className="workspace-desktop-nav" aria-label="প্রধান বিভাগ">{NAV_ITEMS.map((item) => { const Icon = item.icon; const active = section === item.id; return <button key={item.id} type="button" className={`workspace-desktop-tab ${active ? "active" : ""}`} onClick={() => navigateSection(item.id)} aria-current={active ? "page" : undefined}><Icon size={17}/><span>{item.label}</span></button>; })}</nav>
         <div className="workspace-content">
           {section === "home" && <DashboardView key={liveDay} data={data}/>} 

@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
+import { showAppToast } from "@/lib/ui/toast";
 
 export type Theme = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
@@ -83,11 +84,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (sequence === requestSequence.current) {
         setThemeSaveState("saved");
         setThemeSaveMessage("থিম পছন্দ অনলাইনে সংরক্ষিত।");
+        showAppToast("success", "থিম পছন্দ আপডেট হয়েছে।");
       }
-    }).catch((error: unknown) => {
+    }).catch(() => {
       if (sequence === requestSequence.current) {
+        const message = "থিমের পছন্দ অনলাইনে সংরক্ষণ করা যায়নি। সংযোগ যাচাই করে আবার চেষ্টা করো।";
         setThemeSaveState("error");
-        setThemeSaveMessage(error instanceof Error ? error.message : "থিম অনলাইনে সংরক্ষণ করা যায়নি।");
+        setThemeSaveMessage(message);
+        showAppToast("error", message);
       }
     });
   }, []);

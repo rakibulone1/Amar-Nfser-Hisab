@@ -55,7 +55,7 @@ export function NotificationsList({ initialItems }: { initialItems: Notification
             <div className="notification-item-content">
               <h3>{item.title}</h3>
               {item.body && <p>{item.body}</p>}
-              <time dateTime={item.created_at}>{new Intl.DateTimeFormat("bn-BD", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Dhaka" }).format(new Date(item.created_at))}</time>
+              <time dateTime={item.created_at}>{new Intl.DateTimeFormat("bn-BD", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Dhaka" }).format(new Date(item.created_at))}</time>
             </div>
             <div className="notification-actions">
               {!item.is_read && <button className="small-action" type="button" disabled={busy} onClick={() => markRead(item.id)}><Check size={12} /> পড়া হয়েছে</button>}

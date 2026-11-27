@@ -1,36 +1,16 @@
-Amar Nfser Hisab — Release 1.2.7 Premium UI Cumulative Patch
+PATCH BASE: Amar Nfser Hisab Release 1.2.8 Experience Upgrade
+PATCH: Fix 01
 
-Base: Public GitHub main Release 1.2.5 A+ Account-Owned Online + Fix Patch 01.
-This patch incorporates the intervening Release 1.2.6 repairs and all Release 1.2.7 visual refinements. Apply it once; do not separately apply Release 1.2.6.
-
-Files included in this cumulative incremental patch:
+FILES
 - PATCH_BASE.txt
 - PATCH_FILE_MANIFEST.txt
-- PATCH_README_BN.md
-- PROJECT_PACKAGE_MANIFEST.txt
-- README_BN.md
-- README_RELEASE_1.2.6_BN.md
-- README_RELEASE_1.2.7_BN.md
-- REMOVE_FILES.txt
+- FIX_README_BN.md
 - package.json
-- package-lock.json
-- src/app/api/profile/route.ts
-- src/app/globals.css
-- src/app/login/page.tsx
-- src/components/frontend-workspace.tsx
-- src/modules/hadith/hadith-library.tsx
-- src/modules/trackers/prayer-time-widget.tsx
+- src/lib/workspace/store.ts
 - src/modules/trackers/tracker-center.tsx
-- tests/phase07-contract.test.mjs
+- src/components/frontend-workspace.tsx
+- src/providers/theme-provider.tsx
 - tests/phase08-followup.test.mjs
-- tests/phase08-qa.test.mjs
-- tests/phase12-release.test.mjs
-- tests/phase13-release-hardening.test.mjs
-- tests/phase15-mobile-journey.test.mjs
-- tests/phase16-visual-system.test.mjs
-- tests/phase17-account-cleanup.test.mjs
-- tests/phase18-fix-patch.test.mjs
-- tests/phase19-ui-polish.test.mjs
-- tests/phase20-premium-ui.test.mjs
+- tests/phase22-build-fix.test.mjs
 
-No database migration, schema, RLS, API data contract, durable data format, dependency, or environment-variable change.
+No package-lock.json included because no dependency or lockfile changes were made.

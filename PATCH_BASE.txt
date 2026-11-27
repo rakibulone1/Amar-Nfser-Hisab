@@ -1,4 +1,9 @@
-Amar Nfser Hisab — Current GitHub main baseline
-Base Project: Release 1.2.5 A+ Account-Owned Online + Fix Patch 01.
-This cumulative patch includes the intervening Release 1.2.6 fixes plus Release 1.2.7 premium UI refinement.
-Apply once to the 1.2.5 project after Fix Patch 01. Do not stack the earlier 1.2.6 patch separately.
+Patch: Amar Nfser Hisab Release 1.2.8 Fix 01
+Required base: Release 1.2.8 Experience Upgrade Patch already applied to the project.
+Patch type: Incremental source/build fix only.
+Database schema change: None.
+SQL migration required: No.
+Dependency or package-lock changes: None.
+Environment variable changes: None.
+
+This patch fixes the exact TypeScript errors and ESLint warnings reported in the user's Release 1.2.8 terminal log. It does not repeat the Experience Upgrade work.

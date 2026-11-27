@@ -56,7 +56,7 @@ test('missing date helpers and the Qada future-time purity check are covered', (
   assert.match(dateModule, /export function formatBengaliDate\(dateKey: string\)/);
   assert.match(dashboard, /import \{ formatBengaliDate, getReligiousDateKey \}/);
   assert.match(journal, /formatBengaliDate/);
-  assert.match(workspace, /getPrayerCivilDate/);
+  assert.match(workspace, /getJournalDate/);
   assert.match(tracker, /function isFutureInstant\(value: Date\)/);
   assert.match(tracker, /isFutureInstant\(performedInstant\)/);
   const formStart = tracker.indexOf('function QadaSettlementForm(');
