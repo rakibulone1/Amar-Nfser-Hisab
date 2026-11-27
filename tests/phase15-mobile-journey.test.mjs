@@ -16,7 +16,7 @@ test("Dashboard and Goals no longer expose the demotivating 1,438-day counter", 
 test("one global Dashboard return bar is not duplicated; page-level controls remain", () => {
   const ui = read("src/components/frontend-workspace.tsx");
   assert.doesNotMatch(ui, /workspace-section-back/);
-  assert.match(ui, /ড্যাশবোর্ডে ফিরো/);
+  assert.match(ui, /ফিরে যাও/);
   const hadith = read("src/modules/hadith/hadith-library.tsx");
   assert.ok(hadith.includes('router.push("/dashboard")'));
   assert.doesNotMatch(hadith, /হাদিসের তালিকায় ফিরো/);
@@ -55,16 +55,11 @@ test("stage list displays elapsed, remaining and percentage; goal link is concis
   assert.match(ui, /journey-stage-goal-chip/);
 });
 
-test("forbidden-time display uses AlAdhan's sunrise, sunset and a solar-noon reference, not arbitrary fixed offsets", () => {
-  const api = read("src/app/api/prayer-times/route.ts");
+test("prohibited-time panel is removed from the user interface while core prayer timings remain", () => {
   const widget = read("src/modules/trackers/prayer-time-widget.tsx");
-  assert.match(api, /timings\.Sunset/);
-  assert.match(api, /midpointClock/);
-  assert.match(api, /forbiddenTimes: \{ sunrise, zawal: solarNoon, sunset \}/);
-  assert.doesNotMatch(api, /shiftClock|15\)|-5\)/);
-  assert.match(widget, /সূর্যের গণনাকৃত অবস্থান/);
-  assert.match(widget, /নিষেধাজ্ঞা শুধু মুহূর্তটুকুতে সীমাবদ্ধ নয়/);
-  assert.doesNotMatch(widget, /sunriseStart|zawalStart|sunsetStart/);
+  assert.match(widget, /আজকের ওয়াক্তের সময়/);
+  assert.match(widget, /শেষ \{endTime/);
+  assert.doesNotMatch(widget, /forbidden-prayer-times|সূর্যের গণনাকৃত অবস্থান|নিষিদ্ধ মুহূর্তের সময়সূচি/);
 });
 
 test("prayer-time cache preserves real astronomical reference fields after hydration", () => {

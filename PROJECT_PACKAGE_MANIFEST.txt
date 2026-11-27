@@ -1,26 +1,26 @@
-Amar Nfser Hisab — Release 1.2.5 Account-Owned Online Release
+Amar Nfser Hisab — Release 1.2.6
+Base lineage: Release 1.2.5 A+ Account-Owned Online + Fix Patch 01
 
 Included:
-- Complete Next.js / React application source and public assets.
-- Authenticated per-record Supabase relational workspace tables, RLS policies and SECURITY INVOKER RPCs.
-- No runtime JSON workspace snapshot, IndexedDB persistence or Local Storage persistence.
-- `supabase/MASTER_DATABASE_SETUP.sql` for new/empty Supabase projects; it does not create the retired snapshot table.
-- `supabase/migrations/002_relational_workspace.sql` for the one-time existing-database conversion from the prior snapshot to relational records.
-- `supabase/migrations/003_remove_legacy_snapshot.sql` to drop the retired snapshot table/RPC only after the relational migration is verified.
-- Read-only relational audit SQL for existing account data.
-- Account deletion endpoint with same-origin validation, current-password reauthentication, explicit DELETE confirmation, private account file cleanup and Auth user deletion.
-- Account-owned public records use ON DELETE CASCADE to auth.users; private account files are removed before Auth deletion.
-- Static Bengali Hadith library, the fixed 71-stage journey, observation/reward flows and deadline planning.
-- Maghrib-based Bangladesh journal date, Hanafi prayer calculation, Qada confirmation, notifications and direct tracker entry.
-- Release, regression, account cleanup, relational database and UI tests.
-- Release 1.2.4 unified mobile-first visual system retained as the UI baseline.
+- Complete Next.js / React app source, Bengali UI, public assets and tests.
+- Account-authenticated per-record Supabase relational workspace and RLS/RPCs.
+- Supabase Master setup script: `supabase/MASTER_DATABASE_SETUP.sql` (new/empty projects only).
+- Master SQL creates the relational workspace schema for new/empty projects only; do not run it over an existing production database.
+- No runtime JSON workspace snapshot and no durable IndexedDB/Local Storage persistence.
+- Profile API and Settings profile/logout UI; no Account Delete control in Settings.
+- Dashboard, Goals, Journal, Nafs Mirror, Hadith, Notifications and Settings UI refinements.
+- Compact section heading/back control; full-width desktop top tabs and mobile bottom navigation.
+- Notification navigation to the exact target entry, background scroll lock, outside-click and Escape close.
+- Maghrib-based prayer accounting day and duplicate-safe prayer entry/edit workflow.
+- Existing Journey, Hadith library, tracker forms, data formats and relational Database schema preserved.
+- Release 1.2.6 regression and UI contract tests.
 
-Excluded by design:
-- `.env.local`, Supabase secrets/tokens, `node_modules`, `.next`, `tsconfig.tsbuildinfo` and cache files.
-- No new paid service, Cron, Edge Function or extra Storage bucket.
+Not included:
+- `.env.local`, private Supabase keys, session cookies, node_modules, .next, Git metadata,
+  TypeScript build cache, personal data or private backups.
+- No new dependency, database migration, table, cron, Edge Function or paid service.
 
-Database setup:
-- New/empty project: run only `supabase/MASTER_DATABASE_SETUP.sql` once.
-- Existing Release 1.1/1.2 database: ensure migration 002 has completed and relational row counts are verified; then run migration 003 once to remove the obsolete snapshot archive.
-- Do not run the full Master SQL on an existing production database.
-- Account deletion permanently removes that user's account-owned relational rows and account-prefixed private storage files.
+Apply instructions:
+- Incremental patch target: Release 1.2.5 A+ Account-Owned Online with Fix Patch 01 already applied.
+- No SQL Migration required for Release 1.2.6.
+- Keep `.env.local` untouched; run npm ci and verify:release locally before deployment.

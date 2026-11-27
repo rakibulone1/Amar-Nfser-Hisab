@@ -1,6 +1,10 @@
-Release 1.2.5 Patch — Manual removal required after extraction:
+No application source files must be manually deleted for Release 1.2.6.
 
-Delete this obsolete source file if it still exists in the target project:
+Keep the current authenticated relational store:
+  src/lib/workspace/store.ts
+
+If an obsolete file from a much older release still exists, such as
   src/lib/local/store.ts
-
-Do not delete `src/lib/workspace/store.ts`; this is the current authenticated relational online store.
+it is not used by Release 1.2.6. It may be removed only after confirming no
+custom code imports it. Do not delete the active workspace store or any
+Supabase migration files.

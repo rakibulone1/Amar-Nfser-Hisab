@@ -1,6 +1,6 @@
 # Amar Nfser Hisab
 
-ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
+ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.2.6-এ মোবাইল-প্রথম নেভিগেশন, সংক্ষিপ্ত Section Heading, উন্নত Notification ও Settings Profile রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
 
 ## ১. প্রয়োজনীয়তা
 
@@ -31,7 +31,7 @@ npm run env:check
 
 `supabase/MASTER_DATABASE_SETUP.sql`
 
-এটি প্রজেক্টের পূর্ণাঙ্গ Master Schema: প্রয়োজনীয় Tracker টেবিল, owner-scoped Row Level Security, private attachment storage policy, backup/restore RPC এবং ব্যক্তিগত online workspace snapshot table। এই প্যাকেজে আলাদা incremental migration নেই।
+এটি নতুন/খালি প্রজেক্টের পূর্ণাঙ্গ Master Schema: প্রয়োজনীয় Relational Tracker টেবিল, owner-scoped Row Level Security, private attachment storage policy, backup/restore RPC এবং per-record online workspace। এতে অবসরপ্রাপ্ত JSON Snapshot Table তৈরি করা হয় না।
 
 **সতর্কতা:** এটি নতুন/খালি Database-এর জন্য। আগে থেকে ব্যবহার করা Database-এ অন্ধভাবে চালাবে না; বিদ্যমান তথ্য ও schema আগে যাচাই করতে হবে। SQL Editor-এ Run সফল না হওয়া পর্যন্ত Cloud Sync সম্পন্ন হবে না।
 

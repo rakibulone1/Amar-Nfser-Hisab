@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent, type ReactNode, type Inpu
 import {
   ArrowLeft, ArrowRight, BookMarked, BookOpen, Check, CheckCircle2,
   ChevronRight, Clock3, Compass, Heart, MoonStar, Plus, Save,
-  Search, ShieldCheck, Sparkles, Trash2, TrendingUp, X
+  Search, ShieldCheck, Sparkles, Trash2, TrendingUp, X, Pencil
 } from "lucide-react";
 import { SURAHS } from "@/modules/journal/surahs";
 import {
@@ -113,13 +113,129 @@ function QadaSettlementForm({ data, onCancel }: { data: WorkspaceData; onCancel:
   </form>;
 }
 
-function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = false }: { data: WorkspaceData; onCancel: () => void; initialPrayer?: PrayerId | null; initialQada?: boolean }) {
+function PrayerEntryEditForm({ entry, onCancel, onSaved }: { entry: PrayerEntry; onCancel: () => void; onSaved: () => void }) {
+  const initialDateTime = entry.performedAt ? getDhakaDateTimeInput(new Date(entry.performedAt)) : getDhakaDateTimeInput();
+  const [method, setMethod] = useState<"jamaat" | "home" | "not-performed">(entry.method === "not-performed" ? "not-performed" : entry.method === "jamaat" ? "jamaat" : "home");
+  const [performedDate, setPerformedDate] = useState(initialDateTime.date);
+  const [performedTime, setPerformedTime] = useState(initialDateTime.time);
+  const [takbir, setTakbir] = useState<PrayerEntry["takbirStatus"]>(entry.takbirStatus === "late-join" || entry.takbirStatus === "without-takbir" ? entry.takbirStatus : "with-takbir");
+  const [caught, setCaught] = useState(String(entry.caughtRakats || 0));
+  const [completedAfter, setCompletedAfter] = useState(String(entry.completedAfterRakats || 0));
+  const [parts, setParts] = useState<PrayerComponentResult[]>(entry.components.map((part) => ({ ...part })));
+  const [lateReason, setLateReason] = useState(entry.lateReason);
+  const [missedReason, setMissedReason] = useState(entry.missedReason);
+  const [note, setNote] = useState(entry.note);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  function changePart(partId: string, value: string) {
+    const nextValue = Math.max(0, Number(value) || 0);
+    setParts((current) => current.map((part) => part.partId === partId
+      ? { ...part, performedRakats: Math.min(part.plannedRakats, nextValue), performed: nextValue > 0 }
+      : part));
+  }
+
+  function save(eventSubmit: FormEvent<HTMLFormElement>) {
+    eventSubmit.preventDefault();
+    setError("");
+    if (method !== "not-performed" && !toDhakaIso(performedDate, performedTime)) {
+      setError("আদায়ের তারিখ ও সময় সঠিকভাবে দাও।");
+      return;
+    }
+    const fardPart = parts.find((part) => part.category === "fard");
+    if (!fardPart) { setError("এই রেকর্ডে ফরজ অংশ পাওয়া যায়নি।"); return; }
+    const fardTotal = fardPart.plannedRakats;
+    let performedFard = fardPart.performedRakats;
+    let nextCaught = Number(caught) || 0;
+    let nextCompletedAfter = Number(completedAfter) || 0;
+    let nextTakbir = method === "jamaat" ? takbir : "not-applicable" as const;
+    let nextLateReason = method === "jamaat" && takbir === "late-join" ? lateReason.trim() : "";
+    let nextMissedReason = missedReason.trim();
+
+    if (method === "not-performed") {
+      performedFard = 0;
+      nextCaught = 0;
+      nextCompletedAfter = 0;
+      nextTakbir = "not-applicable";
+      nextLateReason = "";
+      if (nextMissedReason.length < 2) { setError("কেন আদায় হয়নি, সংক্ষেপে লিখো।"); return; }
+    } else if (method === "home") {
+      performedFard = fardTotal;
+      nextCaught = fardTotal;
+      nextCompletedAfter = 0;
+      nextTakbir = "not-applicable";
+      nextLateReason = "";
+      nextMissedReason = "";
+    } else if (takbir === "late-join") {
+      if (!Number.isInteger(nextCaught) || nextCaught < 1 || nextCaught > fardTotal) { setError("ইমামের সঙ্গে পাওয়া রাকাত সঠিকভাবে দাও।"); return; }
+      if (!nextLateReason || (nextCaught + nextCompletedAfter < fardTotal && !nextMissedReason)) { setError("জামাতে যোগ দেওয়ার তথ্য ও প্রয়োজনীয় কারণ পূরণ করো।"); return; }
+      nextCompletedAfter = Math.min(Math.max(0, nextCompletedAfter), fardTotal - nextCaught);
+      performedFard = Math.min(fardTotal, nextCaught + nextCompletedAfter);
+    } else {
+      performedFard = fardTotal;
+      nextCaught = fardTotal;
+      nextCompletedAfter = 0;
+      nextMissedReason = "";
+    }
+
+    const nextParts = parts.map((part) => part.category === "fard"
+      ? { ...part, performed: performedFard > 0, performedRakats: performedFard, reason: method === "not-performed" ? nextMissedReason : method === "jamaat" && takbir === "late-join" ? [nextLateReason, nextMissedReason].filter(Boolean).join(" · ") : "" }
+      : { ...part, performed: part.performedRakats > 0 });
+    const missedRakats = Math.max(0, fardTotal - performedFard);
+    const now = new Date().toISOString();
+    const updatedEntry: PrayerEntry = {
+      ...entry,
+      method: method === "not-performed" ? "not-performed" : method,
+      components: nextParts,
+      takbirStatus: nextTakbir,
+      caughtRakats: nextCaught,
+      completedAfterRakats: nextCompletedAfter,
+      missedRakats,
+      lateReason: nextLateReason,
+      missedReason: nextMissedReason,
+      performedAt: method === "not-performed" ? "" : toDhakaIso(performedDate, performedTime) || "",
+      note: note.trim(),
+      updatedAt: now
+    };
+    setBusy(true);
+    updateWorkspaceData((current) => {
+      let qadaEntries = current.qadaEntries.filter((item) => !(item.status === "pending" && item.sourceEntryId === entry.id));
+      const settledAlready = current.qadaEntries.some((item) => item.status === "settled" && item.prayer === entry.prayer && item.missedDate === entry.date);
+      if (missedRakats > 0 && !settledAlready) {
+        qadaEntries = [{ id: current.qadaEntries.find((item) => item.status === "pending" && item.sourceEntryId === entry.id)?.id || makeId(), prayer: entry.prayer, missedDate: entry.date, sourceEntryId: entry.id, rakats: missedRakats, reason: nextMissedReason || nextLateReason || "ফরজের কিছু রাকাত বাকি", status: "pending", settledAt: null, settlementNote: "", createdAt: current.qadaEntries.find((item) => item.status === "pending" && item.sourceEntryId === entry.id)?.createdAt || now }, ...qadaEntries];
+      }
+      return { ...current, prayerEntries: current.prayerEntries.map((item) => item.id === entry.id ? updatedEntry : item), qadaEntries };
+    });
+    setBusy(false);
+    onSaved();
+  }
+
+  return <form className="tracker-form prayer-entry-editor" onSubmit={save}>
+    <div className="prayer-editor-heading"><div><span className="wizard-step-kicker">{PRAYER_NAMES[entry.prayer]} · {entry.date}</span><h3>সালাতের রেকর্ড সম্পাদনা</h3></div><span className="edit-record-badge">সম্পাদনা</span></div>
+    <Field label="ফরজ সালাতের অবস্থা"><Select value={method} onChange={(event) => setMethod(event.target.value as typeof method)}><option value="jamaat">জামাতে আদায়</option><option value="home">বাসায় / একাকী আদায়</option><option value="not-performed">আদায় হয়নি</option></Select></Field>
+    {method === "jamaat" && <Field label="জামাতে যোগ দেওয়ার অবস্থা"><Select value={takbir === "not-applicable" ? "with-takbir" : takbir} onChange={(event) => setTakbir(event.target.value as PrayerEntry["takbirStatus"])}><option value="with-takbir">তাকবিরে উলা পেয়েছি</option><option value="without-takbir">তাকবিরে উলা পাইনি, সব রাকাত পেয়েছি</option><option value="late-join">দেরিতে যোগ দিয়েছি</option></Select></Field>}
+    {method === "jamaat" && takbir === "late-join" && <div className="tracker-form-grid"><Field label="ইমামের সঙ্গে পাওয়া রাকাত"><TextInput type="number" min="1" max={fardTotalFallback(parts)} value={caught} onChange={(event) => setCaught(event.target.value)}/></Field><Field label="পরে পূরণ করা রাকাত"><TextInput type="number" min="0" max={fardTotalFallback(parts)} value={completedAfter} onChange={(event) => setCompletedAfter(event.target.value)}/></Field></div>}
+    {method !== "not-performed" && <div className="tracker-form-grid"><Field label="আদায়ের তারিখ"><TextInput type="date" value={performedDate} onChange={(event) => setPerformedDate(event.target.value)} required/></Field><Field label="আদায়ের সময়"><TextInput type="time" value={performedTime} onChange={(event) => setPerformedTime(event.target.value)} required/></Field></div>}
+    <div className="prayer-editor-parts"><strong>রাকাতের বিবরণ</strong>{parts.map((part) => <Field key={part.partId} label={`${part.label} · ${CATEGORY_LABELS[part.category]}`}><TextInput type="number" min="0" max={part.plannedRakats} value={method === "not-performed" && part.category === "fard" ? "0" : method === "home" && part.category === "fard" ? String(part.plannedRakats) : String(part.performedRakats)} disabled={method === "not-performed" && part.category === "fard" || method === "home" && part.category === "fard" || method === "jamaat" && part.category === "fard" && takbir !== "late-join"} onChange={(event) => changePart(part.partId, event.target.value)}/></Field>)}</div>
+    {method === "jamaat" && takbir === "late-join" && <Field label="জামাতে দেরি হওয়ার কারণ"><TextArea rows={2} value={lateReason} onChange={(event) => setLateReason(event.target.value)} /></Field>}
+    {method === "not-performed" || method === "jamaat" && takbir === "late-join" ? <Field label="বাকি রাকাতের কারণ"><TextArea rows={2} value={missedReason} onChange={(event) => setMissedReason(event.target.value)} /></Field> : null}
+    <Field label="ব্যক্তিগত নোট"><TextArea rows={2} value={note} onChange={(event) => setNote(event.target.value)} /></Field>
+    {error && <Notice type="error">{error}</Notice>}
+    <div className="wizard-actions"><button type="button" className="tracker-quiet-button" onClick={onCancel}>বাতিল</button><button type="submit" className="tracker-primary-button" disabled={busy}>{busy ? "সংরক্ষণ হচ্ছে…" : <><Save size={15}/> পরিবর্তন সংরক্ষণ</>}</button></div>
+  </form>;
+}
+
+function fardTotalFallback(parts: PrayerComponentResult[]) {
+  return parts.find((part) => part.category === "fard")?.plannedRakats || 4;
+}
+
+function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = false, initialDate, initialEditingEntry = null }: { data: WorkspaceData; onCancel: () => void; initialPrayer?: PrayerId | null; initialQada?: boolean; initialDate?: string | null; initialEditingEntry?: PrayerEntry | null }) {
   const [prayer, setPrayer] = useState<PrayerId | "">(initialPrayer || "");
   const [partIndex, setPartIndex] = useState(0);
   const [componentResults, setComponentResults] = useState<PrayerComponentResult[]>([]);
   const [partDone, setPartDone] = useState<boolean | null>(null);
   const [partReason, setPartReason] = useState("");
-  const [method, setMethod] = useState<"jamaat" | "home" | "not-prayed" | "home-partial" | "">("");
+  const [method, setMethod] = useState<"jamaat" | "home" | "not-prayed" | "">("");
   const [extraMode, setExtraMode] = useState(false);
   const [qadaMode, setQadaMode] = useState(initialQada);
   const [takbir, setTakbir] = useState<PrayerEntry["takbirStatus"]>("not-applicable");
@@ -127,7 +243,8 @@ function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = fals
   const [completedAfter, setCompletedAfter] = useState("0");
   const [lateReason, setLateReason] = useState("");
   const [missedReason, setMissedReason] = useState("");
-  const [prayerDate, setPrayerDate] = useState(today());
+  const [prayerDate, setPrayerDate] = useState(initialDate || today());
+  const [editingEntry, setEditingEntry] = useState<PrayerEntry | null>(initialEditingEntry);
   const prayerNow = getDhakaDateTimeInput();
   const [performedTime, setPerformedTime] = useState(prayerNow.time);
   const [note, setNote] = useState("");
@@ -138,6 +255,7 @@ function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = fals
   const prayerLabel = prayer ? PRAYER_NAMES[prayer] : "সালাত";
   const pendingQada = data.qadaEntries.filter((item) => item.status === "pending");
   const allResults = [...componentResults];
+  const existingPrayerEntry = prayer ? data.prayerEntries.find((item) => item.date === prayerDate && item.prayer === prayer && item.method !== "qada") || null : null;
 
   function moveNextPart(result?: PrayerComponentResult) {
     setError("");
@@ -152,9 +270,9 @@ function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = fals
     if (selectedMethod === "jamaat" && takbir === "late-join" && lateReason.trim().length < 2) { setError("দেরি হওয়ার কারণ লিখো।"); return; }
     const fardPart = parts.find((part) => part.category === "fard");
     if (!fardPart) { setError("এই ওয়াক্তের ফরজ রাকাত Configuration পাওয়া যায়নি। Settings পরীক্ষা করো।"); return; }
-    const initialCaught = selectedMethod === "jamaat" && takbir === "late-join" || selectedMethod === "home-partial" ? Number(caught) : selectedMethod === "home" ? fardPart.rakats : fardPart.rakats;
-    const initiallyMissed = selectedMethod === "jamaat" && takbir === "late-join" || selectedMethod === "home-partial" ? Math.max(0, fardPart.rakats - initialCaught) : 0;
-    const completedLater = selectedMethod === "jamaat" && takbir === "late-join" || selectedMethod === "home-partial" ? Math.max(0, Math.min(initiallyMissed, Number(completedAfter) || 0)) : 0;
+    const initialCaught = selectedMethod === "jamaat" && takbir === "late-join" ? Number(caught) : fardPart.rakats;
+    const initiallyMissed = selectedMethod === "jamaat" && takbir === "late-join" ? Math.max(0, fardPart.rakats - initialCaught) : 0;
+    const completedLater = selectedMethod === "jamaat" && takbir === "late-join" ? Math.max(0, Math.min(initiallyMissed, Number(completedAfter) || 0)) : 0;
     const outstandingRakats = Math.max(0, initiallyMissed - completedLater);
     if (outstandingRakats > 0 && missedReason.trim().length < 2) { setError("যে রাকাতগুলো এখনো পূরণ করোনি, তার কারণ লিখো।"); return; }
     const omittedSunnah = data.prayerConfig[selectedPrayer].filter((part) => part.category === "sunnah" && !part.enabled).map((part) => ({ partId: part.id, label: part.label, category: part.category, plannedRakats: part.rakats, performed: false, performedRakats: 0, reason: part.omissionReason || "সেটিংসে নিষ্ক্রিয় করা হয়েছে" }));
@@ -162,7 +280,7 @@ function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = fals
     const performedAt = selectedMethod === "not-prayed" ? "" : toDhakaIso(getPrayerCivilDate(prayerDate, selectedPrayer), performedTime);
     if (selectedMethod !== "not-prayed" && !performedAt) { setError("আদায়ের তারিখ ও সময় সঠিকভাবে দাও।"); return; }
     const entry: PrayerEntry = {
-      id: makeId(), date: prayerDate, prayer: selectedPrayer, method: selectedMethod === "not-prayed" ? "not-performed" : selectedMethod === "home-partial" ? "home" : selectedMethod,
+      id: makeId(), date: prayerDate, prayer: selectedPrayer, method: selectedMethod === "not-prayed" ? "not-performed" : selectedMethod,
       components: results, takbirStatus: selectedMethod === "jamaat" ? takbir : "not-applicable",
       caughtRakats: selectedMethod === "not-prayed" ? 0 : initialCaught,
       completedAfterRakats: completedLater,
@@ -172,13 +290,13 @@ function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = fals
     };
     updateWorkspaceData((current) => {
       const replacedEntries = current.prayerEntries.filter((item) => item.date === prayerDate && item.prayer === selectedPrayer && item.method !== "qada");
-      const qadaNeeded = selectedMethod === "not-prayed" || results.some((part) => part.category === "fard" && !part.performed);
+      const qadaNeeded = selectedMethod === "not-prayed" || results.some((part) => part.category === "fard" && part.performedRakats < part.plannedRakats);
       let qadaEntries = qadaNeeded
         ? current.qadaEntries.filter((item) => !(item.status === "pending" && item.prayer === selectedPrayer && item.missedDate === prayerDate && item.sourceEntryId && replacedEntries.some((entry) => entry.id === item.sourceEntryId)))
         : current.qadaEntries.filter((item) => !(item.status === "pending" && item.prayer === selectedPrayer && item.missedDate === prayerDate));
       if (qadaNeeded && !qadaEntries.some((item) => item.prayer === selectedPrayer && item.missedDate === prayerDate && item.status === "pending")) {
-        const missingRakats = fardPart?.rakats || 0;
-        qadaEntries = [{ id: makeId(), prayer: selectedPrayer, missedDate: prayerDate, sourceEntryId: entry.id, rakats: missingRakats, reason: missedReason.trim() || results.find((part) => part.category === "fard" && !part.performed)?.reason || "ফরজ অংশ সম্পূর্ণ হয়নি", status: "pending", settledAt: null, settlementNote: "", createdAt: new Date().toISOString() }, ...qadaEntries];
+        const missingRakats = Math.max(1, (fardPart?.rakats || 0) - (results.find((part) => part.category === "fard")?.performedRakats || 0));
+        qadaEntries = [{ id: makeId(), prayer: selectedPrayer, missedDate: prayerDate, sourceEntryId: entry.id, rakats: missingRakats, reason: missedReason.trim() || results.find((part) => part.category === "fard" && part.performedRakats < part.plannedRakats)?.reason || "ফরজের কিছু রাকাত বাকি", status: "pending", settledAt: null, settlementNote: "", createdAt: new Date().toISOString() }, ...qadaEntries];
       }
       return {
         ...current,
@@ -189,22 +307,29 @@ function PrayerWizard({ data, onCancel, initialPrayer = null, initialQada = fals
     });
     setSaved(true);
   }
+  if (editingEntry) return <PrayerEntryEditForm entry={editingEntry} onCancel={() => setEditingEntry(null)} onSaved={() => { setEditingEntry(null); setSaved(true); }}/>;
   if (qadaMode) return <QadaSettlementForm data={data} onCancel={() => setQadaMode(false)}/>;
   if (saved) return <div className="tracker-success"><span><CheckCircle2 size={28}/></span><h3>সালাতের রেকর্ড সংরক্ষিত হয়েছে</h3><p>রেকর্ডটি অনলাইনে সংরক্ষিত হয়েছে।</p><button className="tracker-primary-button" onClick={onCancel}>ট্র্যাকার তালিকায় ফিরো</button></div>;
+
+  if (existingPrayerEntry && prayer) return <div className="prayer-wizard prayer-existing-state">
+    <div className="prayer-existing-icon"><CheckCircle2 size={26}/></div>
+    <span className="wizard-step-kicker">{PRAYER_NAMES[prayer]} · {prayerDate}</span>
+    <h3>এই ওয়াক্তের এন্ট্রি হয়েছে</h3>
+    <p>একই দিনে নতুন এন্ট্রি তৈরি করা যাবে না। প্রয়োজন হলে আগের রেকর্ড সম্পাদনা করো।</p>
+    <div className="prayer-existing-actions"><button type="button" className="tracker-secondary-button" onClick={() => setEditingEntry(existingPrayerEntry)}><Pencil size={15}/> সম্পাদনা</button><button type="button" className="tracker-quiet-button" onClick={onCancel}>ফিরে যাও</button></div>
+  </div>;
 
   return <div className="prayer-wizard">
     <div className="wizard-topline"><span>ধাপে ধাপে সালাতের হিসাব</span><span>{prayer ? `${bn(Math.min(partIndex + 1, Math.max(parts.length, 1)))} / ${bn(parts.length + 1)} ধাপ` : "প্রথম ধাপ"}</span></div>
     <div className="wizard-progress"><span style={{ width: `${prayer ? Math.min(92, ((partIndex + 1) / (parts.length + 2)) * 100) : 8}%` }}/></div>
-    {prayer && <div className="wizard-date-strip"><Field label="সালাতের তারিখ"><TextInput type="date" value={prayerDate} onChange={(event) => setPrayerDate(event.target.value)}/></Field></div>}
-    {!prayer && !extraMode ? <div className="wizard-step"><h3>কোন ধরনের সালাতের হিসাব রাখবে?</h3><p>পাঁচ ওয়াক্তের সালাত অথবা অতিরিক্ত সালাত বেছে নাও।</p><div className="prayer-select-grid">{PRAYERS.map((id) => <button key={id} type="button" className="prayer-select-card" onClick={() => { setPrayer(id); setCompletedAfter("0"); setCaught(String(data.prayerConfig[id].find((part) => part.category === "fard")?.rakats || 4)); }}><span>{PRAYER_NAMES[id]}</span><ChevronRight size={17}/></button>)}</div><div className="prayer-extra-actions"><button type="button" className="tracker-secondary-button" onClick={() => setExtraMode(true)}><Plus size={15}/> অতিরিক্ত সালাতের রেকর্ড</button><button type="button" className="tracker-secondary-button" onClick={() => setQadaMode(true)}><Clock3 size={15}/> বাকি কাজা আদায় ({bn(pendingQada.length)})</button></div></div>
+    <div className="wizard-date-strip"><Field label="মুহাসাবার তারিখ · মাগরিব থেকে পরের আসর"><TextInput type="date" value={prayerDate} onChange={(event) => { setPrayerDate(event.target.value); setPrayer(""); setPartIndex(0); setComponentResults([]); setMethod(""); }}/></Field></div>
+    {!prayer && !extraMode ? <div className="wizard-step"><h3>কোন ওয়াক্তের হিসাব রাখবে?</h3><p>এই মুহাসাবার দিনে প্রতিটি ওয়াক্তের জন্য একবার এন্ট্রি করা যাবে।</p><div className="prayer-select-grid">{PRAYERS.map((id) => { const existing = data.prayerEntries.find((item) => item.date === prayerDate && item.prayer === id && item.method !== "qada"); return <div className={`prayer-select-row ${existing ? "is-recorded" : ""}`} key={id}><button type="button" className="prayer-select-card" disabled={Boolean(existing)} onClick={() => { setPrayer(id); setCompletedAfter("0"); setCaught(String(data.prayerConfig[id].find((part) => part.category === "fard")?.rakats || 4)); }}><span><strong>{PRAYER_NAMES[id]}</strong><small>{existing ? "এন্ট্রি হয়েছে" : "নতুন এন্ট্রি"}</small></span>{existing ? <CheckCircle2 size={18}/> : <ChevronRight size={17}/>}</button>{existing && <button type="button" className="prayer-edit-inline" onClick={() => setEditingEntry(existing)}><Pencil size={13}/> সম্পাদনা</button>}</div>; })}</div><div className="prayer-extra-actions"><button type="button" className="tracker-secondary-button" onClick={() => setExtraMode(true)}><Plus size={15}/> অতিরিক্ত সালাতের রেকর্ড</button><button type="button" className="tracker-secondary-button" onClick={() => setQadaMode(true)}><Clock3 size={15}/> বাকি কাজা আদায় ({bn(pendingQada.length)})</button></div></div>
     : extraMode ? <ExtraPrayerForm onCancel={onCancel}/> 
     : currentPart && currentPart.category !== "fard" ? <div className="wizard-step"><div className="wizard-step-kicker">{prayerLabel} · {CATEGORY_LABELS[currentPart.category]}</div><h3>{currentPart.label} আদায় করেছ?</h3><p>{bn(currentPart.rakats)} রাকাত · গ্লোবাল রাকাত সেটিংস থেকে নেওয়া</p><div className="choice-row"><button type="button" className={`choice-tile ${partDone === true ? "selected" : ""}`} onClick={() => { setPartDone(true); setPartReason(""); }}><CheckCircle2 size={18}/>হ্যাঁ</button><button type="button" className={`choice-tile ${partDone === false ? "selected" : ""}`} onClick={() => setPartDone(false)}><X size={18}/>না</button></div>{partDone === false && <Field label="কেন আদায় হয়নি?"><TextArea rows={2} value={partReason} onChange={(event) => setPartReason(event.target.value)} placeholder="সংক্ষেপে কারণ লিখো"/></Field>}<div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setPartIndex(Math.max(0, partIndex - 1))}>পেছনে</button><button className="tracker-primary-button" disabled={partDone === null || (partDone === false && !partReason.trim())} onClick={() => moveNextPart({ partId: currentPart.id, label: currentPart.label, category: currentPart.category, plannedRakats: currentPart.rakats, performed: partDone === true, performedRakats: partDone ? currentPart.rakats : 0, reason: partReason.trim() })}>পরবর্তী <ArrowRight size={15}/></button></div></div>
-    : currentPart?.category === "fard" && !method ? <div className="wizard-step"><div className="wizard-step-kicker">{prayerLabel} · ফরজ {bn(currentPart.rakats)} রাকাত</div><h3>ফরজ সালাত কীভাবে আদায় করেছ?</h3><p>একটি পদ্ধতি নির্বাচন করো। পরের প্রশ্ন সেই অনুযায়ী আসবে।</p><div className="choice-stack"><button className="choice-tile" onClick={() => { setMethod("jamaat"); setTakbir("with-takbir"); setCaught(String(currentPart.rakats)); setCompletedAfter("0"); setMissedReason(""); }}><span><strong>জামাতে</strong><small>মসজিদে বা জামাতে আদায়</small></span><ChevronRight/></button><button className="choice-tile" onClick={() => setMethod("home")}><span><strong>বাসায় / একাকী</strong><small>একাকী আদায় করেছি</small></span><ChevronRight/></button><button className="choice-tile choice-tile-muted" onClick={() => setMethod("not-prayed")}><span><strong>এখনো আদায় করিনি</strong><small>এটি নিশ্চিত করলে কাজার রেকর্ড তৈরি হবে</small></span><ChevronRight/></button></div><div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setPartIndex(Math.max(0, partIndex - 1))}>পেছনে</button></div></div>
+    : currentPart?.category === "fard" && !method ? <div className="wizard-step"><div className="wizard-step-kicker">{prayerLabel} · ফরজ {bn(currentPart.rakats)} রাকাত</div><h3>ফরজ সালাত কীভাবে আদায় করেছ?</h3><p>একটি পদ্ধতি নির্বাচন করো। পরের প্রশ্ন সেই অনুযায়ী আসবে।</p><div className="choice-stack"><button className="choice-tile" onClick={() => { setMethod("jamaat"); setTakbir("with-takbir"); setCaught(String(currentPart.rakats)); setCompletedAfter("0"); setMissedReason(""); }}><span><strong>জামাতে</strong><small>মসজিদে বা জামাতে আদায়</small></span><ChevronRight/></button><button className="choice-tile" onClick={() => { setMethod("home"); moveNextPart({ partId: currentPart.id, label: currentPart.label, category: currentPart.category, plannedRakats: currentPart.rakats, performed: true, performedRakats: currentPart.rakats, reason: "" }); }}><span><strong>বাসায় / একাকী</strong><small>নির্ধারিত ফরজ রাকাত পূর্ণ হিসেবে গণ্য হবে</small></span><ChevronRight/></button><button className="choice-tile choice-tile-muted" onClick={() => setMethod("not-prayed")}><span><strong>এখনো আদায় করিনি</strong><small>এটি নিশ্চিত করলে কাজার রেকর্ড তৈরি হবে</small></span><ChevronRight/></button></div><div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setPartIndex(Math.max(0, partIndex - 1))}>পেছনে</button></div></div>
     : currentPart?.category === "fard" && method === "jamaat" ? <div className="wizard-step"><div className="wizard-step-kicker">{prayerLabel} · জামাতে</div><h3>জামাতে কতটুকু পেয়েছ?</h3><div className="choice-stack"><button className={`choice-tile ${takbir === "with-takbir" ? "selected" : ""}`} onClick={() => { setTakbir("with-takbir"); setCaught(String(currentPart.rakats)); setLateReason(""); }}><span><strong>তাকবিরে উলা পেয়েছি</strong><small>সম্পূর্ণ সালাতের অংশ পেয়েছি</small></span><Check/></button><button className={`choice-tile ${takbir === "without-takbir" ? "selected" : ""}`} onClick={() => { setTakbir("without-takbir"); setCaught(String(currentPart.rakats)); setLateReason(""); }}><span><strong>তাকবিরে উলা পাইনি, তবে সব রাকাত পেয়েছি</strong><small>সালাত সম্পূর্ণ পেয়েছি</small></span><Check/></button><button className={`choice-tile ${takbir === "late-join" ? "selected" : ""}`} onClick={() => { setTakbir("late-join"); setCaught(String(Math.max(1, currentPart.rakats - 1))); setCompletedAfter("0"); setMissedReason(""); }}><span><strong>দেরিতে যোগ দিয়েছি</strong><small>কিছু রাকাত মিস হয়েছে</small></span><ChevronRight/></button></div>{takbir === "late-join" && <div className="wizard-followup"><Field label="ইমামের সঙ্গে কত রাকাত পেয়েছ?"><Select value={caught} onChange={(event) => { setCaught(event.target.value); setCompletedAfter("0"); }}>{Array.from({ length: currentPart.rakats }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{bn(n)} রাকাত</option>)}</Select></Field><Field label="ইমাম সালাম ফেরানোর পর কত রাকাত পূরণ করেছ?"><Select value={completedAfter} onChange={(event) => setCompletedAfter(event.target.value)}>{Array.from({ length: Math.max(0, currentPart.rakats - Number(caught)) + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{bn(n)} রাকাত</option>)}</Select></Field><Field label="কেন দেরিতে জামাতে যোগ দিয়েছ?"><TextArea rows={2} value={lateReason} onChange={(event) => setLateReason(event.target.value)} placeholder="যেমন: সময়মতো পৌঁছাতে পারিনি…"/></Field>{Number(caught) + Number(completedAfter) < currentPart.rakats && <Field label="যে রাকাত এখনো পূরণ করোনি, তার কারণ"><TextArea rows={2} value={missedReason} onChange={(event) => setMissedReason(event.target.value)} placeholder="কারণটি লিখে রাখো"/></Field>}</div>}<div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setMethod("")}>পেছনে</button><button className="tracker-primary-button" disabled={takbir === "late-join" && (!lateReason.trim() || (Number(caught) + Number(completedAfter) < currentPart.rakats && !missedReason.trim()))} onClick={() => moveNextPart({ partId: currentPart.id, label: currentPart.label, category: currentPart.category, plannedRakats: currentPart.rakats, performed: true, performedRakats: Math.min(currentPart.rakats, Number(caught) + Number(completedAfter)), reason: [lateReason.trim(), missedReason.trim()].filter(Boolean).join(" · ") })}>পরবর্তী <ArrowRight size={15}/></button></div></div>
-    : currentPart?.category === "fard" && method === "home" ? <div className="wizard-step"><div className="wizard-step-kicker">{prayerLabel} · বাসায় / একাকী</div><h3>ফরজ সালাত সম্পূর্ণ আদায় করেছ?</h3><div className="choice-row"><button className="choice-tile" onClick={() => { setCaught(String(currentPart.rakats)); moveNextPart({ partId: currentPart.id, label: currentPart.label, category: currentPart.category, plannedRakats: currentPart.rakats, performed: true, performedRakats: currentPart.rakats, reason: "" }); }}>হ্যাঁ, সম্পূর্ণ</button><button className="choice-tile" onClick={() => { setMethod("home-partial"); setCaught(String(Math.max(0, currentPart.rakats - 1))); setCompletedAfter("0"); setMissedReason(""); }}>না, কিছু বাকি</button></div><div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setMethod("")}>পেছনে</button></div></div>
-    : currentPart?.category === "fard" && method === "home-partial" ? <div className="wizard-step"><h3>কত রাকাত আদায় ও পরে পূরণ করেছ?</h3><Field label="প্রথমে আদায় করা রাকাত"><Select value={caught} onChange={(event) => { setCaught(event.target.value); setCompletedAfter("0"); }}>{Array.from({ length: currentPart.rakats }, (_, i) => i).map((n) => <option key={n} value={n}>{bn(n)} রাকাত</option>)}</Select></Field><Field label="পরে পূরণ করা রাকাত"><Select value={completedAfter} onChange={(event) => setCompletedAfter(event.target.value)}>{Array.from({ length: Math.max(0, currentPart.rakats - Number(caught)) + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{bn(n)} রাকাত</option>)}</Select></Field>{Number(caught) + Number(completedAfter) < currentPart.rakats && <Field label="কেন এখনো কিছু রাকাত বাকি?"><TextArea rows={2} value={missedReason} onChange={(event) => setMissedReason(event.target.value)} placeholder="কারণ লিখো"/></Field>}<div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setMethod("home")}>পেছনে</button><button className="tracker-primary-button" disabled={Number(caught) + Number(completedAfter) < currentPart.rakats && !missedReason.trim()} onClick={() => moveNextPart({ partId: currentPart.id, label: currentPart.label, category: currentPart.category, plannedRakats: currentPart.rakats, performed: true, performedRakats: Math.min(currentPart.rakats, Number(caught) + Number(completedAfter)), reason: missedReason.trim() })}>পরবর্তী</button></div></div>
     : currentPart?.category === "fard" && method === "not-prayed" ? <div className="wizard-step"><h3>কেন এই সালাত আদায় হয়নি?</h3><Field label="কারণ"><TextArea rows={3} value={missedReason} onChange={(event) => setMissedReason(event.target.value)} placeholder="নিজের জন্য সংক্ষেপে লিখে রাখো"/></Field><div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => setMethod("")}>পেছনে</button><button className="tracker-primary-button" disabled={!missedReason.trim()} onClick={() => moveNextPart({ partId: currentPart.id, label: currentPart.label, category: currentPart.category, plannedRakats: currentPart.rakats, performed: false, performedRakats: 0, reason: missedReason.trim() })}>পরবর্তী</button></div></div>
-    : partIndex >= parts.length ? <div className="wizard-step"><div className="wizard-step-kicker">শেষ ধাপ</div><h3>রেকর্ডটি সংরক্ষণ করবে?</h3><div className="prayer-summary-list"><div><span>ওয়াক্ত</span><strong>{prayer ? PRAYER_NAMES[prayer] : "—"}</strong></div><div><span>পদ্ধতি</span><strong>{method === "jamaat" ? "জামাতে" : method === "home" || method === "home-partial" ? "বাসায় / একাকী" : "এখনো আদায় হয়নি"}</strong></div><div><span>রেকর্ডকৃত অংশ</span><strong>{bn(allResults.length)}টি</strong></div></div>{method !== "not-prayed" && <Field label="আদায়ের সময় (বাংলাদেশ)"><TextInput type="time" value={performedTime} onChange={(event) => setPerformedTime(event.target.value)}/></Field>}<Field label="ব্যক্তিগত নোট (ঐচ্ছিক)"><TextArea rows={2} value={note} onChange={(event) => setNote(event.target.value)} placeholder="আর কিছু মনে রাখতে চাইলে লিখো"/></Field><div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => { setPartIndex(Math.max(0, parts.length - 1)); setMethod(""); }}>পেছনে</button><button className="tracker-primary-button" onClick={savePrayer}><Save size={16}/> রেকর্ড সংরক্ষণ</button></div></div>
+    : partIndex >= parts.length ? <div className="wizard-step"><div className="wizard-step-kicker">শেষ ধাপ</div><h3>রেকর্ডটি সংরক্ষণ করবে?</h3><div className="prayer-summary-list"><div><span>ওয়াক্ত</span><strong>{prayer ? PRAYER_NAMES[prayer] : "—"}</strong></div><div><span>পদ্ধতি</span><strong>{method === "jamaat" ? "জামাতে" : method === "home" ? "বাসায় / একাকী" : "এখনো আদায় হয়নি"}</strong></div><div><span>রেকর্ডকৃত অংশ</span><strong>{bn(allResults.length)}টি</strong></div></div>{method !== "not-prayed" && <Field label="আদায়ের সময় (বাংলাদেশ)"><TextInput type="time" value={performedTime} onChange={(event) => setPerformedTime(event.target.value)}/></Field>}<Field label="ব্যক্তিগত নোট (ঐচ্ছিক)"><TextArea rows={2} value={note} onChange={(event) => setNote(event.target.value)} placeholder="আর কিছু মনে রাখতে চাইলে লিখো"/></Field><div className="wizard-actions"><button className="tracker-quiet-button" onClick={() => { setPartIndex(Math.max(0, parts.length - 1)); setMethod(""); }}>পেছনে</button><button className="tracker-primary-button" onClick={savePrayer}><Save size={16}/> রেকর্ড সংরক্ষণ</button></div></div>
     : <div className="wizard-step"><h3>এই ওয়াক্তের Configuration-এ কোনো সক্রিয় অংশ নেই</h3><p>Settings থেকে সালাতের রাকাত ও অংশগুলো সক্রিয় করো।</p></div>}
     {error && <Notice type="error">{error}</Notice>}
   </div>;
@@ -286,8 +411,8 @@ function ReflectionForm({ data, onSaved }: { data: WorkspaceData; onSaved: () =>
   return <form className="tracker-form" onSubmit={submit}><Field label="তারিখ"><TextInput type="date" value={date} onChange={(e) => { setDate(e.target.value); const value = data.reflections.find((x) => x.date === e.target.value); setGood(value?.goodToday || ""); setMistake(value?.mistakeToday || ""); setLesson(value?.lesson || ""); setGratitude(value?.gratitude || ""); setTomorrow(value?.tomorrowFocus || ""); setMood(value?.mood || ""); }}/></Field><Field label="আজকের ভালো কাজ কী ছিল?"><TextArea rows={2} value={goodToday} onChange={(e) => setGood(e.target.value)}/></Field><Field label="কোন বিষয়টি আরও ভালো করতে পারতাম?"><TextArea rows={2} value={mistakeToday} onChange={(e) => setMistake(e.target.value)}/></Field><Field label="আজ কী শিখেছি?"><TextArea rows={2} value={lesson} onChange={(e) => setLesson(e.target.value)}/></Field><Field label="কোন বিষয়ে কৃতজ্ঞ? (ঐচ্ছিক)"><TextArea rows={2} value={gratitude} onChange={(e) => setGratitude(e.target.value)}/></Field><Field label="আগামীকালের একটি অগ্রাধিকার"><TextInput value={tomorrowFocus} onChange={(e) => setTomorrow(e.target.value)}/></Field><Field label="আজকের অনুভূতি (ঐচ্ছিক)"><Select value={mood} onChange={(e) => setMood(e.target.value)}><option value="">নির্বাচন করিনি</option><option value="calm">শান্ত</option><option value="hopeful">আশাবাদী</option><option value="tired">ক্লান্ত</option><option value="focused">মনোযোগী</option><option value="mixed">মিশ্র অনুভূতি</option></Select></Field><SaveButton>মুহাসাবা সংরক্ষণ</SaveButton></form>;
 }
 
-function TrackerHistory({ kind, data }: { kind: TrackerKind; data: WorkspaceData }) {
-  if (kind === "prayer") return <div className="tracker-history-list">{data.prayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{PRAYER_NAMES[item.prayer]} · {item.method === "jamaat" ? "জামাতে" : item.method === "qada" ? "কাজা" : item.method === "not-performed" ? "আদায় হয়নি" : "একাকী"}</strong><small>{item.date} · {item.components.reduce((n, part) => n + part.performedRakats, 0)} রাকাত · {item.takbirStatus === "with-takbir" ? "তাকবিরে উলা" : item.takbirStatus === "late-join" ? `${item.caughtRakats} রাকাত পেয়েছ` : item.takbirStatus === "without-takbir" ? "তাকবিরে উলা ছাড়া" : ""}</small></div><button className="tracker-icon-button" type="button" onClick={() => deleteLocal(kind, item.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}{data.extraPrayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{item.type}</strong><small>{item.date} · {bn(item.rakats)} রাকাত · {CATEGORY_LABELS[item.category]}</small></div><button className="tracker-icon-button" type="button" onClick={() => updateWorkspaceData((current) => ({ ...current, extraPrayerEntries: current.extraPrayerEntries.filter((x) => x.id !== item.id) }))} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
+function TrackerHistory({ kind, data, onEditPrayer }: { kind: TrackerKind; data: WorkspaceData; onEditPrayer?: (entry: PrayerEntry) => void }) {
+  if (kind === "prayer") return <div className="tracker-history-list">{data.prayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{PRAYER_NAMES[item.prayer]} · {item.method === "jamaat" ? "জামাতে" : item.method === "qada" ? "কাজা" : item.method === "not-performed" ? "আদায় হয়নি" : "একাকী"}</strong><small>{item.date} · {item.components.reduce((n, part) => n + part.performedRakats, 0)} রাকাত · {item.takbirStatus === "with-takbir" ? "তাকবিরে উলা" : item.takbirStatus === "late-join" ? `${item.caughtRakats} রাকাত পেয়েছ` : item.takbirStatus === "without-takbir" ? "তাকবিরে উলা ছাড়া" : ""}</small></div><div className="tracker-history-actions">{item.method !== "qada" && <button className="tracker-icon-button" type="button" onClick={() => onEditPrayer?.(item)} aria-label="সালাত সম্পাদনা"><Pencil size={14}/></button>}<button className="tracker-icon-button" type="button" onClick={() => deleteLocal(kind, item.id)} aria-label="মুছুন"><Trash2 size={15}/></button></div></article>)}{data.extraPrayerEntries.slice(0, 20).map((item) => <article className="tracker-history-row" key={item.id}><div><strong>{item.type}</strong><small>{item.date} · {bn(item.rakats)} রাকাত · {CATEGORY_LABELS[item.category]}</small></div><button className="tracker-icon-button" type="button" onClick={() => updateWorkspaceData((current) => ({ ...current, extraPrayerEntries: current.extraPrayerEntries.filter((x) => x.id !== item.id) }))} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
   if (kind === "quran") return <div className="tracker-history-list">{data.quranEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{SURAHS[x.surahFrom - 1]?.name || "সূরা"} · {bn(x.ayahFrom)}–{bn(x.ayahTo)}</strong><small>{x.date} · {bn(x.ayahTo - x.ayahFrom + 1)} আয়াত{ x.pageFrom ? ` · পৃষ্ঠা ${bn(x.pageFrom)}–${bn(x.pageTo || x.pageFrom)}` : ""}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
   if (kind === "dhikr") return <div className="tracker-history-list">{data.dhikrSessions.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{x.title}</strong><small>{x.date} · {bn(x.count)} / {bn(x.target)} বার {x.completed ? "· লক্ষ্য পূর্ণ" : ""}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
   if (kind === "fasting") return <div className="tracker-history-list">{data.fastingEntries.slice(0, 30).map((x) => <article className="tracker-history-row" key={x.id}><div><strong>{{ fard: "ফরজ", nafl: "নফল", qada: "কাজা" }[x.category]} · {x.date}</strong><small>{{ completed: "সম্পন্ন", planned: "পরিকল্পিত", "not-kept": "রাখা হয়নি" }[x.status]}</small></div><button className="tracker-icon-button" onClick={() => deleteLocal(kind, x.id)} aria-label="মুছুন"><Trash2 size={15}/></button></article>)}</div>;
@@ -318,24 +443,29 @@ function TrackerSummary({ kind, data }: { kind: TrackerKind; data: WorkspaceData
 }
 
 function readTrackerTarget() {
-  if (typeof window === "undefined") return { tracker: null as TrackerKind | null, prayer: null as PrayerId | null, qada: false };
+  if (typeof window === "undefined") return { tracker: null as TrackerKind | null, prayer: null as PrayerId | null, qada: false, date: null as string | null };
   const params = new URLSearchParams(window.location.search);
   const trackerValue = params.get("tracker") as TrackerKind | null;
   const prayerValue = params.get("prayer");
   const validTracker = TRACKERS.some((item) => item.id === trackerValue) ? trackerValue : null;
   const validPrayer = ["fajr", "dhuhr", "asr", "maghrib", "isha"].includes(prayerValue || "") ? prayerValue as PrayerId : null;
-  return { tracker: validTracker, prayer: validPrayer, qada: prayerValue === "qada" };
+  const dateValue = params.get("entryDate");
+  const validDate = dateValue && /^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? dateValue : null;
+  return { tracker: validTracker, prayer: validPrayer, qada: prayerValue === "qada", date: validDate };
 }
-function writeTrackerTarget(tracker: TrackerKind | null, prayer?: PrayerId | "qada") {
+function writeTrackerTarget(tracker: TrackerKind | null, prayer?: PrayerId | "qada", entryDate?: string) {
   const url = new URL(window.location.href);
+  url.searchParams.delete("prayer");
+  url.searchParams.delete("entryDate");
   if (tracker) {
     url.searchParams.set("section", "journal");
     url.searchParams.set("tracker", tracker);
     url.searchParams.set("action", "new");
   } else {
-    url.searchParams.delete("tracker"); url.searchParams.delete("action"); url.searchParams.delete("prayer");
+    url.searchParams.delete("tracker"); url.searchParams.delete("action");
   }
   if (prayer) url.searchParams.set("prayer", prayer);
+  if (entryDate && /^\d{4}-\d{2}-\d{2}$/.test(entryDate)) url.searchParams.set("entryDate", entryDate);
   window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
@@ -343,6 +473,8 @@ export function TrackerCenter({ data, onBack }: { data: WorkspaceData; onBack: (
   const [selected, setSelected] = useState<TrackerKind | null>(null);
   const [initialPrayer, setInitialPrayer] = useState<PrayerId | null>(null);
   const [initialQada, setInitialQada] = useState(false);
+  const [initialDate, setInitialDate] = useState<string | null>(null);
+  const [initialEditingEntry, setInitialEditingEntry] = useState<PrayerEntry | null>(null);
   const [savedMessage, setSavedMessage] = useState("");
   const [search, setSearch] = useState("");
   const tracker = TRACKERS.find((item) => item.id === selected);
@@ -354,6 +486,8 @@ export function TrackerCenter({ data, onBack }: { data: WorkspaceData; onBack: (
       setSelected(target.tracker);
       setInitialPrayer(target.prayer);
       setInitialQada(target.qada);
+      setInitialDate(target.date);
+      setInitialEditingEntry(null);
       setSavedMessage("");
     };
     applyTarget();
@@ -366,23 +500,23 @@ export function TrackerCenter({ data, onBack }: { data: WorkspaceData; onBack: (
   }, []);
 
   function chooseTracker(id: TrackerKind) {
-    setSelected(id); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false);
+    setSelected(id); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false); setInitialDate(null); setInitialEditingEntry(null);
     writeTrackerTarget(id);
   }
   function closeTracker() {
-    setSelected(null); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false);
+    setSelected(null); setSavedMessage(""); setInitialPrayer(null); setInitialQada(false); setInitialDate(null); setInitialEditingEntry(null);
     writeTrackerTarget(null);
   }
   function saved() {
     setSavedMessage("রেকর্ড সংরক্ষিত হয়েছে।");
-    setSelected(null); setInitialPrayer(null); setInitialQada(false); writeTrackerTarget(null);
+    setSelected(null); setInitialPrayer(null); setInitialQada(false); setInitialDate(null); setInitialEditingEntry(null); writeTrackerTarget(null);
     window.setTimeout(() => setSavedMessage(""), 3000);
   }
 
   return <div className="tracker-center">
     <header className="tracker-page-heading">
       <div className="tracker-page-heading-copy">
-        <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
+        <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
         <div><h1>আত্মশুদ্ধি লিপি</h1></div>
       </div>
       <div className="tracker-heading-mark"><ScaleGlyph/></div>
@@ -392,9 +526,9 @@ export function TrackerCenter({ data, onBack }: { data: WorkspaceData; onBack: (
       <div className="tracker-back-row"><button type="button" className="tracker-back-button" onClick={closeTracker}><ArrowLeft size={16}/> সব ট্র্যাকার</button><span>আত্মশুদ্ধি লিপি <ChevronRight size={14}/> {tracker.short}</span></div>
       <div className="tracker-detail-layout">
         <section className="tracker-entry-column"><div className="tracker-detail-heading"><span className="tracker-detail-icon"><tracker.icon size={22}/></span><div><h2>{tracker.title}</h2></div></div>
-          {selected === "prayer" ? <PrayerWizard key={`${initialPrayer || "default"}:${initialQada ? "qada" : "regular"}`} data={data} initialPrayer={initialPrayer} initialQada={initialQada} onCancel={closeTracker}/> : selected === "quran" ? <QuranForm onSaved={saved}/> : selected === "dhikr" ? <DhikrForm data={data} onSaved={saved}/> : selected === "fasting" ? <FastingForm onSaved={saved}/> : selected === "good" ? <GoodDeedForm onSaved={saved}/> : selected === "avoid" ? <AvoidForm onSaved={saved}/> : selected === "ilm" ? <IlmForm onSaved={saved}/> : selected === "habit" ? <HabitForm data={data} onSaved={saved}/> : <ReflectionForm data={data} onSaved={saved}/>}
+          {selected === "prayer" ? <PrayerWizard key={`${initialPrayer || "default"}:${initialQada ? "qada" : "regular"}:${initialDate || "today"}:${initialEditingEntry?.id || "new"}`} data={data} initialPrayer={initialPrayer} initialQada={initialQada} initialDate={initialDate} initialEditingEntry={initialEditingEntry} onCancel={closeTracker}/> : selected === "quran" ? <QuranForm onSaved={saved}/> : selected === "dhikr" ? <DhikrForm data={data} onSaved={saved}/> : selected === "fasting" ? <FastingForm onSaved={saved}/> : selected === "good" ? <GoodDeedForm onSaved={saved}/> : selected === "avoid" ? <AvoidForm onSaved={saved}/> : selected === "ilm" ? <IlmForm onSaved={saved}/> : selected === "habit" ? <HabitForm data={data} onSaved={saved}/> : <ReflectionForm data={data} onSaved={saved}/>}
         </section>
-        <aside className="tracker-side-column"><Panel title="সারাংশ"><TrackerSummary kind={selected} data={data}/></Panel><Panel title="সাম্প্রতিক রেকর্ড" action={<span className="tracker-mini-count">{bn(selected === "prayer" ? data.prayerEntries.length + data.extraPrayerEntries.length : selected === "quran" ? data.quranEntries.length : selected === "dhikr" ? data.dhikrSessions.length : selected === "fasting" ? data.fastingEntries.length : selected === "good" ? data.deedEntries.length : selected === "avoid" ? data.avoidEntries.length : selected === "ilm" ? data.studyEntries.length : selected === "habit" ? data.habitLogs.length : data.reflections.length)}টি</span>}><TrackerHistory kind={selected} data={data}/></Panel>{selected === "prayer" && <Panel title="কাজার হিসাব"><div className="qada-ledger-list">{data.qadaEntries.slice(0, 12).map((item) => <div key={item.id}><span><strong>{PRAYER_NAMES[item.prayer]}</strong><small>{item.missedDate} · {item.reason}</small></span><span className={`qada-status ${item.status === "pending" ? "pending" : "settled"}`}>{item.status === "pending" ? "বাকি" : "আদায় হয়েছে"}</span></div>)}</div></Panel>}</aside>
+        <aside className="tracker-side-column"><Panel title="সারাংশ"><TrackerSummary kind={selected} data={data}/></Panel><Panel title="সাম্প্রতিক রেকর্ড" action={<span className="tracker-mini-count">{bn(selected === "prayer" ? data.prayerEntries.length + data.extraPrayerEntries.length : selected === "quran" ? data.quranEntries.length : selected === "dhikr" ? data.dhikrSessions.length : selected === "fasting" ? data.fastingEntries.length : selected === "good" ? data.deedEntries.length : selected === "avoid" ? data.avoidEntries.length : selected === "ilm" ? data.studyEntries.length : selected === "habit" ? data.habitLogs.length : data.reflections.length)}টি</span>}><TrackerHistory kind={selected} data={data} onEditPrayer={selected === "prayer" ? (entry) => { setInitialDate(entry.date); setInitialPrayer(entry.prayer); setInitialEditingEntry(entry); writeTrackerTarget("prayer", entry.prayer, entry.date); } : undefined}/></Panel>{selected === "prayer" && <Panel title="কাজার হিসাব"><div className="qada-ledger-list">{data.qadaEntries.slice(0, 12).map((item) => <div key={item.id}><span><strong>{PRAYER_NAMES[item.prayer]}</strong><small>{item.missedDate} · {item.reason}</small></span><span className={`qada-status ${item.status === "pending" ? "pending" : "settled"}`}>{item.status === "pending" ? "বাকি" : "আদায় হয়েছে"}</span></div>)}</div></Panel>}</aside>
       </div>
     </> : <>
       <div className="tracker-picker-tools"><label className="tracker-search"><Search size={17}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ট্র্যাকার খুঁজে নাও"/></label><span>{bn(filtered.length)}টি বিভাগ</span></div>

@@ -1,14 +1,39 @@
-Modified files:
+Amar Nfser Hisab — Release 1.2.6 Fix Patch
+Base: Release 1.2.5 A+ Account-Owned Online + Fix Patch 01
+
+Files included in the incremental patch:
+- PATCH_BASE.txt
+- PATCH_FILE_MANIFEST.txt
+- PATCH_README_BN.md
+- PROJECT_PACKAGE_MANIFEST.txt
+- README_BN.md
+- README_RELEASE_1.2.6_BN.md
+- REMOVE_FILES.txt
+- package-lock.json
 - package.json
+- src/app/api/profile/route.ts
+- src/app/globals.css
+- src/app/login/page.tsx
 - src/components/frontend-workspace.tsx
-- src/lib/journey/stages.ts
-- src/lib/workspace/store.ts
+- src/modules/hadith/hadith-library.tsx
+- src/modules/trackers/prayer-time-widget.tsx
 - src/modules/trackers/tracker-center.tsx
+- tests/phase07-contract.test.mjs
 - tests/phase08-followup.test.mjs
-- tests/phase09-semi-final.test.ts
-
-New files:
+- tests/phase08-qa.test.mjs
+- tests/phase12-release.test.mjs
+- tests/phase13-release-hardening.test.mjs
+- tests/phase15-mobile-journey.test.mjs
+- tests/phase16-visual-system.test.mjs
+- tests/phase17-account-cleanup.test.mjs
 - tests/phase18-fix-patch.test.mjs
+- tests/phase19-ui-polish.test.mjs
+- PATCH_BASE.txt
+- PATCH_README_BN.md
+- PATCH_FILE_MANIFEST.txt
+- REMOVE_FILES.txt
+- README_BN.md
+- README_RELEASE_1.2.6_BN.md
+- PROJECT_PACKAGE_MANIFEST.txt
 
-No database migrations, schema changes, environment variables, package dependencies,
-Supabase configuration, account lifecycle, or user data formats are changed.
+No SQL migration, database schema, RLS policy, environment variable, dependency, Supabase configuration, or durable user-data format is changed.

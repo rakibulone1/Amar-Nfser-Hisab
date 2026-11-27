@@ -1,5 +1,5 @@
 Amar Nfser Hisab Release 1.2.5 A+ Account-Owned Online
-Fix Patch 01
+Fix Patch 01 must already be installed.
 
-Apply this patch only to the Release 1.2.5 project.
-Do not apply it to Release 1.2.4 or earlier versions.
+Apply this patch only to the Release 1.2.5 project after Fix Patch 01.
+Do not apply to Release 1.2.4 or earlier versions, or to Release 1.2.6 and later.

@@ -3,13 +3,13 @@
 import {
   Activity, ArrowDownToLine, ArrowLeft, ArrowRight, Bell, BookOpen, CalendarDays,
   Check, CheckCircle2, ChevronRight, Clock3, Cloud, CloudOff, Compass,
-  Download, Heart, LockKeyhole, LogOut, Moon, Trash2,
+  Download, Heart, LockKeyhole, LogOut, LoaderCircle, Moon, Trash2,
   MoreHorizontal, Plus, Settings, ShieldCheck, Sparkles, Sun, Target,
   Upload, X, type LucideIcon
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import hadithData from "@/data/hadith-bn.json";
 import type { HadithDataset, HadithRecord } from "@/types/hadith";
 import { formatHijriDate } from "@/lib/date/hijri";
@@ -55,16 +55,17 @@ function subscribeSection(listener: () => void) {
 function useSection(initialSection: AppSection) {
   return useSyncExternalStore(subscribeSection, getSectionFromLocation, () => initialSection);
 }
-function navigateSection(section: AppSection, tracker?: string, prayer?: PrayerId | "qada") {
+function navigateSection(section: AppSection, tracker?: string, prayer?: PrayerId | "qada", targetDate?: string) {
   const url = new URL(window.location.href);
   url.pathname = "/dashboard";
   if (section === "home") url.searchParams.delete("section");
   else url.searchParams.set("section", section);
-  for (const key of ["tracker", "action", "prayer"]) url.searchParams.delete(key);
+  for (const key of ["tracker", "action", "prayer", "entryDate"]) url.searchParams.delete(key);
   if (section === "journal" && tracker) {
     url.searchParams.set("tracker", tracker);
     url.searchParams.set("action", "new");
     if (prayer) url.searchParams.set("prayer", prayer);
+    if (targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate)) url.searchParams.set("entryDate", targetDate);
   }
   window.history.pushState({ section, tracker, prayer }, "", `${url.pathname}${url.search}${url.hash}`);
   window.dispatchEvent(new Event(SECTION_EVENT));
@@ -105,8 +106,8 @@ function PageIntro({ eyebrow, title, action, onBack }: { eyebrow: string; title:
   return (
     <div className="page-intro">
       <div className="page-intro-main">
-        <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
-        <div><span className="eyebrow">{eyebrow}</span><h1>{title}</h1></div>
+        <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
+        <div className="page-intro-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1></div>
       </div>
       {action && <div className="page-intro-action">{action}</div>}
     </div>
@@ -163,12 +164,12 @@ function DailyHadithCard({ date }: { date: string }) {
 function formatEnglishGregorianDate(dateKey: string) {
   const date = new Date(`${dateKey}T12:00:00.000Z`);
   if (!Number.isFinite(date.getTime())) return dateKey;
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("bn-BD", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC"
   }).format(date);
 }
 function DashboardDateCard({ date }: { date: string }) {
-  return <div className="dashboard-date-card"><span lang="en">{formatEnglishGregorianDate(date)}</span><span className="dashboard-date-divider"/><span>{getHijriLabel(date)}</span></div>;
+  return <div className="dashboard-date-card"><span lang="bn">{formatEnglishGregorianDate(date)}</span><span className="dashboard-date-divider"/><span>{getHijriLabel(date)}</span></div>;
 }
 function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof getWorkspaceData>; date: string }) {
   const progress = getFixedJourneyProgress(date);
@@ -475,7 +476,7 @@ function StageDetailView({
 
   return <div className="stage-detail-view view-stack">
     <div className="stage-detail-heading">
-      <button type="button" className="section-back-button" onClick={onBack}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
+      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
       <span className="eyebrow">মডিউল {stage.module.toLocaleString("bn-BD")} · পর্যায় {stage.stageNumber.toLocaleString("bn-BD")}</span>
       <h1>{stage.title}</h1>
       <p>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)} · {stage.durationDays.toLocaleString("bn-BD")} দিন</p>
@@ -643,7 +644,7 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
 
   return <div className="view-stack goals-workspace">
     <div className="goals-page-heading">
-      <button type="button" className="section-back-button" onClick={() => navigateSection("home")}><ArrowLeft size={16}/> ড্যাশবোর্ডে ফিরো</button>
+      <button type="button" className="section-back-button" onClick={() => navigateSection("home")} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
       <div><span className="eyebrow">নিজের পথ ও পরিকল্পনা</span><h1>লক্ষ্য</h1></div>
     </div>
     <div className="goals-mode-tabs" role="tablist" aria-label="লক্ষ্যের বিভাগ">
@@ -762,158 +763,34 @@ function MirrorView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   </div>;
 }
 
-function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnType<typeof getWorkspaceData>; event: ReminderEvent; onCancel: () => void; onSaved: () => void }) {
-  const prayerId = event.prayer;
-  const configuredFard = prayerId ? data.prayerConfig[prayerId].find((part) => part.category === "fard") : undefined;
-  const fard = configuredFard;
-  const now = getDhakaDateTimeInput();
-  const prayerCivilDate = prayerId ? getPrayerCivilDate(event.date, prayerId) : event.date;
-  const [performedDate, setPerformedDate] = useState(now.date);
-  const [performedTime, setPerformedTime] = useState(now.time);
-  const [method, setMethod] = useState<"jamaat" | "home">("jamaat");
-  const [takbir, setTakbir] = useState<PrayerEntry["takbirStatus"]>("with-takbir");
-  const [caught, setCaught] = useState(String(fard?.rakats || 4));
-  const [completedAfter, setCompletedAfter] = useState("0");
-  const [reason, setReason] = useState("");
-  const [note, setNote] = useState("");
-  const [error, setError] = useState("");
-  if (!prayerId || !fard) return <p className="inline-feedback" role="alert">এই ওয়াক্তের ফরজ রাকাতের Configuration পাওয়া যায়নি। Settings পরীক্ষা করো।</p>;
-
-  function save(eventSubmit: FormEvent<HTMLFormElement>) {
-    eventSubmit.preventDefault();
-    // Re-narrow values inside the callback: TypeScript does not retain the
-    // outer render-branch narrowing reliably across this event handler.
-    const currentPrayer = event.prayer;
-    if (!currentPrayer) { setError("এই রেকর্ডের ওয়াক্ত শনাক্ত করা যায়নি। আবার খুলে চেষ্টা করো।"); return; }
-    const currentFard = data.prayerConfig[currentPrayer]?.find((part) => part.category === "fard");
-    if (!currentFard) { setError("এই ওয়াক্তের ফরজ রাকাতের Configuration পাওয়া যায়নি। Settings পরীক্ষা করো।"); return; }
-    const performedAt = toDhakaIso(performedDate, performedTime);
-    if (!performedAt) { setError("তারিখ ও সময় সঠিকভাবে নির্বাচন করো।"); return; }
-    const times = data.prayerTimesCache.find((item) => item.date === prayerCivilDate);
-    const tomorrow = data.prayerTimesCache.find((item) => item.date === nextDhakaDate(prayerCivilDate));
-    const window = getPrayerWaqtWindow(times, tomorrow, currentPrayer);
-    if (!window) { setError("এই দিনের ওয়াক্তের সময়সূচি পাওয়া যাচ্ছে না। সময়সূচি হালনাগাদ করে আবার চেষ্টা করো।"); return; }
-    const actual = new Date(performedAt).getTime();
-    const start = new Date(toDhakaIso(prayerCivilDate, window.start) || "").getTime();
-    const endDate = currentPrayer === "isha" ? nextDhakaDate(prayerCivilDate) : prayerCivilDate;
-    const end = new Date(toDhakaIso(endDate, window.end) || "").getTime();
-    const isQada = performedDate !== prayerCivilDate || actual >= end;
-    if (performedDate < prayerCivilDate) { setError("আদায়ের তারিখটি মূল ওয়াক্তের তারিখের আগে হতে পারে না।"); return; }
-    if (performedDate === prayerCivilDate && actual < start) { setError("নির্বাচিত সময়টি এই ওয়াক্ত শুরু হওয়ার আগের। সময়টি আবার যাচাই করো।"); return; }
-    if (isQada && reason.trim().length < 2) { setError("ওয়াক্তের পরে আদায় হয়ে থাকলে কারণটি সংক্ষেপে লিখো।"); return; }
-    const received = Number(caught);
-    const completedLater = method === "jamaat" && takbir === "late-join" ? Math.max(0, Math.min(currentFard.rakats - received, Number(completedAfter) || 0)) : 0;
-    const outstanding = Math.max(0, currentFard.rakats - received - completedLater);
-    if (!isQada && method === "jamaat" && takbir === "late-join" && (!Number.isInteger(received) || received < 1 || received >= currentFard.rakats || reason.trim().length < 2 || (outstanding > 0 && reason.trim().length < 2))) {
-      setError("ইমামের সঙ্গে পাওয়া রাকাত এবং দেরির কারণ পূরণ করো।"); return;
-    }
-    const existingObligation = data.qadaEntries.some((item) => item.prayer === currentPrayer && item.missedDate === event.date && item.status === "settled");
-    const existingPartial = data.prayerEntries.find((item) => item.date === event.date && item.prayer === currentPrayer && item.method !== "qada");
-    const existingFardDone = existingPartial?.components.find((part) => part.category === "fard")?.performedRakats || 0;
-    const duplicateOnWaqtDate = !isQada && !!existingPartial && existingPartial.missedRakats === 0 && existingPartial.components.some((part) => part.category === "fard" && part.performed && part.performedRakats >= part.plannedRakats);
-    if (existingObligation || duplicateOnWaqtDate) { setError("এই ওয়াক্তের রেকর্ড ইতিমধ্যে সম্পন্ন হয়েছে। ইতিহাস থেকে যাচাই করো।"); return; }
-    const pendingWorkspaceState = data.qadaEntries.find((item) => item.prayer === currentPrayer && item.missedDate === event.date && item.status === "pending");
-    const qadaRakats = pendingWorkspaceState?.rakats || Math.max(1, currentFard.rakats - existingFardDone);
-    const qadaId = isQada ? pendingWorkspaceState?.id || createWorkspaceRecordId() : undefined;
-    const entryId = createWorkspaceRecordId();
-    const entry: PrayerEntry = {
-      id: entryId,
-      date: isQada ? getJournalDate(new Date(performedAt), data.preferences.timeZone, data.preferences.maghribTime || null) : event.date,
-      prayer: currentPrayer,
-      method: isQada ? "qada" : method,
-      ...(qadaId ? { qadaId } : {}),
-      components: [{ partId: currentFard.id, label: isQada ? `${currentFard.label} · কাজা` : currentFard.label, category: "fard", plannedRakats: isQada ? qadaRakats : currentFard.rakats, performed: true, performedRakats: isQada ? qadaRakats : Math.min(currentFard.rakats, received + completedLater), reason: "" }],
-      takbirStatus: isQada || method !== "jamaat" ? "not-applicable" : takbir,
-      caughtRakats: isQada ? qadaRakats : !isQada && method === "jamaat" && takbir === "late-join" ? received : currentFard.rakats,
-      completedAfterRakats: isQada ? 0 : completedLater,
-      missedRakats: !isQada && method === "jamaat" && takbir === "late-join" ? outstanding : 0,
-      lateReason: !isQada && takbir === "late-join" ? reason.trim() : "",
-      missedReason: isQada ? reason.trim() : "",
-      performedAt,
-      note: [note.trim(), isQada ? `ওয়াক্তের পরে আদায় · মূল পদ্ধতি: ${method === "jamaat" ? "জামাতে" : "বাসায় / একাকী"}` : ""].filter(Boolean).join(" · "),
-      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
-    };
-    updateWorkspaceData((current) => {
-      const duplicate = isQada
-        ? current.prayerEntries.some((item) => item.method === "qada" && item.qadaId === qadaId)
-        : current.prayerEntries.some((item) => item.date === entry.date && item.prayer === entry.prayer && item.method !== "qada" && item.missedRakats === 0);
-      const prayerEntries = duplicate ? current.prayerEntries : isQada
-        ? [entry, ...current.prayerEntries]
-        : [entry, ...current.prayerEntries.filter((item) => !(item.date === entry.date && item.prayer === entry.prayer && item.method !== "qada"))];
-      const pendingObligation = current.qadaEntries.find((item) => item.id === qadaId && item.status === "pending");
-      let qadaEntries = !isQada ? current.qadaEntries.filter((item) => !(item.prayer === currentPrayer && item.missedDate === event.date && item.status === "pending")) : current.qadaEntries;
-      if (isQada && pendingObligation) {
-        qadaEntries = current.qadaEntries.map((item) => item.id === pendingObligation.id
-          ? { ...item, sourceEntryId: entryId, reason: reason.trim(), status: "settled" as const, settledAt: performedAt, settlementNote: note.trim() }
-          : item);
-      } else if (isQada && !current.qadaEntries.some((item) => item.prayer === currentPrayer && item.missedDate === event.date && item.status === "settled")) {
-        qadaEntries = [{ id: qadaId || createWorkspaceRecordId(), prayer: currentPrayer, missedDate: event.date, sourceEntryId: entryId, rakats: qadaRakats, reason: reason.trim(), status: "settled" as const, settledAt: performedAt, settlementNote: note.trim(), createdAt: new Date().toISOString() }, ...current.qadaEntries];
-      }
-      return { ...current, prayerEntries, qadaEntries, reminderEvents: current.reminderEvents.map((item) => item.id === event.id ? { ...item, resolved: true, response: "prayed" as const } : item) };
-    });
-    onSaved();
-  }
-
-  return <form className="waqt-answer-form" onSubmit={save}>
-    <strong>আদায়ের তথ্য নিশ্চিত করো</strong>
-    <div className="tracker-form-grid">
-      <label className="tracker-field"><span>আদায়ের তারিখ</span><input className="tracker-input" type="date" value={performedDate} onChange={(e) => setPerformedDate(e.target.value)} required/></label>
-      <label className="tracker-field"><span>আদায়ের সময় (স্থানীয় সময়)</span><input className="tracker-input" type="time" value={performedTime} onChange={(e) => setPerformedTime(e.target.value)} required/></label>
-    </div>
-    <label className="tracker-field"><span>কীভাবে আদায় করেছ?</span><select className="tracker-input" value={method} onChange={(e) => setMethod(e.target.value as "jamaat" | "home")}><option value="jamaat">জামাতে</option><option value="home">বাসায় / একাকী</option></select></label>
-    {method === "jamaat" && <label className="tracker-field"><span>জামাতে কী অবস্থায় পেয়েছ?</span><select className="tracker-input" value={takbir} onChange={(e) => setTakbir(e.target.value as PrayerEntry["takbirStatus"])}><option value="with-takbir">তাকবিরে উলা পেয়েছি</option><option value="without-takbir">তাকবিরে উলা পাইনি, সব রাকাত পেয়েছি</option><option value="late-join">দেরিতে যোগ দিয়েছি</option></select></label>}
-    {method === "jamaat" && takbir === "late-join" && <div className="tracker-form-grid"><label className="tracker-field"><span>ইমামের সঙ্গে কত রাকাত পেয়েছ?</span><select className="tracker-input" value={caught} onChange={(e) => { setCaught(e.target.value); setCompletedAfter("0"); }}>{Array.from({ length: Math.max(1, fard.rakats - 1) }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n.toLocaleString("bn-BD")} রাকাত</option>)}</select></label><label className="tracker-field"><span>পরে কত রাকাত পূরণ করেছ?</span><select className="tracker-input" value={completedAfter} onChange={(e) => setCompletedAfter(e.target.value)}>{Array.from({ length: Math.max(0, fard.rakats - Number(caught)) + 1 }, (_, i) => i).map((n) => <option key={n} value={n}>{n.toLocaleString("bn-BD")} রাকাত</option>)}</select></label></div>}
-    <label className="tracker-field"><span>কারণ / ব্যাখ্যা (ওয়াক্তের পরে আদায় হলে প্রয়োজনীয়)</span><textarea className="tracker-input tracker-textarea" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="দেরি বা অন্য কোনো কারণ থাকলে লিখো"/></label>
-    <label className="tracker-field"><span>অতিরিক্ত নোট (ঐচ্ছিক)</span><textarea className="tracker-input tracker-textarea" rows={2} value={note} onChange={(e) => setNote(e.target.value)}/></label>
-    {error && <p className="inline-feedback" role="alert">{error}</p>}
-    <div className="form-actions"><button type="button" className="tracker-quiet-button" onClick={onCancel}>বাতিল</button><button type="submit" className="tracker-primary-button">আদায়ের রেকর্ড সংরক্ষণ</button></div>
-    <small className="field-hint">ওয়াক্তের পরে আদায় হলে কাজা হিসেবে আলাদা হিসাব হবে।</small>
-  </form>;
-}
-
-function WaqtNotPerformedForm({ data, event, onCancel, onSaved }: { data: ReturnType<typeof getWorkspaceData>; event: ReminderEvent; onCancel: () => void; onSaved: () => void }) {
-  const [reason, setReason] = useState("");
-  const [error, setError] = useState("");
-  const prayerId = event.prayer;
-  const fard = prayerId ? data.prayerConfig[prayerId].find((part) => part.category === "fard") : undefined;
-  function save(eventSubmit: FormEvent<HTMLFormElement>) {
-    eventSubmit.preventDefault();
-    if (!prayerId || !fard) { setError("সালাতের Configuration পাওয়া যায়নি।"); return; }
-    if (reason.trim().length < 2) { setError("কেন আদায় হয়নি, সংক্ষেপে লিখো।"); return; }
-    updateWorkspaceData((current) => {
-      const exists = current.qadaEntries.some((item) => item.prayer === prayerId && item.missedDate === event.date && item.status === "pending");
-      const previousEntry = current.prayerEntries.find((item) => item.date === event.date && item.prayer === prayerId && item.method !== "qada");
-      const alreadyCompleted = previousEntry?.components.find((part) => part.category === "fard")?.performedRakats || 0;
-      const remainingRakats = Math.max(1, fard.rakats - alreadyCompleted);
-      const entryId = previousEntry?.id || createWorkspaceRecordId();
-      const now = new Date().toISOString();
-      const updatedPrayerEntries = previousEntry
-        ? current.prayerEntries.map((item) => item.id !== previousEntry.id ? item : { ...item, missedRakats: remainingRakats, missedReason: reason.trim(), updatedAt: now })
-        : [{ id: entryId, date: event.date, prayer: prayerId, method: "not-performed" as const, components: [{ partId: fard.id, label: fard.label, category: "fard" as const, plannedRakats: fard.rakats, performed: false, performedRakats: 0, reason: reason.trim() }], takbirStatus: "not-applicable" as const, caughtRakats: 0, completedAfterRakats: 0, missedRakats: remainingRakats, lateReason: "", missedReason: reason.trim(), performedAt: "", note: "", createdAt: now, updatedAt: now }, ...current.prayerEntries];
-      return {
-        ...current,
-        prayerEntries: updatedPrayerEntries,
-        qadaEntries: exists ? current.qadaEntries : [{ id: createWorkspaceRecordId(), prayer: prayerId, missedDate: event.date, sourceEntryId: entryId, rakats: remainingRakats, reason: reason.trim(), status: "pending", settledAt: null, settlementNote: "", createdAt: now }, ...current.qadaEntries],
-        reminderEvents: current.reminderEvents.map((item) => item.id === event.id ? { ...item, resolved: true, response: "not-prayed" as const } : item)
-      };
-    });
-    onSaved();
-  }
-  return <form className="waqt-answer-form" onSubmit={save}>
-    <strong>কাজার রেকর্ড নিশ্চিত করো</strong>
-    <p>এই ওয়াক্তের ফরজ সালাত আদায় হয়নি বলে নিশ্চিত করলে বাকি কাজার তালিকায় যোগ হবে।</p>
-    <label className="tracker-field"><span>কেন আদায় হয়নি?</span><textarea className="tracker-input tracker-textarea" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} required minLength={2} placeholder="নিজের জন্য সংক্ষেপে কারণ লিখে রাখো"/></label>
-    {error && <p className="inline-feedback" role="alert">{error}</p>}
-    <div className="form-actions"><button type="button" className="tracker-quiet-button" onClick={onCancel}>বাতিল</button><button type="submit" className="tracker-primary-button">কাজার রেকর্ড তৈরি</button></div>
-  </form>;
-}
-
-function NotificationPopover({ events, data }: { events: ReminderEvent[]; data: ReturnType<typeof getWorkspaceData> }) {
+function NotificationPopover({ events }: { events: ReminderEvent[] }) {
   const [open, setOpen] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [answerMode, setAnswerMode] = useState<{ id: string; choice: "prayed" | "not-prayed" } | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const ordered = [...events].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const unread = ordered.filter((item) => !item.readAt).length;
+
+  useEffect(() => {
+    if (!open) return;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    const onPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && !panelRef.current?.contains(event.target)) setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
   function markRead(id: string) {
     updateWorkspaceData((current) => ({ ...current, reminderEvents: current.reminderEvents.map((item) => item.id === id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item) }));
   }
@@ -923,74 +800,107 @@ function NotificationPopover({ events, data }: { events: ReminderEvent[]; data: 
   }
   function removeOne(id: string) {
     updateWorkspaceData((current) => ({ ...current, reminderEvents: current.reminderEvents.filter((item) => item.id !== id) }));
-    if (expandedId === id) setExpandedId(null);
   }
   function removeAll() {
     if (!ordered.length || !window.confirm("সব নোটিফিকেশন মুছে ফেলবে?")) return;
     updateWorkspaceData((current) => ({ ...current, reminderEvents: [] }));
-    setExpandedId(null);
   }
-  return <div className="notification-popover-wrap">
-    <button className="topbar-icon-button notification-trigger" type="button" onClick={() => setOpen((value) => !value)} aria-label="নোটিফিকেশন" aria-expanded={open}>
+  function openTarget(item: ReminderEvent) {
+    markRead(item.id);
+    setOpen(false);
+    if (item.kind === "night-qada") {
+      navigateSection("journal", "prayer", "qada", item.date);
+      return;
+    }
+    if (item.prayer) {
+      navigateSection("journal", "prayer", item.prayer, item.date);
+      return;
+    }
+    navigateSection("journal", "prayer");
+  }
+
+  return <div className="notification-popover-wrap" ref={panelRef}>
+    <button className="topbar-icon-button notification-trigger" type="button" onClick={() => setOpen((value) => !value)} aria-label="নোটিফিকেশন" aria-expanded={open} aria-haspopup="dialog">
       <Bell size={18}/>{unread > 0 && <i/>}
     </button>
-    {open && <section className="notification-popover" role="dialog" aria-label="নোটিফিকেশন তালিকা">
+    {open && <section className="notification-popover" role="dialog" aria-label="নোটিফিকেশন তালিকা" aria-modal="true">
       <header className="notification-popover-header"><div><strong>নোটিফিকেশন</strong><small>{unread.toLocaleString("bn-BD")}টি নতুন</small></div><button type="button" className="icon-button-soft" aria-label="বন্ধ করো" onClick={() => setOpen(false)}><X size={16}/></button></header>
       <div className="notification-popover-actions"><button type="button" onClick={markAllRead} disabled={!unread}>সব পড়া হয়েছে</button><button type="button" onClick={removeAll} disabled={!ordered.length}>সব মুছো</button></div>
       <div className="notification-popover-list">
         {ordered.length ? ordered.map((item) => <article className={`notification-popover-item ${item.readAt ? "read" : "unread"}`} key={item.id}>
-          <button type="button" className="notification-item-main" onClick={() => { setExpandedId((current) => current === item.id ? null : item.id); markRead(item.id); }}>
+          <button type="button" className="notification-item-main" onClick={() => openTarget(item)}>
             <span className="notification-item-title">{item.title}</span>
             <span className="notification-item-summary">{item.message}</span>
             <small>{formatCompactDate(item.date)} · {new Intl.DateTimeFormat("bn-BD", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(new Date(item.createdAt))}</small>
+            <span className="notification-open-target">সংশ্লিষ্ট অংশে যাও <ArrowRight size={13}/></span>
           </button>
           <button type="button" className="notification-delete-button" aria-label="নোটিফিকেশন মুছুন" onClick={() => removeOne(item.id)}><Trash2 size={14}/></button>
-          {expandedId === item.id && <div className="notification-item-detail">
-            {item.message}
-            {item.kind === "waqt-ended" && item.prayer && !item.resolved && <div className="waqt-confirmation-panel">
-              <p>তুমি কি সালাত আদায় করেছ কি না—নিশ্চিত করো।</p>
-              {!answerMode || answerMode.id !== item.id ? <div className="waqt-confirmation-actions">
-                <button type="button" className="tracker-primary-button" onClick={() => setAnswerMode({ id: item.id, choice: "prayed" })}>হ্যাঁ, আদায় করেছি</button>
-                <button type="button" className="tracker-secondary-button" onClick={() => setAnswerMode({ id: item.id, choice: "not-prayed" })}>না, আদায় করিনি</button>
-              </div> : answerMode.choice === "prayed" ? <WaqtPrayerEntryForm data={data} event={item} onCancel={() => setAnswerMode(null)} onSaved={() => setAnswerMode(null)}/> : <WaqtNotPerformedForm data={data} event={item} onCancel={() => setAnswerMode(null)} onSaved={() => setAnswerMode(null)}/>}
-            </div>}
-            {item.resolved && item.response && <small>প্রতিক্রিয়া: {item.response === "prayed" ? "আদায় করেছি" : "আদায় করিনি"}</small>}
-          </div>}
         </article>) : <div className="notification-empty">এখনো কোনো নোটিফিকেশন নেই।</div>}
       </div>
     </section>}
   </div>;
 }
 
-function SettingsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
+function SettingsView({ data, userEmail, onLogout, loggingOut }: { data: ReturnType<typeof getWorkspaceData>; userEmail: string; onLogout: () => void; loggingOut: boolean }) {
   const { theme, setTheme, themeSaveState, themeSaveMessage } = useTheme();
   const [displayName, setDisplayName] = useState(data.preferences.displayName);
+  const [phone, setPhone] = useState("");
+  const [profileBusy, setProfileBusy] = useState(false);
+  const [profileMessage, setProfileMessage] = useState("");
   const [maghribTime, setMaghribTime] = useState(data.preferences.maghribTime);
   const [saved, setSaved] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [importing, setImporting] = useState(false);
-  const [deletePassword, setDeletePassword] = useState("");
-  const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [deleteMessage, setDeleteMessage] = useState("");
+
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDisplayName(data.preferences.displayName);
-      setMaghribTime(data.preferences.maghribTime);
-    }, 0);
+    let active = true;
+    void fetch("/api/profile", { cache: "no-store", credentials: "same-origin" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("প্রোফাইলের তথ্য লোড করা যায়নি।");
+        return response.json() as Promise<{ profile?: { displayName?: string | null; phone?: string | null } }>;
+      })
+      .then((result) => {
+        if (!active) return;
+        if (typeof result.profile?.displayName === "string" && result.profile.displayName.trim()) setDisplayName(result.profile.displayName);
+        if (typeof result.profile?.phone === "string") setPhone(result.profile.phone);
+      })
+      .catch((error: unknown) => { if (active) setProfileMessage(error instanceof Error ? error.message : "প্রোফাইল লোড করা যায়নি।"); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setMaghribTime(data.preferences.maghribTime), 0);
     return () => window.clearTimeout(timer);
-  }, [data.preferences.displayName, data.preferences.maghribTime]);
-  async function savePreferences(event: FormEvent<HTMLFormElement>) {
+  }, [data.preferences.maghribTime]);
+
+  async function saveProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    updateWorkspaceData((current) => ({ ...current, preferences: { ...current.preferences, displayName: displayName.trim().slice(0, 80), timeZone: "Asia/Dhaka", maghribTime } }));
-    await flushWorkspaceChanges();
-    if (getCloudSyncState() === "synced") {
-      setSaved(true);
-      window.setTimeout(() => setSaved(false), 1800);
-    } else {
-      setBackupMessage(getCloudSyncMessage() || "অনলাইন সংরক্ষণ সম্পন্ন হয়নি। সংযোগ যাচাই করো।");
+    setProfileBusy(true);
+    setProfileMessage("");
+    try {
+      const response = await fetch("/api/profile", { method: "PATCH", headers: { "Content-Type": "application/json" }, credentials: "same-origin", body: JSON.stringify({ displayName: displayName.trim(), phone: phone.trim() }) });
+      const result = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(result.message || "প্রোফাইল সংরক্ষণ করা যায়নি।");
+      updateWorkspaceData((current) => ({ ...current, preferences: { ...current.preferences, displayName: displayName.trim().slice(0, 80) } }));
+      await flushWorkspaceChanges();
+      if (getCloudSyncState() !== "synced") throw new Error(getCloudSyncMessage() || "প্রোফাইলের নাম Workspace-এ সংরক্ষণ হয়নি।");
+      setProfileMessage("প্রোফাইল অনলাইনে সংরক্ষিত হয়েছে।");
+    } catch (error) {
+      setProfileMessage(error instanceof Error ? error.message : "প্রোফাইল সংরক্ষণ করা যায়নি।");
+    } finally {
+      setProfileBusy(false);
     }
   }
+
+  async function savePreferences(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    updateWorkspaceData((current) => ({ ...current, preferences: { ...current.preferences, timeZone: "Asia/Dhaka", maghribTime } }));
+    await flushWorkspaceChanges();
+    setSaved(getCloudSyncState() === "synced");
+    if (getCloudSyncState() !== "synced") setBackupMessage(getCloudSyncMessage() || "অনলাইন সংরক্ষণ সম্পন্ন হয়নি। সংযোগ যাচাই করো।");
+    window.setTimeout(() => setSaved(false), 1800);
+  }
+
   async function exportData() {
     await flushWorkspaceChanges();
     if (getCloudSyncState() !== "synced") {
@@ -1001,8 +911,9 @@ function SettingsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a"); anchor.href = url; anchor.download = `amar-nfser-hisab-backup-${todayKey(data.preferences.timeZone, data.preferences.maghribTime)}.json`; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1200);
-    setBackupMessage("JSON ব্যাকআপ ফাইল তৈরি হয়েছে। এটি এনক্রিপ্ট করা নয়—নিরাপদ স্থানে রাখবে।");
+    setBackupMessage("JSON ব্যাকআপ ফাইল তৈরি হয়েছে। এটি এনক্রিপ্ট করা নয়—নিরাপদে রাখো।");
   }
+
   async function importData(file: File | undefined) {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { setBackupMessage("Backup ফাইল ১০ MB সীমা অতিক্রম করেছে।"); return; }
@@ -1017,57 +928,28 @@ function SettingsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
       setBackupMessage(error instanceof Error ? error.message : "Backup পড়া যায়নি।");
     } finally { setImporting(false); }
   }
-  async function deleteAccount(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setDeleteMessage("");
-    if (deleteConfirmation !== "DELETE") {
-      setDeleteMessage("নিশ্চিত করতে ইংরেজিতে DELETE লিখো।");
-      return;
-    }
-    setDeleteBusy(true);
-    try {
-      // Do not delete an account while a previous online write is still pending.
-      await flushWorkspaceChanges();
-      if (getCloudSyncState() !== "synced") {
-        throw new Error(getCloudSyncMessage() || "আগের পরিবর্তনগুলো অনলাইনে সংরক্ষিত হয়নি।");
-      }
-      const response = await fetch("/api/account/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-        body: JSON.stringify({ password: deletePassword, confirmation: deleteConfirmation })
-      });
-      const result = await response.json().catch(() => ({})) as { message?: string };
-      if (!response.ok) throw new Error(result.message || "অ্যাকাউন্ট মুছে ফেলা যায়নি।");
-      window.location.replace("/login?accountDeleted=1");
-    } catch (error) {
-      setDeleteMessage(error instanceof Error ? error.message : "অ্যাকাউন্ট মুছে ফেলা যায়নি।");
-      setDeleteBusy(false);
-    }
-  }
+
   return (
-    <div className="view-stack">
+    <div className="view-stack settings-view">
       <PageIntro eyebrow="ব্যক্তিগত পছন্দ" title="সেটিংস" description="" onBack={() => navigateSection("home")} />
+      <section className="settings-profile-panel">
+        <div className="settings-profile-heading"><span className="settings-profile-avatar">{getInitials(displayName)}</span><div><span className="eyebrow">অ্যাকাউন্ট</span><h2>ব্যক্তিগত প্রোফাইল</h2><p>তোমার পরিচিতি ও যোগাযোগের তথ্য</p></div></div>
+        <form className="workspace-form settings-profile-form" onSubmit={saveProfile}>
+          <label>প্রদর্শিত নাম<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} placeholder="তোমার নাম" required /></label>
+          <label>অ্যাকাউন্ট ইমেইল<input value={userEmail} readOnly aria-readonly="true" /></label>
+          <label>মোবাইল নম্বর <small>(ঐচ্ছিক)</small><input value={phone} onChange={(event) => setPhone(event.target.value)} maxLength={25} inputMode="tel" placeholder="মোবাইল নম্বর" /></label>
+          {profileMessage && <p className="inline-feedback" role="status">{profileMessage}</p>}
+          <div className="form-actions"><button type="submit" className="button-primary" disabled={profileBusy}>{profileBusy ? <LoaderCircle className="spin" size={15}/> : <Check size={15}/>} প্রোফাইল সংরক্ষণ</button></div>
+        </form>
+      </section>
       <PrayerSettingsPanel data={data}/>
       <div className="content-grid content-grid-wide-left">
-        <Panel eyebrow="ব্যক্তিগত পছন্দ" title="ব্যক্তিগত তথ্য"><form className="workspace-form" onSubmit={savePreferences}><label>প্রদর্শিত নাম<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} maxLength={80} placeholder="তোমার নাম" /></label><label>সময় অঞ্চল<input value="বাংলাদেশের সময় (Asia/Dhaka)" readOnly aria-readonly="true" /></label><label>মাগরিবের সময় (ঐচ্ছিক সংশোধন)<input type="time" value={maghribTime} onChange={(event) => setMaghribTime(event.target.value)} /></label><p className="field-hint">সময় অঞ্চল বাংলাদেশে স্থির। সময় ফাঁকা রাখলে হানাফি সূচির মাগরিব নেওয়া হবে; চাইলে নিজে সংশোধন করো। মাগরিবে নতুন দিন শুরু হবে।</p><div className="form-actions"><button type="submit" className="button-primary">{saved ? <Check size={15}/> : <ArrowDownToLine size={15}/>} {saved ? "সংরক্ষিত" : "পছন্দ সংরক্ষণ"}</button></div></form></Panel>
-        <Panel eyebrow="দৃশ্যমানতা" title="থিম"><div className="theme-choice-list"><button type="button" className={`theme-choice ${theme === "light" ? "selected" : ""}`} onClick={() => setTheme("light")}><Sun size={17}/><span><strong>সাদা থিম</strong><small>পরিষ্কার উজ্জ্বল ক্যানভাস</small></span>{theme === "light" && <Check size={16}/>}</button><button type="button" className={`theme-choice ${theme === "dark" ? "selected" : ""}`} onClick={() => setTheme("dark")}><Moon size={17}/><span><strong>অন্ধকার থিম</strong><small>কম আলোতে আরামদায়ক</small></span>{theme === "dark" && <Check size={16}/>}</button></div><p className={`field-hint theme-save-${themeSaveState}`} role="status">{themeSaveMessage}</p></Panel>
+        <Panel eyebrow="মুহাসাবার দিন" title="তারিখ ও মাগরিব"><form className="workspace-form" onSubmit={savePreferences}><label>সময় অঞ্চল<input value="বাংলাদেশের সময় (Asia/Dhaka)" readOnly aria-readonly="true" /></label><label>মাগরিবের সময় (ঐচ্ছিক সংশোধন)<input type="time" value={maghribTime} onChange={(event) => setMaghribTime(event.target.value)} /></label><p className="field-hint">সময় ফাঁকা রাখলে হানাফি সূচির মাগরিব নেওয়া হবে। মাগরিবে নতুন মুহাসাবার দিন শুরু হবে।</p><div className="form-actions"><button type="submit" className="button-primary">{saved ? <Check size={15}/> : <ArrowDownToLine size={15}/>} {saved ? "সংরক্ষিত" : "তারিখের পছন্দ সংরক্ষণ"}</button></div></form></Panel>
+        <Panel eyebrow="দৃশ্যমানতা" title="অ্যাপের থিম"><div className="theme-choice-list"><button type="button" className={`theme-choice ${theme === "light" ? "selected" : ""}`} onClick={() => setTheme("light")}><Sun size={17}/><span><strong>লাইট থিম</strong><small>পরিষ্কার ও উজ্জ্বল</small></span>{theme === "light" && <Check size={16}/>}</button><button type="button" className={`theme-choice ${theme === "dark" ? "selected" : ""}`} onClick={() => setTheme("dark")}><Moon size={17}/><span><strong>ডার্ক থিম</strong><small>কম আলোতে আরামদায়ক</small></span>{theme === "dark" && <Check size={16}/>}</button></div><p className={`field-hint theme-save-${themeSaveState}`} role="status">{themeSaveMessage}</p></Panel>
       </div>
-      <Panel eyebrow="অনলাইন সংরক্ষণ" title="ব্যক্তিগত অনলাইন ওয়ার্কস্পেস"><div className="backup-summary"><span className="backup-summary-icon"><ShieldCheck size={20}/></span><div><strong>{getCloudSyncState() === "synced" ? "সব তথ্য অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" ? "অনলাইনে সংরক্ষণ চলছে" : getCloudSyncState() === "offline" ? "ইন্টারনেট সংযোগ নেই" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত হচ্ছে"}</strong><p>{data.prayerEntries.length + data.extraPrayerEntries.length}টি সালাত · {data.quranEntries.length}টি কুরআন পাঠ · {data.dhikrSessions.length}টি জিকির · {data.deadlinePlans.length}টি সময়সীমা · {data.journeys.length}টি যাত্রা</p></div><span className={`local-badge cloud-status-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? "অনলাইনে আছে" : getCloudSyncState() === "offline" ? "সংযোগ নেই" : getCloudSyncState() === "error" ? "সমস্যা" : getCloudSyncState() === "syncing" ? "সংরক্ষণ হচ্ছে" : "প্রস্তুতি"}</span></div><div className="backup-actions"><button type="button" className="button-secondary" onClick={exportData}><Download size={15}/> JSON ব্যাকআপ ডাউনলোড</button><label className="button-secondary upload-button"><Upload size={15}/>{importing ? "পড়া হচ্ছে…" : "ব্যাকআপ পুনরুদ্ধার"}<input type="file" accept="application/json,.json" onChange={(event) => void importData(event.target.files?.[0])} disabled={importing}/></label></div>{backupMessage && <p className="inline-feedback" role="status">{backupMessage}</p>}<p className="security-caption"><LockKeyhole size={14}/> রেকর্ড অনলাইনে সংরক্ষিত হয়; ইন্টারনেট না থাকলে নতুন পরিবর্তন সংরক্ষণ হয় না। JSON ব্যাকআপ এনক্রিপ্ট করা নয়—নিরাপদে রাখো।</p></Panel>
+      <Panel eyebrow="অনলাইন সংরক্ষণ" title="ব্যক্তিগত ওয়ার্কস্পেস"><div className="backup-summary"><span className="backup-summary-icon"><ShieldCheck size={20}/></span><div><strong>{getCloudSyncState() === "synced" ? "সব তথ্য অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" ? "অনলাইনে সংরক্ষণ চলছে" : getCloudSyncState() === "offline" ? "ইন্টারনেট সংযোগ নেই" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত হচ্ছে"}</strong><p>{data.prayerEntries.length + data.extraPrayerEntries.length}টি সালাত · {data.quranEntries.length}টি কুরআন পাঠ · {data.dhikrSessions.length}টি জিকির · {data.deadlinePlans.length}টি সময়সীমা · {data.journeys.length}টি যাত্রা</p></div><span className={`local-badge cloud-status-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? "অনলাইনে আছে" : getCloudSyncState() === "offline" ? "সংযোগ নেই" : getCloudSyncState() === "error" ? "সমস্যা" : getCloudSyncState() === "syncing" ? "সংরক্ষণ হচ্ছে" : "প্রস্তুতি"}</span></div><div className="backup-actions"><button type="button" className="button-secondary" onClick={exportData}><Download size={15}/> JSON ব্যাকআপ ডাউনলোড</button><label className="button-secondary upload-button"><Upload size={15}/>{importing ? "পড়া হচ্ছে…" : "ব্যাকআপ পুনরুদ্ধার"}<input type="file" accept="application/json,.json" onChange={(event) => void importData(event.target.files?.[0])} disabled={importing}/></label></div>{backupMessage && <p className="inline-feedback" role="status">{backupMessage}</p>}<p className="security-caption"><LockKeyhole size={14}/> রেকর্ড অনলাইনে সংরক্ষিত হয়; ইন্টারনেট না থাকলে নতুন পরিবর্তন সংরক্ষণ হয় না। JSON ব্যাকআপ এনক্রিপ্ট করা নয়—নিরাপদে রাখো।</p></Panel>
+      <section className="settings-logout-panel"><div><span className="settings-logout-icon"><LogOut size={18}/></span><div><strong>এই ডিভাইস থেকে লগআউট</strong><p>তোমার অনলাইন রেকর্ড অ্যাকাউন্টে নিরাপদ থাকবে।</p></div></div><button type="button" className="button-secondary settings-logout-button" onClick={onLogout} disabled={loggingOut}>{loggingOut ? <LoaderCircle className="spin" size={15}/> : <LogOut size={15}/>} {loggingOut ? "লগআউট হচ্ছে…" : "লগআউট"}</button></section>
       <div className={`local-data-note cloud-sync-note cloud-sync-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? <Cloud size={15}/> : <CloudOff size={15}/>} {getCloudSyncMessage() || "তোমার পরিবর্তন অনলাইনে সংরক্ষিত হয়।"}</div>
-      <Panel className="account-danger-panel" eyebrow="স্থায়ী সিদ্ধান্ত" title="অ্যাকাউন্ট ও সব তথ্য মুছে ফেলা">
-        <div className="account-danger-copy">
-          <strong>এই কাজটি ফেরানো যাবে না।</strong>
-          <p>অ্যাকাউন্ট মুছে দিলে সালাত, কাজা, কুরআন, জিকির, লক্ষ্য, আত্মশুদ্ধির নোট, সেটিংস এবং ব্যক্তিগত ছবি স্থায়ীভাবে মুছে যাবে।</p>
-        </div>
-        <form className="workspace-form account-delete-form" onSubmit={deleteAccount}>
-          <label>বর্তমান পাসওয়ার্ড<input type="password" autoComplete="current-password" minLength={8} maxLength={128} required value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="পরিচয় নিশ্চিত করতে পাসওয়ার্ড" /></label>
-          <label>নিশ্চিত করতে DELETE লিখো<input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} autoComplete="off" spellCheck={false} required placeholder="DELETE" /></label>
-          {deleteMessage && <p className="inline-feedback account-delete-feedback" role="alert">{deleteMessage}</p>}
-          <div className="form-actions"><button type="submit" className="button-danger-solid" disabled={deleteBusy || !deletePassword || deleteConfirmation !== "DELETE"}>{deleteBusy ? "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…" : <><Trash2 size={15}/> অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলো</>}</button></div>
-        </form>
-      </Panel>
     </div>
   );
 }
@@ -1115,23 +997,16 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
     <>
     <PrayerReminderEngine userName={displayName}/>
     <div className="workspace-app">
-      <aside className="workspace-sidebar">
-        <div className="sidebar-brand"><BrandMark /></div>
-        <div className="sidebar-caption">প্রধান বিভাগ</div>
-        <nav className="sidebar-nav" aria-label="প্রধান বিভাগ">{NAV_ITEMS.slice(0, 4).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={`sidebar-link ${section === item.id ? "active" : ""}`} onClick={() => navigateSection(item.id)} aria-current={section === item.id ? "page" : undefined}><Icon size={18}/><span>{item.label}</span>{section === item.id && <ChevronRight className="sidebar-chevron" size={15}/>}</button>; })}</nav>
-        <div className="sidebar-caption sidebar-caption-spaced">অন্যান্য</div>
-        {NAV_ITEMS.slice(4).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={`sidebar-link ${section === item.id ? "active" : ""}`} onClick={() => navigateSection(item.id)}><Icon size={18}/><span>{item.label}</span>{section === item.id && <ChevronRight className="sidebar-chevron" size={15}/>}</button>; })}
-        <div className="sidebar-bottom"><div className="sidebar-private"><span><ShieldCheck size={16}/></span><div><strong>ব্যক্তিগত ও সুরক্ষিত</strong><small>শুধু তোমার অ্যাকাউন্ট</small></div></div><div className="sidebar-user"><span className="user-avatar">{getInitials(displayName)}</span><div className="sidebar-user-copy"><strong>{displayName}</strong><small>{userEmail}</small></div><button type="button" className="icon-button-soft" onClick={() => void logout()} disabled={loggingOut} aria-label="লগআউট"><LogOut size={16}/></button></div></div>
-      </aside>
       <main className="workspace-main">
-        <header className="workspace-topbar"><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label cloud-status-${getCloudSyncState()}`}><span/>{getCloudSyncState() === "synced" ? "অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "অনলাইনে সংরক্ষণ হচ্ছে" : getCloudSyncState() === "offline" ? "অফলাইন · সংরক্ষিত নয়" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত"}</span><NotificationPopover events={data.reminderEvents} data={data}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="নোটিফিকেশন ও অ্যাপ সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
+        <header className="workspace-topbar"><div className="desktop-brand"><BrandMark/></div><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label cloud-status-${getCloudSyncState()}`}><span/>{getCloudSyncState() === "synced" ? "অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "অনলাইনে সংরক্ষণ হচ্ছে" : getCloudSyncState() === "offline" ? "অফলাইন · সংরক্ষিত নয়" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত"}</span><NotificationPopover events={data.reminderEvents}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
+        <nav className="workspace-desktop-nav" aria-label="প্রধান বিভাগ">{NAV_ITEMS.map((item) => { const Icon = item.icon; const active = section === item.id; return <button key={item.id} type="button" className={`workspace-desktop-tab ${active ? "active" : ""}`} onClick={() => navigateSection(item.id)} aria-current={active ? "page" : undefined}><Icon size={17}/><span>{item.label}</span></button>; })}</nav>
         <div className="workspace-content">
           {section === "home" && <DashboardView key={liveDay} data={data}/>} 
           {section === "goals" && <GoalsView data={data}/>} 
           {section === "journal" && <JournalView data={data}/>} 
           {section === "mirror" && <MirrorView data={data}/>} 
-          {section === "settings" && <SettingsView data={data}/>} 
-          <footer className="workspace-footer"><span>রাকিব তুমি তোমার বাবা-মায়ের বিশ্বাসটা ভেঙ্গোনা।</span><span>তাহলে তাদের আর যাওয়ার মতো জায়গা থাকবে না!</span></footer>
+          {section === "settings" && <SettingsView data={data} userEmail={userEmail} onLogout={() => void logout()} loggingOut={loggingOut}/>} 
+          <footer className="workspace-footer"><span className="workspace-footer-copy"><span className="footer-copyright-mark">©</span><span>রাকিব তুমি তোমার বাবা-মায়ের বিশ্বাসটা ভেঙ্গোনা।</span></span><span>তাহলে তাদের আর যাওয়ার মতো জায়গা থাকবে না!</span></footer>
         </div>
       </main>
       <nav className="mobile-navigation" aria-label="মোবাইল প্রধান বিভাগ">{NAV_ITEMS.slice(0, 4).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={section === item.id ? "active" : ""} onClick={() => navigateSection(item.id)}><Icon size={19}/><span>{item.shortLabel}</span></button>; })}<button type="button" className={section === "settings" ? "active" : ""} onClick={() => navigateSection("settings")}><MoreHorizontal size={19}/><span>আরও</span></button></nav>

@@ -1,6 +1,6 @@
 {
   "name": "amar-nfser-hisab",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "private": true,
   "description": "ব্যক্তিগত মুহাসাবা, আত্মশুদ্ধি ও উন্নয়নের ওয়েব অ্যাপ্লিকেশন",
   "scripts": {
@@ -17,7 +17,7 @@
     "test:phase03": "node --test tests/phase03-contract.test.mjs",
     "test:phase04": "node --test tests/phase04-env-ui-contract.test.mjs",
     "test:frontend": "node --test tests/frontend-phase06.test.mjs",
-    "test:all": "npm run test:phase02 && npm run test:phase03 && npm run test:phase04 && npm run test:phase05 && npm run test:phase06 && npm run test:phase07 && npm run test:phase08 && npm run test:phase08followup && npm run test:phase10 && npm run test:release-ui && npm run test:phase11 && npm run test:phase12 && npm run test:phase13 && npm test && npm run test:phase14 && npm run test:phase15 && npm run test:phase16 && npm run test:phase17 && npm run test:phase18",
+    "test:all": "npm run test:phase02 && npm run test:phase03 && npm run test:phase04 && npm run test:phase05 && npm run test:phase06 && npm run test:phase07 && npm run test:phase08 && npm run test:phase08followup && npm run test:phase10 && npm run test:release-ui && npm run test:phase11 && npm run test:phase12 && npm run test:phase13 && npm test && npm run test:phase14 && npm run test:phase15 && npm run test:phase16 && npm run test:phase17 && npm run test:phase18 && npm run test:phase19",
     "test:phase05": "node --test tests/phase05-performance.test.mjs",
     "test:phase07": "node --test tests/phase07-contract.test.mjs",
     "test:phase06": "node --test tests/frontend-phase06.test.mjs",
@@ -34,7 +34,8 @@
     "test:phase15": "node --test tests/phase15-mobile-journey.test.mjs",
     "test:phase16": "node --test tests/phase16-visual-system.test.mjs",
     "test:phase17": "node --test tests/phase17-account-cleanup.test.mjs",
-    "test:phase18": "node --test tests/phase18-fix-patch.test.mjs"
+    "test:phase18": "node --test tests/phase18-fix-patch.test.mjs",
+    "test:phase19": "node --test tests/phase19-ui-polish.test.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",

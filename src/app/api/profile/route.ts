@@ -11,6 +11,18 @@ const schema = z.object({
   phone: z.string().trim().max(25).transform((value) => value || null)
 }).strict();
 
+export async function GET(request: NextRequest) {
+  const context = await getApiContext(request);
+  if (isErrorResponse(context)) return context.response;
+  const { data, error } = await context.supabase
+    .from("profiles")
+    .select("display_name, phone")
+    .eq("id", context.user.id)
+    .maybeSingle();
+  if (error) return NextResponse.json({ message: "প্রোফাইলের তথ্য লোড করা যায়নি।" }, { status: 400, headers: { "Cache-Control": "no-store" } });
+  return NextResponse.json({ profile: { displayName: data?.display_name ?? null, phone: data?.phone ?? null } }, { headers: { "Cache-Control": "no-store" } });
+}
+
 export async function PATCH(request: NextRequest) {
   if (!isSameOriginRequest(request)) return NextResponse.json({ message: "অনুরোধটি গ্রহণ করা হয়নি।" }, { status: 403 });
   if (!(request.headers.get("content-type") || "").toLowerCase().includes("application/json")) return NextResponse.json({ message: "সঠিক অনুরোধ পাঠাও।" }, { status: 415 });

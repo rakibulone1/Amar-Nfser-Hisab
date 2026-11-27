@@ -86,15 +86,7 @@ export function PrayerTimeWidget({ data }: { data: WorkspaceData }) {
       const endTime = prayer === "fajr" ? currentTimes.sunrise : prayer === "dhuhr" ? currentTimes.asr : prayer === "asr" ? currentTimes.maghrib : prayer === "maghrib" ? currentTimes.isha : tomorrowTimes?.fajr ? shiftPrayerClock(tomorrowTimes.fajr, -1) : undefined;
       const endDate = prayer === "isha" ? tomorrowDate : date;
       return <div key={prayer} className={state?.next === prayer ? "is-next" : ""}><span>{NAMES[prayer]}</span><strong>{fmt(currentTimes[prayer], date)}</strong><small>শেষ {endTime ? fmt(endTime, endDate) : "পরের দিনের সময়সূচি আসছে"}</small></div>;
-    })}<div><span>সূর্যোদয়</span><strong>{fmt(currentTimes.sunrise, date)}</strong><small>ফজরের শেষ</small></div></div><div className="prayer-time-source"><CalendarClock size={13}/> {currentTimes.source} · {loading ? "আপডেট হচ্ছে" : `সর্বশেষ হালনাগাদ ${new Intl.DateTimeFormat("bn-BD", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(new Date(currentTimes.fetchedAt))}`}</div><div className="forbidden-prayer-times">
-      <div className="forbidden-prayer-heading"><strong>নিষিদ্ধ মুহূর্তের সময়সূচি</strong><small>সূর্যের গণনাকৃত অবস্থান</small></div>
-      {[
-        { key: "sunrise", title: "সূর্যোদয়", time: currentTimes.forbiddenTimes?.sunrise || currentTimes.sunrise, detail: "সূর্য ওঠা শুরু" },
-        { key: "zawal", title: "জাওয়াল / মধ্যাহ্ন", time: currentTimes.forbiddenTimes?.zawal || currentTimes.solarNoon || currentTimes.dhuhr, detail: "সূর্যের মধ্যাহ্ন অবস্থান" },
-        { key: "sunset", title: "সূর্যাস্ত", time: currentTimes.forbiddenTimes?.sunset || currentTimes.sunset || currentTimes.maghrib, detail: "সূর্য অস্ত যাওয়া" }
-      ].map((item) => <div key={item.key}><span>{item.title}<small>{item.detail}</small></span><strong>{fmt(item.time, date)}</strong></div>)}
-      <p className="forbidden-prayer-note">হানাফি ফিকহে সূর্যোদয় ও সূর্যাস্তের নিষেধাজ্ঞা শুধু মুহূর্তটুকুতে সীমাবদ্ধ নয়। সময়সীমা স্থান ও ঋতুভেদে পরিবর্তিত হয়; নির্দিষ্ট আমলের আগে স্থানীয় নির্ভরযোগ্য আলেম বা মসজিদের নির্দেশনা অনুসরণ করো।</p>
-    </div></> : <div className="prayer-time-empty"><AlarmClock size={20}/><strong>{loading ? "ওয়াক্তের সময় আনা হচ্ছে…" : "সময়সূচি এখনো পাওয়া যায়নি"}</strong><small>{problem || "ইন্টারনেট সংযোগ এবং Settings-এ অবস্থান যাচাই করো।"}</small></div>}
+    })}<div><span>সূর্যোদয়</span><strong>{fmt(currentTimes.sunrise, date)}</strong><small>ফজরের শেষ</small></div></div><div className="prayer-time-source"><CalendarClock size={13}/> {currentTimes.source} · {loading ? "আপডেট হচ্ছে" : `সর্বশেষ হালনাগাদ ${new Intl.DateTimeFormat("bn-BD", { hour: "numeric", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(new Date(currentTimes.fetchedAt))}`}</div></> : <div className="prayer-time-empty"><AlarmClock size={20}/><strong>{loading ? "ওয়াক্তের সময় আনা হচ্ছে…" : "সময়সূচি এখনো পাওয়া যায়নি"}</strong><small>{problem || "ইন্টারনেট সংযোগ এবং Settings-এ অবস্থান যাচাই করো।"}</small></div>}
     <div className="mosque-jamaat-inline"><span>স্থানীয় মসজিদের জামাত</span><small>সেটিংসে সময়গুলো হাতে লিখে রাখবে</small>{ACCOUNTING_ORDER.map((prayer) => <div key={prayer}><span>{NAMES[prayer]}</span><strong>{data.prayerPreferences.mosqueTimes[prayer] ? fmt(data.prayerPreferences.mosqueTimes[prayer]) : "নির্ধারিত নয়"}</strong></div>)}</div>
   </section>;
 }

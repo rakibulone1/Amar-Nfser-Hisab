@@ -38,14 +38,19 @@ test("dashboard hierarchy is date strip, journey summary, four metric cards and 
   assert.doesNotMatch(dashboard, /today-hero/);
 });
 
-test("notification popover supports read, expanded detail and individual or bulk deletion", () => {
+test("notification popover navigates to the exact prayer target, locks background scroll and supports read/delete", () => {
   const workspace = read("src/components/frontend-workspace.tsx");
   const store = read("src/lib/workspace/store.ts");
   assert.match(workspace, /function NotificationPopover/);
   assert.match(workspace, /markAllRead/);
   assert.match(workspace, /removeAll/);
   assert.match(workspace, /removeOne/);
+  assert.match(workspace, /function openTarget\(item: ReminderEvent\)/);
+  assert.match(workspace, /navigateSection\("journal", "prayer", item\.prayer, item\.date\)/);
+  assert.match(workspace, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(workspace, /document\.addEventListener\("pointerdown", onPointerDown, true\)/);
   assert.match(store, /readAt\?: string \| null/);
+  assert.doesNotMatch(workspace, /expandedId|notification-item-detail/);
   assert.doesNotMatch(workspace, /navigateSection\("notifications"/);
 });
 
@@ -59,37 +64,36 @@ test("entry shortcuts open the requested tracker and prayer instead of only swit
   assert.match(tracker, /writeTrackerTarget/);
 });
 
-test("prayer times include prohibited windows and Isha ends one minute before tomorrow Fajr", () => {
+test("prayer time widget omits the prohibited-time panel and Isha ends one minute before tomorrow Fajr", () => {
   const api = read("src/app/api/prayer-times/route.ts");
   const lib = read("src/lib/prayer-time.ts");
   const widget = read("src/modules/trackers/prayer-time-widget.tsx");
   assert.match(api, /forbiddenTimes/);
-  assert.match(widget, /নিষিদ্ধ মুহূর্তের সময়সূচি/);
+  assert.doesNotMatch(widget, /forbidden-prayer-times|নিষিদ্ধ মুহূর্তের সময়সূচি/);
   assert.match(lib, /shiftPrayerClock\(tomorrowTimes\.fajr, -1\)/);
 });
 
-test("every workspace route and login/hadith page uses the personal two-line footer", () => {
+test("private workspace and Hadith use a centered copyright footer; public login has no personal footer", () => {
   const workspace = read("src/components/frontend-workspace.tsx");
   const login = read("src/app/login/page.tsx");
   const hadith = read("src/modules/hadith/hadith-library.tsx");
   const phrase = "তাহলে তাদের আর যাওয়ার মতো জায়গা থাকবে না!";
   assert.ok(workspace.includes(phrase));
-  assert.ok(login.includes(phrase));
+  assert.doesNotMatch(login, /login-personal-footer|রাকিব তুমি/);
+  assert.match(workspace, /footer-copyright-mark/);
+  assert.match(hadith, /footer-copyright-mark/);
   assert.ok(hadith.includes(phrase));
 });
 
 
-test("waqt expiry notification opens the two confirmation forms and records the selected response", () => {
+test("waqt expiry notification opens the preselected prayer tracker for its Maghrib-based day", () => {
   const workspace = read("src/components/frontend-workspace.tsx");
   const reminders = read("src/modules/trackers/prayer-settings.tsx");
   assert.match(reminders, /আদায় করেছ কি\?/);
-  assert.match(workspace, /তুমি কি সালাত আদায় করেছ কি না/);
-  assert.match(workspace, /হ্যাঁ, আদায় করেছি/);
-  assert.match(workspace, /না, আদায় করিনি/);
-  assert.match(workspace, /WaqtPrayerEntryForm data=\{data\} event=\{item\}/);
-  assert.match(workspace, /WaqtNotPerformedForm data=\{data\} event=\{item\}/);
-  assert.match(workspace, /response: "prayed" as const/);
-  assert.match(workspace, /response: "not-prayed" as const/);
+  assert.match(workspace, /navigateSection\("journal", "prayer", item\.prayer, item\.date\)/);
+  assert.match(workspace, /entryDate/);
+  const tracker = read("src/modules/trackers/tracker-center.tsx");
+  assert.match(tracker, /response: qadaNeeded \? "not-prayed" as const : "prayed" as const/);
 });
 
 test("hadith library contains twenty unique records with exactly the required fields and source map", () => {

@@ -1,31 +1,54 @@
-# Amar Nfser Hisab — Release 1.2.5 A+ Online & Account-Owned Patch
+# Amar Nfser Hisab — Release 1.2.6 Fix Patch
 
-## Base Project
+## কোন সংস্করণের জন্য
 
-এই প্যাচটি Release 1.2.4 Full Project-এর ওপর তৈরি (যেখানে আগের Release 1.2.3 UI/Journey এবং Build Fix 01 ইতিমধ্যে অন্তর্ভুক্ত)। সরাসরি চলমান 1.2.4 Project Root-এ Apply করবে। আগের Patch আবার Apply করবে না।
+এই প্যাচটি **Release 1.2.5 A+ Account-Owned Online + Fix Patch 01**-এর ওপর বসানোর জন্য। Release 1.2.4 বা তার আগের সংস্করণে বসাবে না। একই প্যাচ দ্বিতীয়বার প্রয়োগ করার দরকার নেই।
 
-## এই Release-এ
+## এই প্যাচে কী আছে
 
-- Runtime Workspace JSON Snapshot বাদ; Tracker Record পৃথক authenticated `workspace_*` টেবিলে থাকে।
-- অ্যাপ পুরোনো IndexedDB/Local Storage পড়ে বা নতুন Durable Data সেখানে লেখে না; শুধু নির্দিষ্ট পুরোনো Key/Database Cleanup-only মুছে দেয়।
-- নতুন Master SQL আর `user_workspace_snapshots` তৈরি করে না।
-- Existing Database-এর জন্য Migration 003 পুরোনো Snapshot Table ও RPC সরায়; Migration 002-এর relational data অক্ষত রাখে।
-- Settings-এ Account Delete: বর্তমান পাসওয়ার্ড, `DELETE` নিশ্চিতকরণ, account-prefixed private files অপসারণ, তারপর Auth User Delete। Relational Account Data FK Cascade-এ মুছে যায়।
-- Supabase schema-তে Account Cascade preflight check রয়েছে।
-- কোনো নতুন package/dependency বা environment variable নেই।
+1. মাগরিব-ভিত্তিক তারিখের Test-এ পুরোনো `getLocalJournalDate` নাম বাদ দিয়ে বর্তমান `getJournalDate` ব্যবহার। মূল তারিখ গণনার লজিক অপরিবর্তিত।
+2. পুরোনো Journey Archive-এর Stage 3 নামের Backward Compatibility রাখা; নতুন ৭১টি Fixed Stage-এর নাম ও তারিখ অপরিবর্তিত।
+3. হাদিস কার্ডের প্রথম নির্বাচন SSR/Hydration-safe করা; Effect-এ অপ্রয়োজনীয় State Update নেই।
+4. Quick Note নতুন মাগরিব-ভিত্তিক দিনে সঠিকভাবে Reset হয়।
+5. Stage Reward Draft-এর Server Data Synchronization React-এর guarded render update দিয়ে করা; cascading Effect সরানো।
+6. Notification থেকে নির্দিষ্ট সালাত ও তারিখে সরাসরি Tracker Entry-তে যাওয়া; প্যানেল খোলা থাকলে ব্যাকগ্রাউন্ড Scroll বন্ধ এবং বাইরে ক্লিক/Escape-এ প্যানেল বন্ধ।
+7. Section Heading-এর Back Button ছোট ও একক রাখা; Desktop-এ পূর্ণ-প্রস্থ Top Tabs এবং Mobile-এ Bottom Navigation বজায় রাখা।
+8. Dashboard Gregorian Date বাংলা Typography-তে; নিষিদ্ধ সময়ের Panel সরানো।
+9. Notification Detail Expansion বাদ; ক্লিক করলে নির্দিষ্ট Section/Entry খোলে।
+10. Settings-এ Profile ও Logout; Settings UI থেকে Account Delete সরানো। Profile Server API যুক্ত।
+11. সালাত Entry প্রতি মাগরিব-ভিত্তিক তারিখে একবার; আগে রেকর্ড থাকলে নতুন Entry নয়, Existing Entry Edit করা যাবে। বাসায়/একাকী আদায়ে অপ্রয়োজনীয় দ্বিতীয় Completion প্রশ্ন নেই।
+12. Release metadata 1.2.6 এবং Regression Tests আপডেট।
 
-## Apply
+## বসানোর নিয়ম
 
-1. Project Folder ও Supabase-এর Backup রাখো।
-2. ZIP Extract করে Release 1.2.4 Project Root-এ Replace করো; `.env.local` ও `.git` অক্ষত রাখবে।
-3. `npm ci` এবং `npm run test:all`, `npm run typecheck`, `npm run lint`, `npm run build` চালাও।
-4. Existing Database হলে আগে নিশ্চিত হও `002_relational_workspace.sql` সম্পূর্ণ সফল হয়েছে এবং Relational Row Count ঠিক আছে। তারপর `003_remove_legacy_snapshot.sql` একবার চালাও। এটি পুরোনো Snapshot Archive স্থায়ীভাবে Drop করবে।
-5. নতুন/খালি Database হলে শুধু `MASTER_DATABASE_SETUP.sql` চালাও; 001/002/003 আলাদা চালাবে না।
+1. চলমান Project-এর Backup রাখো।
+2. ZIP Extract করে Project Root-এ Replace করো—যেখানে `package.json` আছে।
+3. `.env.local`, `.git` এবং Supabase Credentials অপরিবর্তিত রাখো।
+4. **কোনো SQL Migration লাগবে না।** Database Schema, RLS, API Contract বা Durable Data Format পরিবর্তন করা হয়নি।
+5. নতুন Dependency যোগ করা হয়নি; `package-lock.json`-এ শুধু Root Package Version 1.2.6 করা হয়েছে।
 
-## Account Delete
+## পরীক্ষা
 
-Settings → Account Delete-এ বর্তমান পাসওয়ার্ড দিয়ে পরিচয় নিশ্চিত করে `DELETE` লিখে Submit করতে হবে। এটি অপরিবর্তনীয়; অ্যাকাউন্টের Relational Data ও private account-prefixed files সরিয়ে দেয়। শুধু UI থেকে Account Delete করলেই সঠিক cleanup path চালু হয়; Auth Dashboard থেকে সরাসরি user delete করলে private Storage cleanup route চলবে না।
+প্যাকেজিং পরিবেশে সরাসরি চালানো হয়েছে:
 
-## Verification
+- Node `.mjs` Regression/Contract Tests: **119/119 PASS**
+- TypeScript Runtime Tests: **18/18 PASS** (Node 22 native type stripping)
+- TypeScript/TSX syntax transpilation: **75 files, 0 syntax errors**
+- Patch Apply Test: Release 1.2.5 + Fix 01-এর clean copy-তে সফল
+- ZIP Integrity: PASS
 
-এই প্যাকেজ প্রস্তুতের পরিবেশে ১০১টি Node `.mjs` regression/contract test পাস করেছে। `tsx` Dependency অনুপস্থিত থাকায় `tests/*.test.ts`, পূর্ণ TypeScript typecheck, ESLint এবং Next.js production build চালানো যায়নি। এগুলো তোমার Node.js 22 পরিবেশে যাচাই করতে হবে। Live Supabase migration বা account deletion চালানো হয়নি।
+এখানে `npm ci` নেটওয়ার্ক টাইমআউটে অসম্পূর্ণ হয়েছে। তাই পূর্ণ `tsc --noEmit`, ESLint ও Next.js Production Build এই পরিবেশে চালানো যায়নি; এগুলো পাস হয়েছে বলে দাবি করা হচ্ছে না।
+
+## তোমার কম্পিউটারে যাচাই
+
+Node.js 22.x ব্যবহার করে:
+
+```powershell
+npm ci
+npm run test:all
+npm run typecheck
+npm run lint
+npm run build
+```
+
+Node.js 24.21.0 ব্যবহার করলে `engines: 22.x`-এর EBADENGINE Warning দেখা যেতে পারে; এটি নিজে Build Failure নয়। সামঞ্জস্যের জন্য Node.js 22.x ব্যবহার করো।

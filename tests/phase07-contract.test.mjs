@@ -29,17 +29,16 @@ test('prayer API requests Karachi calculation and Hanafi Asr independently from 
   assert.match(reminders, /জামাতের কত মিনিট আগে স্মরণ করবে/);
 });
 
-test('waqt expiry asks for user confirmation before a qada record is created', () => {
+test('waqt expiry notification opens the selected tracker and offers an explicit not-prayed choice', () => {
   const reminders = read('../src/modules/trackers/prayer-settings.tsx');
   const notifications = read('../src/components/frontend-workspace.tsx');
+  const tracker = read('../src/modules/trackers/tracker-center.tsx');
   assert.match(reminders, /ওয়াক্ত শেষের নিশ্চিতকরণ/);
   assert.match(reminders, /আদায় করেছ কি\?/);
-  assert.match(notifications, /তুমি কি সালাত আদায় করেছ কি না/);
-  assert.match(notifications, /WaqtNotPerformedForm/);
-  assert.match(notifications, /WaqtPrayerEntryForm data=\{data\} event=\{item\}/);
-  assert.match(notifications, /qadaEntries:\s*exists\s*\?\s*current\.qadaEntries\s*:/);
-  assert.match(notifications, /WaqtPrayerEntryForm/);
-  assert.match(notifications, /not-prayed/);
+  assert.match(notifications, /navigateSection\("journal", "prayer", item\.prayer, item\.date\)/);
+  assert.match(tracker, /এখনো আদায় করিনি/);
+  assert.match(tracker, /method === "not-prayed"/);
+  assert.match(tracker, /qadaEntries/);
 });
 
 test('prayer tracker uses a sequential wizard and stores rakats by category and method', () => {

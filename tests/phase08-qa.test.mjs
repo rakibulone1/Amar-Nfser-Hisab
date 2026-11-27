@@ -27,14 +27,14 @@ test('routine rakats and settled qada rakats are calculated separately', () => {
   assert.match(workspace, /pendingQadaRakats/);
 });
 
-test('waqt reminder yes/no responses save complete user-confirmed records', () => {
+test('waqt reminder responses are completed in the preselected tracker and recorded with the selected response', () => {
   const workspace = read('../src/components/frontend-workspace.tsx');
+  const tracker = read('../src/modules/trackers/tracker-center.tsx');
   const reminders = read('../src/modules/trackers/prayer-settings.tsx');
-  assert.match(workspace, /function WaqtPrayerEntryForm/);
-  assert.match(workspace, /function WaqtNotPerformedForm/);
-  assert.match(workspace, /ওয়াক্তের পরে আদায়/);
-  assert.match(workspace, /status: "settled"/);
-  assert.match(workspace, /status: "pending"/);
+  assert.match(workspace, /navigateSection\("journal", "prayer", item\.prayer, item\.date\)/);
+  assert.match(tracker, /এখনো আদায় করিনি/);
+  assert.match(tracker, /status: "pending"/);
+  assert.match(tracker, /response: qadaNeeded \? "not-prayed" as const : "prayed" as const/);
   assert.match(reminders, /minutes >= toMinutes\(window\.end\)/);
   assert.doesNotMatch(reminders, /minutes < end \+ 45/);
 });

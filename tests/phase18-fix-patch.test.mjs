@@ -45,7 +45,7 @@ test("reward draft tracks server milestone changes without a cascading effect", 
 
 test("tracker wizard remounts on query target changes instead of synchronizing props in an effect", () => {
   const tracker = read("src/modules/trackers/tracker-center.tsx");
-  assert.match(tracker, /<PrayerWizard key=\{`\$\{initialPrayer \|\| "default"\}:\$\{initialQada \? "qada" : "regular"\}`\}/);
+  assert.match(tracker, /<PrayerWizard key=\{`\$\{initialPrayer \|\| "default"\}:\$\{initialQada \? "qada" : "regular"\}:\$\{initialDate \|\| "today"\}/);
   assert.doesNotMatch(tracker, /useEffect\(\(\) => \{ if \(initialPrayer\) setPrayer/);
 });
 

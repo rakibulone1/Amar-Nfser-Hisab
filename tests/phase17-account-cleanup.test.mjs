@@ -57,24 +57,26 @@ test("account deletion removes user-prefixed private files before auth deletion"
   assert.match(route, /REMOVE_BATCH_SIZE/);
 });
 
-test("Settings exposes a mobile-usable account deletion form with irreversible warning", () => {
+test("Settings keeps account deletion out of everyday UI and provides profile plus logout", () => {
   const workspace = read("src/components/frontend-workspace.tsx");
   const css = read("src/app/globals.css");
-  assert.match(workspace, /অ্যাকাউন্ট ও সব তথ্য মুছে ফেলা/);
-  assert.match(workspace, /বর্তমান পাসওয়ার্ড/);
-  assert.match(workspace, /নিশ্চিত করতে DELETE লিখো/);
-  assert.match(workspace, /flushWorkspaceChanges\(\)/);
-  assert.match(workspace, /\/api\/account\/delete/);
-  assert.match(css, /\.account-danger-panel/);
-  assert.match(css, /@media \(max-width: 680px\)[\s\S]*?\.account-delete-form/);
+  assert.match(workspace, /ব্যক্তিগত প্রোফাইল/);
+  assert.match(workspace, /প্রোফাইল সংরক্ষণ/);
+  assert.match(workspace, /এই ডিভাইস থেকে লগআউট/);
+  assert.match(workspace, /onLogout/);
+  assert.doesNotMatch(workspace, /অ্যাকাউন্ট ও সব তথ্য মুছে ফেলা|নিশ্চিত করতে DELETE লিখো|\/api\/account\/delete/);
+  assert.match(css, /\.settings-profile-panel/);
+  assert.match(css, /\.settings-logout-panel/);
+  const deleteRoute = read("src/app/api/account/delete/route.ts");
+  assert.match(deleteRoute, /admin\.auth\.admin\.deleteUser/);
 });
 
-test("Release 1.2.5 keeps dependencies unchanged and runs account cleanup checks", () => {
+test("Release 1.2.6 keeps dependencies unchanged and runs account cleanup checks", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.version, "1.2.5");
-  assert.equal(lock.version, "1.2.5");
-  assert.equal(lock.packages[""].version, "1.2.5");
+  assert.equal(pkg.version, "1.2.6");
+  assert.equal(lock.version, "1.2.6");
+  assert.equal(lock.packages[""].version, "1.2.6");
   assert.equal(pkg.scripts["test:phase17"], "node --test tests/phase17-account-cleanup.test.mjs");
   assert.match(pkg.scripts["test:all"], /test:phase17/);
   assert.deepEqual(pkg.dependencies, lock.packages[""].dependencies);

@@ -10,7 +10,7 @@ const css = read("src/app/globals.css");
 const pkg = JSON.parse(read("package.json"));
 const lock = JSON.parse(read("package-lock.json"));
 
-test("Release 1.2.4 includes a unified semantic palette for all main card families", () => {
+test("Release 1.2.4 baseline includes a unified semantic palette for all main card families", () => {
   for (const token of ["--surface-mint", "--surface-sky", "--surface-lilac", "--surface-sand", "--surface-rose", "--surface-teal", "--surface-info"]) {
     assert.ok(css.includes(token), `Missing color token ${token}`);
   }
@@ -44,13 +44,14 @@ test("reduced-motion preference remains respected", () => {
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
 });
 
-test("Release 1.2.5 changes account cleanup and package metadata without changing dependencies", () => {
-  assert.equal(pkg.version, "1.2.5");
-  assert.equal(lock.version, "1.2.5");
-  assert.equal(lock.packages[""].version, "1.2.5");
+test("Release 1.2.6 advances package metadata without changing dependencies", () => {
+  assert.equal(pkg.version, "1.2.6");
+  assert.equal(lock.version, "1.2.6");
+  assert.equal(lock.packages[""].version, "1.2.6");
   assert.equal(pkg.scripts["test:phase16"], "node --test tests/phase16-visual-system.test.mjs");
   assert.match(pkg.scripts["test:all"], /test:phase16/);
   assert.match(pkg.scripts["test:all"], /test:phase17/);
+  assert.match(pkg.scripts["test:all"], /test:phase19/);
   assert.deepEqual(pkg.dependencies, lock.packages[""].dependencies);
   assert.deepEqual(pkg.devDependencies, lock.packages[""].devDependencies);
 });

@@ -3924,3 +3924,370 @@ button:disabled, .primary-button:disabled, .button-primary:disabled, .tracker-pr
   .account-delete-form .button-danger-solid { width: 100%; min-height: 49px; }
   .account-danger-copy { padding: 12px; }
 }
+
+/* Release 1.2.6 — focused workspace shell, section navigation and interaction polish. */
+.workspace-app { display: block; min-height: 100svh; background: var(--page); }
+.workspace-sidebar { display: none !important; }
+.workspace-main { width: 100%; min-width: 0; padding: 0; }
+.workspace-topbar {
+  min-height: 76px;
+  height: auto;
+  display: grid;
+  grid-template-columns: minmax(220px, auto) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(14px, 2vw, 28px);
+  padding: 11px clamp(18px, 3.4vw, 56px);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 94%, transparent);
+  box-shadow: 0 3px 18px rgba(20, 42, 27, .025);
+}
+.desktop-brand { min-width: 0; display: flex; align-items: center; }
+.desktop-brand .brand-mark { gap: 11px; }
+.desktop-brand .brand-mark-icon { width: 43px; height: 43px; border-radius: 13px; }
+.desktop-brand .brand-mark-copy strong { font-size: 14px; letter-spacing: -.025em; }
+.desktop-brand .brand-mark-copy small { font-size: 10px; }
+.mobile-brand { display: none; }
+.topbar-context { justify-self: start; gap: 8px; margin-left: 2px; font-size: 11px; }
+.topbar-context strong { font-size: 12px; }
+.topbar-right { justify-self: end; gap: 9px; }
+.local-mode-label { font-size: 9px; letter-spacing: 0; }
+.topbar-icon-button { width: 40px; height: 40px; border-radius: 12px; background: var(--paper-soft); border-color: var(--line); }
+.topbar-avatar { width: 38px; height: 38px; font-size: 13px; }
+.workspace-desktop-nav {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px clamp(18px, 3.4vw, 56px);
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 76%, var(--page));
+}
+.workspace-desktop-tab {
+  min-width: 130px;
+  min-height: 43px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 17px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  color: var(--ink-soft);
+  background: transparent;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+  transition: background .16s ease, border-color .16s ease, color .16s ease, transform .16s ease;
+}
+.workspace-desktop-tab:hover { border-color: var(--line); color: var(--green-deep); background: var(--paper); transform: translateY(-1px); }
+.workspace-desktop-tab.active { border-color: color-mix(in srgb, var(--green) 20%, var(--line)); color: var(--green-deep); background: var(--green-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 5%, transparent); }
+.workspace-content { width: 100%; max-width: none; margin: 0; padding: 25px clamp(18px, 3.4vw, 56px) 24px; }
+.view-stack { gap: 20px; }
+.page-intro { align-items: center; gap: 14px; margin: 0 0 5px; }
+.page-intro-main { min-width: 0; display: flex; align-items: center; gap: 13px; }
+.page-intro-title { min-width: 0; display: grid; gap: 1px; }
+.page-intro .eyebrow { font-size: 9px; letter-spacing: .08em; }
+.page-intro h1 { margin: 0; font-size: clamp(21px, 2vw, 27px); line-height: 1.35; letter-spacing: -.035em; }
+.section-back-button {
+  min-height: 36px;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink-soft);
+  background: var(--paper);
+  font-size: 11px;
+  font-weight: 700;
+  transition: color .16s ease, border-color .16s ease, background .16s ease;
+}
+.section-back-button:hover { color: var(--green-deep); border-color: var(--line-strong); background: var(--green-pale); }
+.workspace-footer {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: nowrap;
+  gap: 6px;
+  margin: 26px auto 0;
+  padding: 8px 8px 3px;
+  border: 0;
+  color: var(--muted);
+  text-align: center;
+}
+.workspace-footer-copy { display: inline-flex; align-items: center; gap: 5px; }
+.workspace-footer > span, .workspace-footer-copy > span { color: var(--muted); font-size: 10px; line-height: 1.65; }
+.footer-copyright-mark { font-family: Arial, sans-serif; font-size: 13px !important; font-weight: 700; }
+
+/* Consistent cards: distinct, restrained color families without heavy gradients. */
+.metric-card, .workspace-panel, .tracker-panel, .hadith-detail-card, .settings-profile-panel,
+.deadline-plan-card, .journey-module-card, .stage-detail-status, .stage-observation-panel,
+.stage-reward-panel, .tracker-picker-card, .tracker-history-row {
+  border-radius: 17px;
+  box-shadow: 0 5px 18px rgba(28, 48, 34, .035);
+}
+.metric-grid .metric-card:nth-child(4n + 1) { background: color-mix(in srgb, #e9f3ec 62%, var(--paper)); }
+.metric-grid .metric-card:nth-child(4n + 2) { background: color-mix(in srgb, #eaf1f8 58%, var(--paper)); }
+.metric-grid .metric-card:nth-child(4n + 3) { background: color-mix(in srgb, #f5efe4 58%, var(--paper)); }
+.metric-grid .metric-card:nth-child(4n + 4) { background: color-mix(in srgb, #f2edf7 58%, var(--paper)); }
+.panel, .workspace-panel, .tracker-panel { border-color: var(--line); background: var(--paper); box-shadow: var(--shadow-1); }
+.panel-title-row h2, .tracker-panel-heading h3 { font-size: 15px; line-height: 1.45; }
+.panel-title-row { gap: 12px; margin-bottom: 15px; }
+.dashboard-journey-card-compact { min-height: 0; padding: clamp(16px, 2vw, 23px); border-radius: 19px; }
+.dashboard-journey-title h1 { font-size: clamp(19px, 2vw, 25px); }
+.dashboard-journey-facts { gap: 9px; }
+.dashboard-journey-facts > div { min-height: 65px; padding: 11px 12px; border-radius: 12px; }
+.dashboard-journey-facts strong { font-size: 13px; }
+.dashboard-date-card { min-height: 42px; font-size: 12px; letter-spacing: 0; }
+.dashboard-date-card span:first-child { font-family: "Noto Sans Bengali", "Hind Siliguri", "Segoe UI", sans-serif; }
+.journey-current-hero-compact { padding: clamp(16px, 2vw, 23px); border-radius: 19px; }
+.journey-current-hero-compact h2 { font-size: clamp(19px, 2vw, 25px); }
+.journey-current-meta { gap: 9px; }
+.journey-current-meta > div { min-height: 66px; padding: 11px 12px; border-radius: 12px; }
+.journey-module-card { overflow: hidden; border: 1px solid var(--line); background: var(--paper); }
+.journey-module-heading { padding: 15px 17px; }
+.journey-stage-list { display: grid; gap: 9px; padding: 0 12px 13px; }
+.journey-stage-row {
+  min-height: 76px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto 18px;
+  gap: 11px;
+  align-items: center;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--paper-soft);
+  text-align: left;
+}
+.journey-stage-row.stage-current { border-color: color-mix(in srgb, var(--green) 31%, var(--line)); background: color-mix(in srgb, var(--green-soft) 74%, var(--paper)); }
+.journey-stage-row.stage-completed { background: color-mix(in srgb, var(--blue-soft) 62%, var(--paper)); }
+.journey-stage-index { width: 32px; height: 32px; border-radius: 10px; font-size: 12px; }
+.journey-stage-title-line strong { font-size: 13px; }
+.journey-stage-main > small { font-size: 10px; }
+.journey-stage-trailing b { font-size: 12px; }
+.journey-stage-trailing small { font-size: 9px; }
+
+/* Notification panel: only the panel scrolls, outside taps close it. */
+.notification-popover-wrap { position: relative; z-index: 100; display: inline-flex; }
+.notification-popover {
+  position: fixed;
+  z-index: 120;
+  top: 78px;
+  right: clamp(14px, 3vw, 52px);
+  width: min(420px, calc(100vw - 28px));
+  max-height: min(590px, calc(100dvh - 100px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 18px;
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 22px 70px rgba(16, 32, 22, .2);
+  animation: notification-panel-in .16s ease-out;
+}
+.notification-popover-header { min-height: 62px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border-bottom: 1px solid var(--line); background: var(--paper); }
+.notification-popover-header > div { display: grid; gap: 1px; }
+.notification-popover-header strong { font-size: 14px; }
+.notification-popover-header small { color: var(--muted); font-size: 10px; }
+.notification-popover-actions { display: flex; justify-content: flex-end; gap: 13px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: var(--paper-soft); }
+.notification-popover-actions button { min-height: 30px; padding: 0 3px; border: 0; color: var(--green-deep); background: transparent; font-size: 10px; font-weight: 750; }
+.notification-popover-actions button:disabled { cursor: not-allowed; opacity: .4; }
+.notification-popover-list { min-height: 0; display: grid; gap: 8px; overflow-y: auto; overscroll-behavior: contain; padding: 11px; scrollbar-gutter: stable; -webkit-overflow-scrolling: touch; }
+.notification-popover-item { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 34px; gap: 6px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--paper); }
+.notification-popover-item.unread { border-color: color-mix(in srgb, var(--green) 26%, var(--line)); background: color-mix(in srgb, var(--green-soft) 48%, var(--paper)); }
+.notification-item-main { min-width: 0; display: grid; gap: 4px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.notification-item-title { font-size: 12px; font-weight: 800; }
+.notification-item-summary { color: var(--ink-soft); font-size: 11px; line-height: 1.6; }
+.notification-item-main > small { color: var(--muted); font-size: 9px; }
+.notification-open-target { display: inline-flex; align-items: center; gap: 5px; color: var(--green-deep); font-size: 10px; font-weight: 750; }
+.notification-delete-button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); background: var(--paper); }
+.notification-delete-button:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 25%, var(--line)); }
+.notification-empty { padding: 28px 12px; color: var(--muted); font-size: 12px; text-align: center; }
+@keyframes notification-panel-in { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Compact section headings and polished standalone Hadith reader. */
+.goals-page-heading, .tracker-page-heading, .stage-detail-heading, .hadith-page-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin: 0 0 15px;
+  padding: 0;
+}
+.goals-page-heading > div, .stage-detail-heading > div, .hadith-page-title { min-width: 0; display: grid; gap: 1px; }
+.goals-page-heading .eyebrow, .stage-detail-heading .eyebrow, .hadith-page-title .eyebrow { font-size: 9px; letter-spacing: .08em; }
+.goals-page-heading h1, .stage-detail-heading h1, .hadith-page-title h1 { margin: 0; font-size: clamp(21px, 2.1vw, 27px); line-height: 1.35; letter-spacing: -.035em; }
+.stage-detail-heading p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
+.tracker-page-heading { min-height: 42px; justify-content: flex-start; margin-bottom: 14px; }
+.tracker-page-heading-copy { display: flex; align-items: center; gap: 12px; }
+.tracker-page-heading-copy h1 { margin: 0; font-size: 22px; line-height: 1.35; }
+.tracker-heading-mark { display: none; }
+.tracker-back-row { min-height: 32px; gap: 10px; margin: 0 0 10px; font-size: 10px; }
+.tracker-back-button { min-height: 32px; padding: 0 10px; border-radius: 9px; font-size: 10px; }
+.hadith-library { width: min(100%, 1180px); margin: 0 auto; padding: 28px clamp(14px, 3vw, 42px) 20px; }
+.hadith-page-heading { gap: 13px; }
+.hadith-detail-card { padding: clamp(18px, 3vw, 30px); border-radius: 19px; }
+.hadith-detail-summary { margin: 13px 0 17px; font-size: 15px; font-weight: 800; line-height: 1.8; }
+.hadith-detail-text { margin: 0; font-size: 15px; line-height: 2.05; letter-spacing: 0; overflow-wrap: anywhere; }
+.hadith-detail-meta { gap: 10px; margin-top: 22px; }
+.hadith-detail-meta > div { padding: 12px 13px; border-radius: 12px; }
+.hadith-detail-meta dt { font-size: 9px; }
+.hadith-detail-meta dd { margin-top: 4px; font-size: 12px; line-height: 1.7; }
+.hadith-detail-navigation { gap: 10px; }
+.hadith-detail-navigation .button-secondary { min-height: 42px; }
+.hadith-category-section { margin-top: 4px; }
+
+/* Settings profile and session controls. */
+.settings-profile-panel, .settings-logout-panel { border: 1px solid var(--line); border-radius: 17px; background: var(--paper); box-shadow: var(--shadow-1); }
+.settings-profile-panel { display: grid; gap: 17px; padding: clamp(16px, 2vw, 22px); }
+.settings-profile-heading { display: flex; align-items: center; gap: 13px; }
+.settings-profile-avatar { width: 47px; height: 47px; display: grid; place-items: center; flex: 0 0 auto; border: 1px solid var(--surface-mint-border, var(--line)); border-radius: 15px; color: var(--green-deep); background: var(--green-soft); font-size: 18px; font-weight: 850; }
+.settings-profile-heading h2 { margin: 0; font-size: 16px; }
+.settings-profile-heading p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
+.settings-profile-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 13px; }
+.settings-profile-form > label { min-width: 0; display: grid; gap: 6px; color: var(--ink-soft); font-size: 11px; font-weight: 700; }
+.settings-profile-form input { width: 100%; min-width: 0; min-height: 44px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 11px; color: var(--ink); background: var(--paper-soft); font: inherit; }
+.settings-profile-form input[readonly] { color: var(--muted); background: var(--paper-tint); }
+.settings-profile-form .inline-feedback, .settings-profile-form .form-actions { grid-column: 1 / -1; margin: 0; }
+.settings-logout-panel { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 15px 17px; }
+.settings-logout-panel > div { min-width: 0; display: flex; align-items: center; gap: 12px; }
+.settings-logout-icon { width: 38px; height: 38px; display: grid; place-items: center; flex: 0 0 auto; border-radius: 12px; color: var(--blue); background: var(--blue-soft); }
+.settings-logout-panel strong { font-size: 12px; }
+.settings-logout-panel p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
+.settings-logout-button { min-height: 40px; flex: 0 0 auto; }
+
+/* Prayer-entry uniqueness, edit affordance and compact editor. */
+.prayer-select-grid { display: grid; gap: 9px; }
+.prayer-select-row { min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.prayer-select-card { min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 14px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--paper); text-align: left; }
+.prayer-select-card > span { display: grid; gap: 1px; }
+.prayer-select-card strong { font-size: 13px; }
+.prayer-select-card small { color: var(--muted); font-size: 9px; }
+.prayer-select-card:disabled { cursor: not-allowed; border-color: color-mix(in srgb, var(--green) 25%, var(--line)); color: var(--green-deep); background: color-mix(in srgb, var(--green-soft) 68%, var(--paper)); opacity: 1; }
+.prayer-select-row.is-recorded .prayer-select-card { cursor: not-allowed; }
+.prayer-edit-inline { min-height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 0 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--green-deep); background: var(--paper); font-size: 10px; font-weight: 750; }
+.prayer-existing-state { display: grid; justify-items: start; gap: 10px; padding: 22px; border-color: color-mix(in srgb, var(--green) 25%, var(--line)); background: color-mix(in srgb, var(--green-soft) 42%, var(--paper)); }
+.prayer-existing-icon { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 14px; color: var(--green-deep); background: var(--green-soft); }
+.prayer-existing-state h3 { margin: 0; font-size: 17px; }
+.prayer-existing-state p { margin: 0; color: var(--ink-soft); font-size: 11px; }
+.prayer-existing-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.prayer-existing-actions button { min-height: 40px; }
+.prayer-entry-editor { gap: 13px; }
+.prayer-editor-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.prayer-editor-heading h3 { margin: 2px 0 0; font-size: 17px; }
+.edit-record-badge { padding: 5px 9px; border-radius: 8px; color: var(--green-deep); background: var(--green-soft); font-size: 9px; font-weight: 800; }
+.prayer-editor-parts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 13px; border: 1px solid var(--line); border-radius: 13px; background: var(--paper-soft); }
+.prayer-editor-parts > strong { grid-column: 1 / -1; font-size: 12px; }
+.prayer-editor-parts .tracker-field { margin: 0; }
+.tracker-history-actions { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Form, list and button consistency across tracker pages. */
+button, input, select, textarea { font-family: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+:where(button, a, input, select, textarea):focus-visible { outline: 3px solid color-mix(in srgb, var(--green) 24%, transparent); outline-offset: 2px; }
+.button-primary, .tracker-primary-button, .button-secondary, .tracker-secondary-button, .tracker-quiet-button { min-height: 42px; border-radius: 11px; font-size: 11px; font-weight: 750; }
+.tracker-input, .workspace-form input, .workspace-form select, .workspace-form textarea { min-height: 44px; border-radius: 11px; font-size: 12px; }
+.tracker-field { gap: 6px; font-size: 11px; }
+.tracker-field > small, .field-hint { font-size: 10px; line-height: 1.65; }
+.tracker-picker-grid { gap: 11px; }
+.tracker-picker-card { min-height: 88px; padding: 14px; border-radius: 15px; background: var(--paper); box-shadow: 0 4px 14px rgba(28,48,34,.035); }
+.tracker-picker-card:hover { border-color: color-mix(in srgb, var(--green) 30%, var(--line)); transform: translateY(-1px); }
+.tracker-picker-copy strong { font-size: 13px; }
+.tracker-picker-copy small { font-size: 10px; line-height: 1.65; }
+.tracker-history-row { min-height: 58px; padding: 10px 11px; border-radius: 12px; }
+.tracker-history-row strong { font-size: 11px; }
+.tracker-history-row small { font-size: 9px; }
+
+:root[data-theme="dark"] .workspace-topbar,
+:root[data-theme="dark"] .workspace-desktop-nav { background: color-mix(in srgb, var(--paper) 94%, var(--page)); border-color: var(--line); }
+:root[data-theme="dark"] .workspace-desktop-tab { color: var(--ink-soft); }
+:root[data-theme="dark"] .workspace-desktop-tab.active { color: var(--green-deep); background: var(--green-soft); border-color: var(--line-strong); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 1) { background: color-mix(in srgb, #284333 60%, var(--paper)); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 2) { background: color-mix(in srgb, #263a49 58%, var(--paper)); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 3) { background: color-mix(in srgb, #413827 58%, var(--paper)); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 4) { background: color-mix(in srgb, #3b3048 58%, var(--paper)); }
+:root[data-theme="dark"] .settings-profile-panel,
+:root[data-theme="dark"] .settings-logout-panel,
+:root[data-theme="dark"] .hadith-detail-card { color: var(--ink); border-color: var(--line); background: var(--paper); }
+:root[data-theme="dark"] .settings-profile-form input { color: var(--ink); border-color: var(--line-strong); background: var(--paper-soft); }
+:root[data-theme="dark"] .settings-profile-form input[readonly] { color: var(--muted); background: var(--paper-tint); }
+:root[data-theme="dark"] .notification-popover { border-color: var(--line-strong); background: var(--paper); box-shadow: 0 22px 70px rgba(0,0,0,.45); }
+:root[data-theme="dark"] .notification-popover-header,
+:root[data-theme="dark"] .notification-popover-actions { background: var(--paper); border-color: var(--line); }
+:root[data-theme="dark"] .notification-popover-item { border-color: var(--line); background: var(--paper-soft); }
+:root[data-theme="dark"] .notification-popover-item.unread { background: color-mix(in srgb, var(--green-soft) 82%, var(--paper)); }
+:root[data-theme="dark"] .notification-delete-button { border-color: var(--line); color: var(--muted); background: var(--paper); }
+:root[data-theme="dark"] .prayer-select-card { border-color: var(--line); color: var(--ink); background: var(--paper-soft); }
+:root[data-theme="dark"] .prayer-select-card:disabled { color: var(--green-deep); background: var(--green-soft); }
+:root[data-theme="dark"] .prayer-existing-state { border-color: var(--line-strong); background: color-mix(in srgb, var(--green-soft) 70%, var(--paper)); }
+:root[data-theme="dark"] .prayer-editor-parts { border-color: var(--line); background: var(--paper-soft); }
+:root[data-theme="dark"] .journey-stage-row { border-color: var(--line); background: var(--paper-soft); }
+:root[data-theme="dark"] .journey-stage-row.stage-current { background: color-mix(in srgb, var(--green-soft) 85%, var(--paper)); }
+:root[data-theme="dark"] .journey-stage-row.stage-completed { background: color-mix(in srgb, var(--blue-soft) 80%, var(--paper)); }
+
+@media (max-width: 860px) {
+  .workspace-topbar { min-height: 60px; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 7px 13px; }
+  .desktop-brand, .topbar-context, .workspace-desktop-nav { display: none !important; }
+  .mobile-brand { display: flex; min-width: 0; }
+  .mobile-brand strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-right { gap: 5px; }
+  .topbar-icon-button { width: 38px; height: 38px; }
+  .topbar-avatar { display: none; }
+  .workspace-main { width: 100%; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  .workspace-content { width: 100%; padding: 16px 14px calc(18px + env(safe-area-inset-bottom)); }
+  .mobile-navigation { left: 0; right: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; min-height: calc(67px + env(safe-area-inset-bottom)); padding: 5px 5px calc(5px + env(safe-area-inset-bottom)); border-radius: 0; border: 0; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--paper) 96%, transparent); box-shadow: 0 -7px 24px rgba(20,42,27,.08); }
+  .mobile-navigation button { min-height: 50px; gap: 3px; border-radius: 10px; font-size: 10px; }
+  .notification-popover { top: 66px; left: 10px; right: 10px; width: auto; max-height: calc(100dvh - 82px); }
+  .page-intro { align-items: center; flex-direction: row; gap: 9px; margin-bottom: 1px; }
+  .page-intro-main { gap: 9px; }
+  .page-intro h1, .goals-page-heading h1, .stage-detail-heading h1, .hadith-page-title h1 { font-size: 20px; }
+  .page-intro .eyebrow, .goals-page-heading .eyebrow, .stage-detail-heading .eyebrow, .hadith-page-title .eyebrow { font-size: 8px; }
+  .section-back-button { min-height: 35px; padding: 0 9px; gap: 5px; font-size: 10px; }
+  .workspace-footer { flex-direction: column; gap: 1px; margin-top: 19px; padding-top: 6px; }
+  .workspace-footer > span, .workspace-footer-copy > span { font-size: 10px; }
+  .settings-profile-form { grid-template-columns: minmax(0, 1fr); }
+  .settings-profile-form .inline-feedback, .settings-profile-form .form-actions { grid-column: 1; }
+  .settings-logout-panel { align-items: flex-start; flex-direction: column; }
+  .settings-logout-button { width: 100%; }
+  .hadith-library { padding: 16px 13px calc(20px + env(safe-area-inset-bottom)); }
+  .hadith-page-heading { align-items: center; }
+  .hadith-detail-card { padding: 17px 15px; }
+  .hadith-detail-text { font-size: 14px; line-height: 2; }
+  .hadith-detail-meta { grid-template-columns: minmax(0, 1fr); }
+  .prayer-entry-editor .tracker-form-grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 520px) {
+  .topbar-right { gap: 3px; }
+  .mobile-brand .brand-mark-icon { width: 29px; height: 29px; }
+  .mobile-brand .brand-mark-icon img { width: 22px; height: 22px; }
+  .mobile-brand strong { max-width: 128px; font-size: 10px; }
+  .page-intro h1, .goals-page-heading h1, .stage-detail-heading h1, .hadith-page-title h1 { font-size: 18px; }
+  .page-intro-main { gap: 7px; }
+  .section-back-button { min-height: 33px; padding-inline: 8px; font-size: 9px; }
+  .dashboard-journey-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey-current-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .journey-stage-row { grid-template-columns: 29px minmax(0, 1fr) 68px; gap: 7px; padding: 9px; }
+  .journey-stage-row > svg { display: none; }
+  .journey-stage-index { width: 28px; height: 28px; border-radius: 9px; font-size: 10px; }
+  .journey-stage-title-line { flex-wrap: wrap; gap: 4px; }
+  .journey-stage-title-line strong { font-size: 11px; }
+  .journey-stage-status-chip { font-size: 8px; }
+  .journey-stage-trailing small { white-space: nowrap; font-size: 8px; }
+  .prayer-select-row { gap: 6px; }
+  .prayer-select-card { min-height: 51px; padding: 8px 10px; }
+  .prayer-edit-inline { min-height: 35px; padding-inline: 8px; font-size: 9px; }
+  .prayer-editor-parts { grid-template-columns: minmax(0, 1fr); }
+  .notification-popover-item { padding: 9px; }
+  .notification-popover-list { padding: 9px; }
+  .hadith-detail-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hadith-detail-navigation .button-secondary { min-width: 0; padding-inline: 8px; font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .workspace-desktop-tab, .section-back-button, .notification-popover { animation: none !important; transition: none !important; }
+}

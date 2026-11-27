@@ -4,18 +4,15 @@ import fs from 'node:fs';
 
 const read = (p) => fs.readFileSync(new URL(p, import.meta.url), 'utf8');
 
-test('waqt confirmation narrows the prayer and configured fard inside the submit handler', () => {
+test('waqt notification carries the exact prayer and Maghrib accounting date into the wizard', () => {
   const source = read('../src/components/frontend-workspace.tsx');
-  const start = source.indexOf('function WaqtPrayerEntryForm(');
-  const end = source.indexOf('function WaqtNotPerformedForm(', start);
-  const block = source.slice(start, end);
-  assert.match(block, /const currentPrayer = event\.prayer/);
-  assert.match(block, /if \(!currentPrayer\)/);
-  assert.match(block, /const currentFard = data\.prayerConfig\[currentPrayer\]\?\.find/);
-  assert.match(block, /if \(!currentFard\)/);
-  assert.match(block, /getPrayerWaqtWindow\(times, tomorrow, currentPrayer\)/);
-  assert.match(block, /prayer: currentPrayer/);
-  assert.doesNotMatch(block, /getPrayerWaqtWindow\(times, tomorrow, prayerId\)/);
+  const tracker = read('../src/modules/trackers/tracker-center.tsx');
+  assert.match(source, /navigateSection\("journal", "prayer", item\.prayer, item\.date\)/);
+  assert.match(source, /url\.searchParams\.set\("entryDate", targetDate\)/);
+  assert.match(tracker, /const selectedPrayer = prayer/);
+  assert.match(tracker, /const performedAt = selectedMethod === "not-prayed"/);
+  assert.match(tracker, /getPrayerCivilDate\(prayerDate, selectedPrayer\)/);
+  assert.match(tracker, /response: qadaNeeded \? "not-prayed" as const : "prayed" as const/);
 });
 
 test('prayer time manual refresh state exists and countdown recomputes without memo warnings', () => {
