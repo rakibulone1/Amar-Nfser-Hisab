@@ -84,7 +84,7 @@ test("load and save RPCs cover every collection without a whole-workspace snapsh
   for (const key of expectedCollections.filter((item) => item !== "deadlineTasks")) {
     assert.ok(sql.includes(`'${key}', coalesce((`), `load RPC must return ${key}`);
   }
-  assert.match(sql, /from public\\.workspace_deadline_tasks t where t\\.user_id = p\\.user_id and t\\.record->>'planId' = p\\.id/);
+  assert.match(sql, /from public\.workspace_deadline_tasks t where t\.user_id = p\.user_id and t\.record->>'planId' = p\.id/);
 
   assert.match(sql, /create or replace function public\.load_relational_workspace\(\)/);
   assert.match(sql, /create or replace function public\.save_relational_workspace_changes\(\s*p_changes jsonb,\s*p_expected_updated_at timestamptz/);
