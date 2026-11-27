@@ -1,10 +1,28 @@
--- Amar Nfser Hisab · consolidated master schema
--- Run once in the Supabase SQL Editor for a new project.
--- This file installs the current account, journal, tracker, goal, backup,
--- analytics, rate-limit and relational workspace schema. No browser/local
--- database or JSON workspace snapshot is created by this release.
+-- Amar Nfser Hisab — Release 1.4.0 Fresh Database Master Setup
+-- Run once in the SQL Editor of a NEW Supabase project.
+-- The frontend writes one row per item into 25 account-owned workspace_* tables.
+-- record JSONB contains one typed item, not an account-wide snapshot.
+-- Every durable user table references auth.users with ON DELETE CASCADE.
+-- Existing databases are deliberately rejected by the preflight guard.
 
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '5min';
+
+do $fresh_database_guard$
+begin
+  if to_regclass('public.profiles') is not null
+     or to_regclass('public.user_preferences') is not null
+     or to_regclass('public.workspace_sync_state') is not null
+     or to_regclass('public.workspace_user_settings') is not null
+     or to_regclass('public.workspace_prayer_entries') is not null
+     or to_regclass('public.workspace_deadline_plans') is not null then
+    raise exception 'AMAR_NFSER_HISAB_DATABASE_ALREADY_INITIALIZED'
+      using errcode = '55000',
+      hint = 'Create a new empty Supabase project for Release 1.4.0. Do not run this Master SQL against an existing database.';
+  end if;
+end;
+$fresh_database_guard$;
 
 create extension if not exists pgcrypto;
 
@@ -342,11 +360,13 @@ begin
     'daily_journals','journal_attachments','notifications'
   ] loop
     execute format('alter table public.%I enable row level security', table_name);
+    execute format('revoke all on table public.%I from anon', table_name);
   end loop;
 end $$;
 
 -- Qada settlement rows are append-only: users may read and create them, but cannot rewrite history.
 alter table public.qada_settlements enable row level security;
+revoke all on table public.qada_settlements from anon;
 drop policy if exists "qada_settlements_select_own" on public.qada_settlements;
 drop policy if exists "qada_settlements_insert_own" on public.qada_settlements;
 drop policy if exists "qada_settlements_update_own" on public.qada_settlements;
@@ -661,7 +681,7 @@ do $$
 declare
   v_table text;
   v_tables text[] := array[
-    'workspace_legacy_goals','workspace_legacy_records','workspace_prayer_days','workspace_notes',
+    'workspace_goals','workspace_records','workspace_prayer_days','workspace_notes',
     'workspace_prayer_entries','workspace_qada_entries','workspace_quran_entries','workspace_extra_prayer_entries',
     'workspace_dhikr_templates','workspace_dhikr_sessions','workspace_fasting_entries','workspace_deed_entries',
     'workspace_avoid_entries','workspace_dua_items','workspace_study_entries','workspace_habit_definitions',
@@ -676,7 +696,10 @@ begin
         user_id uuid not null references auth.users(id) on delete cascade,
         id text not null check (length(id) between 1 and 160),
         record_date date,
-        record jsonb not null check (jsonb_typeof(record) = ''object''),
+        record jsonb not null check (
+          jsonb_typeof(record) = ''object''
+          and octet_length(record::text) <= 262144
+        ),
         created_at timestamptz not null default clock_timestamp(),
         updated_at timestamptz not null default clock_timestamp(),
         primary key (user_id, id)
@@ -684,6 +707,7 @@ begin
     );
     execute format('create index if not exists %I on public.%I (user_id, record_date desc)', v_table || '_user_date_idx', v_table);
     execute format('alter table public.%I enable row level security', v_table);
+    execute format('revoke all on table public.%I from anon', v_table);
     execute format('drop policy if exists %I on public.%I', v_table || '_owner_all', v_table);
     execute format(
       'create policy %I on public.%I for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid())',
@@ -693,13 +717,38 @@ begin
   end loop;
 end $$;
 
+-- Each collection table stores one record per row; it never stores a full workspace snapshot.
+do $workspace_comments$
+declare v_table text;
+begin
+  foreach v_table in array array[
+    'workspace_goals','workspace_records','workspace_prayer_days','workspace_notes',
+    'workspace_prayer_entries','workspace_qada_entries','workspace_quran_entries',
+    'workspace_extra_prayer_entries','workspace_dhikr_templates','workspace_dhikr_sessions',
+    'workspace_fasting_entries','workspace_deed_entries','workspace_avoid_entries',
+    'workspace_dua_items','workspace_study_entries','workspace_habit_definitions',
+    'workspace_habit_logs','workspace_reflections','workspace_journeys',
+    'workspace_journey_milestones','workspace_journey_observations',
+    'workspace_deadline_plans','workspace_deadline_tasks',
+    'workspace_prayer_times_cache','workspace_reminder_events'
+  ] loop
+    execute format('comment on table public.%I is %L',v_table,
+      'Amar Nfser Hisab: account-owned frontend collection, one row per record; not a whole-account snapshot.');
+    execute format('comment on column public.%I.record is %L',v_table,
+      'One WorkspaceData collection item stored as bounded JSONB in its own collection table.');
+  end loop;
+end;
+$workspace_comments$;
+
 alter table public.workspace_sync_state enable row level security;
+revoke all on table public.workspace_sync_state from anon;
 drop policy if exists workspace_sync_state_owner_all on public.workspace_sync_state;
 create policy workspace_sync_state_owner_all on public.workspace_sync_state
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 grant select, insert, update, delete on table public.workspace_sync_state to authenticated;
 
 alter table public.workspace_user_settings enable row level security;
+revoke all on table public.workspace_user_settings from anon;
 drop policy if exists workspace_user_settings_owner_all on public.workspace_user_settings;
 create policy workspace_user_settings_owner_all on public.workspace_user_settings
   for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -732,8 +781,8 @@ begin
   return query select jsonb_build_object(
     'schemaVersion', 3,
     'updatedAt', coalesce(v_updated, '1970-01-01T00:00:00Z'::timestamptz)::text,
-    'goals', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last, r.created_at desc) from public.workspace_legacy_goals r where r.user_id = v_user), '[]'::jsonb),
-    'records', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last, r.created_at desc) from public.workspace_legacy_records r where r.user_id = v_user), '[]'::jsonb),
+    'goals', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last, r.created_at desc) from public.workspace_goals r where r.user_id = v_user), '[]'::jsonb),
+    'records', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last, r.created_at desc) from public.workspace_records r where r.user_id = v_user), '[]'::jsonb),
     'prayerDays', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last) from public.workspace_prayer_days r where r.user_id = v_user), '[]'::jsonb),
     'notes', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last) from public.workspace_notes r where r.user_id = v_user), '[]'::jsonb),
     'prayerEntries', coalesce((select jsonb_agg(r.record order by r.record_date desc nulls last, r.created_at desc) from public.workspace_prayer_entries r where r.user_id = v_user), '[]'::jsonb),
@@ -800,22 +849,53 @@ declare
   v_count integer := 0;
   v_bytes integer;
   v_settings jsonb;
-begin  if v_user is null then raise exception 'AUTH_REQUIRED' using errcode = '42501'; end if;
-  if p_changes is null or jsonb_typeof(p_changes) <> 'object' then raise exception 'INVALID_CHANGES' using errcode = '22023'; end if;
+  v_allowed_collections text[] := array[
+    'goals','records','prayerDays','notes','prayerEntries','qadaEntries','quranEntries',
+    'extraPrayerEntries','dhikrTemplates','dhikrSessions','fastingEntries','deedEntries',
+    'avoidEntries','duaItems','studyEntries','habitDefinitions','habitLogs','reflections',
+    'journeys','journeyMilestones','journeyObservations','deadlinePlans','deadlineTasks',
+    'prayerTimesCache','reminderEvents'
+  ];
+begin
+  if v_user is null then raise exception 'AUTH_REQUIRED' using errcode = '42501'; end if;
+  if p_changes is null or jsonb_typeof(p_changes) <> 'object' then
+    raise exception 'INVALID_CHANGES' using errcode = '22023';
+  end if;
+  if (p_changes - array['collections','settings']) <> '{}'::jsonb then
+    raise exception 'UNKNOWN_CHANGE_SECTION' using errcode = '22023';
+  end if;
   v_bytes := octet_length(p_changes::text);
   if v_bytes > 5242880 then raise exception 'WORKSPACE_TOO_LARGE' using errcode = '22023'; end if;
 
-  perform pg_advisory_xact_lock(hashtext(v_user::text));
-  select s.updated_at into v_current from public.workspace_sync_state s where s.user_id = v_user for update;
+  perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
+  select s.updated_at into v_current from public.workspace_sync_state s
+  where s.user_id = v_user for update;
   if (v_current is null and p_expected_updated_at is not null)
      or (v_current is not null and p_expected_updated_at is null)
      or (v_current is not null and v_current <> p_expected_updated_at) then
     raise exception 'WORKSPACE_VERSION_CONFLICT' using errcode = '40001';
   end if;
 
-  if jsonb_typeof(p_changes->'collections') = 'object' then
+  if p_changes ? 'collections' then
+    if coalesce(jsonb_typeof(p_changes->'collections'),'') <> 'object' then
+      raise exception 'INVALID_COLLECTIONS' using errcode = '22023';
+    end if;
+    if exists (
+      select 1 from jsonb_object_keys(p_changes->'collections') as supplied(collection_key)
+      where not (supplied.collection_key = any(v_allowed_collections))
+    ) then
+      raise exception 'INVALID_COLLECTION_KEY' using errcode = '22023';
+    end if;
+    if exists (
+      select 1 from jsonb_each(p_changes->'collections') as supplied(collection_key, delta)
+      where coalesce(jsonb_typeof(supplied.delta),'') <> 'object'
+         or (supplied.delta - array['upserts','deletes']) <> '{}'::jsonb
+    ) then
+      raise exception 'INVALID_COLLECTION_ENVELOPE' using errcode = '22023';
+    end if;
+
     for v_collection in select * from (values
-      ('goals','workspace_legacy_goals','deadline'),('records','workspace_legacy_records','date'),
+      ('goals','workspace_goals','deadline'),('records','workspace_records','date'),
       ('prayerDays','workspace_prayer_days','date'),('notes','workspace_notes','date'),
       ('prayerEntries','workspace_prayer_entries','date'),('qadaEntries','workspace_qada_entries','missedDate'),
       ('quranEntries','workspace_quran_entries','date'),('extraPrayerEntries','workspace_extra_prayer_entries','date'),
@@ -824,54 +904,89 @@ begin  if v_user is null then raise exception 'AUTH_REQUIRED' using errcode = '4
       ('avoidEntries','workspace_avoid_entries','date'),('duaItems','workspace_dua_items',''),
       ('studyEntries','workspace_study_entries','date'),('habitDefinitions','workspace_habit_definitions',''),
       ('habitLogs','workspace_habit_logs','date'),('reflections','workspace_reflections','date'),
-      ('journeys','workspace_journeys','startDate'),('journeyMilestones','workspace_journey_milestones','completedAt'),
+      ('journeys','workspace_journeys','startDate'),('journeyMilestones','workspace_journey_milestones',''),
       ('journeyObservations','workspace_journey_observations','date'),('deadlinePlans','workspace_deadline_plans','startDate'),
       ('deadlineTasks','workspace_deadline_tasks','dueDate'),('prayerTimesCache','workspace_prayer_times_cache','date'),
       ('reminderEvents','workspace_reminder_events','date')
     ) as m(collection_key,table_name,date_key) loop
-      v_upserts := coalesce(p_changes->'collections'->v_collection.collection_key->'upserts', '[]'::jsonb);
-      v_deletes := coalesce(p_changes->'collections'->v_collection.collection_key->'deletes', '[]'::jsonb);
+      v_upserts := coalesce(p_changes->'collections'->v_collection.collection_key->'upserts','[]'::jsonb);
+      v_deletes := coalesce(p_changes->'collections'->v_collection.collection_key->'deletes','[]'::jsonb);
       if jsonb_typeof(v_upserts) <> 'array' or jsonb_typeof(v_deletes) <> 'array' then
         raise exception 'INVALID_COLLECTION_DELTA' using errcode = '22023';
       end if;
+      if jsonb_array_length(v_upserts) > 5000 or jsonb_array_length(v_deletes) > 5000 then
+        raise exception 'COLLECTION_BATCH_TOO_LARGE' using errcode = '22023';
+      end if;
+      if exists (
+        select 1 from jsonb_array_elements(v_deletes) as deleted(value)
+        where jsonb_typeof(deleted.value) <> 'string'
+           or length(deleted.value #>> '{}') < 1
+           or length(deleted.value #>> '{}') > 160
+      ) then
+        raise exception 'INVALID_DELETE_ID' using errcode = '22023';
+      end if;
+
       for v_item in select value from jsonb_array_elements(v_upserts) loop
-        v_id := nullif(v_item->>'id','');
+        if coalesce(jsonb_typeof(v_item),'') <> 'object' then
+          raise exception 'INVALID_RECORD_DELTA' using errcode = '22023';
+        end if;
+        v_id := nullif(btrim(v_item->>'id'),'');
         v_record := v_item->'record';
-        if v_id is null or length(v_id) > 160 or jsonb_typeof(v_record) <> 'object' then
+        if v_id is null or length(v_id) > 160 or coalesce(jsonb_typeof(v_record),'') <> 'object' then
           raise exception 'INVALID_RECORD' using errcode = '22023';
         end if;
+        if (v_record ? 'id') and (v_record->>'id' is distinct from v_id) then
+          raise exception 'RECORD_ID_MISMATCH' using errcode = '22023';
+        end if;
+        if octet_length(v_record::text) > 262144 then
+          raise exception 'RECORD_TOO_LARGE' using errcode = '22023';
+        end if;
         if v_collection.collection_key = 'deadlinePlans' then v_record := v_record - 'tasks'; end if;
-        v_date_text := nullif(v_record->>v_collection.date_key, '');
+
+        v_date_text := nullif(v_record->>v_collection.date_key,'');
         v_date := null;
         if v_date_text is not null then
-          if v_date_text !~ '^\d{4}-\d{2}-\d{2}$' then raise exception 'INVALID_RECORD_DATE' using errcode = '22023'; end if;
+          if v_date_text !~ '^\d{4}-\d{2}-\d{2}$' then
+            raise exception 'INVALID_RECORD_DATE' using errcode = '22023';
+          end if;
           v_date := v_date_text::date;
         end if;
+
         execute format(
-          'insert into public.%I (user_id,id,record_date,record,created_at,updated_at) values ($1,$2,$3,$4,coalesce(nullif($4->>''createdAt'','''')::timestamptz, clock_timestamp()),clock_timestamp()) on conflict (user_id,id) do update set record_date=excluded.record_date, record=excluded.record, updated_at=clock_timestamp()',
+          'insert into public.%I (user_id,id,record_date,record,created_at,updated_at)
+           values ($1,$2,$3,$4,coalesce(nullif($4->>''createdAt'','''')::timestamptz,clock_timestamp()),clock_timestamp())
+           on conflict (user_id,id) do update
+           set record_date=excluded.record_date,record=excluded.record,updated_at=clock_timestamp()',
           v_collection.table_name
-        ) using v_user, v_id, v_date, v_record;
+        ) using v_user,v_id,v_date,v_record;
         v_count := v_count + 1;
       end loop;
+
       if jsonb_array_length(v_deletes) > 0 then
-        execute format('delete from public.%I where user_id=$1 and id = any($2)', v_collection.table_name)
-        using v_user, (select array_agg(value) from jsonb_array_elements_text(v_deletes));
+        execute format('delete from public.%I where user_id=$1 and id=any($2)',v_collection.table_name)
+        using v_user,(select array_agg(value #>> '{}') from jsonb_array_elements(v_deletes));
       end if;
     end loop;
   end if;
 
-  v_settings := p_changes->'settings';
-  if v_settings is not null then
-    if jsonb_typeof(v_settings) <> 'object' then raise exception 'INVALID_SETTINGS' using errcode = '22023'; end if;
+  if p_changes ? 'settings' then
+    v_settings := p_changes->'settings';
+    if coalesce(jsonb_typeof(v_settings),'') <> 'object'
+       or (v_settings - array['preferences','prayerConfig','prayerPreferences']) <> '{}'::jsonb
+       or coalesce(jsonb_typeof(v_settings->'preferences'),'') <> 'object'
+       or coalesce(jsonb_typeof(v_settings->'prayerConfig'),'') <> 'object'
+       or coalesce(jsonb_typeof(v_settings->'prayerPreferences'),'') <> 'object' then
+      raise exception 'INVALID_SETTINGS' using errcode = '22023';
+    end if;
     insert into public.workspace_user_settings(user_id,id,record,updated_at)
-      values (v_user,'primary',v_settings,clock_timestamp())
-      on conflict (user_id,id) do update set record=excluded.record, updated_at=clock_timestamp();
+    values (v_user,'primary',v_settings,clock_timestamp())
+    on conflict (user_id,id) do update set record=excluded.record,updated_at=excluded.updated_at;
   end if;
 
   v_now := clock_timestamp();
   insert into public.workspace_sync_state(user_id,updated_at) values (v_user,v_now)
-    on conflict (user_id) do update set updated_at=excluded.updated_at;
-  return query select v_now, v_count;
+  on conflict (user_id) do update set updated_at=excluded.updated_at;
+  return query select v_now,v_count;
 end;
 $$;
 
@@ -892,7 +1007,7 @@ declare
 begin
   -- Serialize goal writes per owner so two simultaneous requests cannot both
   -- pass the overlap check before either transaction commits.
-  perform pg_advisory_xact_lock(hashtext(new.user_id::text));
+  perform pg_advisory_xact_lock(hashtextextended(new.user_id::text, 0));
   if nullif(new.record->>'startDate','') is null or nullif(new.record->>'deadline','') is null then
     return new;
   end if;
@@ -921,6 +1036,44 @@ create trigger workspace_deadline_plans_no_overlap
 before insert or update on public.workspace_deadline_plans
 for each row execute function public.prevent_workspace_goal_overlap();
 revoke all on function public.prevent_workspace_goal_overlap() from public, anon, authenticated;
+
+-- Final release contract assertion for the frontend collections and protected RPCs.
+do $release_contract_check$
+declare
+  v_expected text[] := array[
+    'workspace_goals','workspace_records','workspace_prayer_days','workspace_notes',
+    'workspace_prayer_entries','workspace_qada_entries','workspace_quran_entries',
+    'workspace_extra_prayer_entries','workspace_dhikr_templates','workspace_dhikr_sessions',
+    'workspace_fasting_entries','workspace_deed_entries','workspace_avoid_entries',
+    'workspace_dua_items','workspace_study_entries','workspace_habit_definitions',
+    'workspace_habit_logs','workspace_reflections','workspace_journeys',
+    'workspace_journey_milestones','workspace_journey_observations',
+    'workspace_deadline_plans','workspace_deadline_tasks',
+    'workspace_prayer_times_cache','workspace_reminder_events',
+    'workspace_sync_state','workspace_user_settings'
+  ];
+  v_missing text[];
+  v_unsecured text[];
+begin
+  select array_agg(t) into v_missing from unnest(v_expected) as x(t)
+  where to_regclass(format('public.%I',t)) is null;
+  if coalesce(array_length(v_missing,1),0)>0 then
+    raise exception 'WORKSPACE_SCHEMA_INCOMPLETE: %',array_to_string(v_missing,', ');
+  end if;
+  select array_agg(t) into v_unsecured from unnest(v_expected) as x(t)
+  join pg_class c on c.oid=to_regclass(format('public.%I',t))
+  where not c.relrowsecurity;
+  if coalesce(array_length(v_unsecured,1),0)>0 then
+    raise exception 'WORKSPACE_RLS_MISSING: %',array_to_string(v_unsecured,', ');
+  end if;
+  if not has_function_privilege('authenticated','public.load_relational_workspace()','EXECUTE')
+     or not has_function_privilege('authenticated','public.save_relational_workspace_changes(jsonb,timestamptz)','EXECUTE')
+     or has_function_privilege('anon','public.load_relational_workspace()','EXECUTE')
+     or has_function_privilege('anon','public.save_relational_workspace_changes(jsonb,timestamptz)','EXECUTE') then
+    raise exception 'WORKSPACE_RPC_PRIVILEGE_MISMATCH';
+  end if;
+end;
+$release_contract_check$;
 
 notify pgrst, 'reload schema';
 

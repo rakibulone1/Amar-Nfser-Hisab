@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const migrationMissing = error?.code === "PGRST202" || error?.message?.includes("load_relational_workspace");
     return NextResponse.json({
       message: migrationMissing
-        ? "নতুন অনলাইন ডেটা কাঠামো প্রস্তুত নয়। Release 1.2-এর 002_relational_workspace.sql Migration একবার চালাও।"
+        ? "নতুন Supabase Database-এ supabase/MASTER_DATABASE_SETUP.sql সম্পূর্ণভাবে একবার চালাও।"
         : "অনলাইন তথ্য লোড করা যায়নি। সংযোগ ও ডেটাবেস সেটআপ পরীক্ষা করো।"
     }, { status: 503, headers: noStore() });
   }
@@ -93,7 +93,7 @@ export async function PUT(request: NextRequest) {
     if (conflict) return NextResponse.json({ message: "এই অ্যাকাউন্টের তথ্য অন্য ট্যাব বা ডিভাইসে পরিবর্তিত হয়েছে। Refresh করে সর্বশেষ তথ্য নাও; এই পরিবর্তনটি এখনো সংরক্ষিত হয়নি।" }, { status: 409, headers: noStore() });
     const migrationMissing = error?.code === "PGRST202" || error?.message?.includes("save_relational_workspace_changes");
     return NextResponse.json({ message: migrationMissing
-      ? "নতুন অনলাইন ডেটা কাঠামো প্রস্তুত নয়। Release 1.2-এর 002_relational_workspace.sql Migration একবার চালাও।"
+      ? "নতুন Supabase Database-এ supabase/MASTER_DATABASE_SETUP.sql সম্পূর্ণভাবে একবার চালাও।"
       : "অনলাইন তথ্য সংরক্ষণ করা যায়নি। ডেটাবেস নীতি ও সংযোগ পরীক্ষা করো।" }, { status: 503, headers: noStore() });
   }
   return NextResponse.json({ ok: true, updatedAt: saved.updated_at, savedRows: typeof saved.saved_rows === "number" ? saved.saved_rows : 0 }, { headers: noStore() });

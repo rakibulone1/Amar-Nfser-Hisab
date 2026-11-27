@@ -1,12 +1,11 @@
-Patch: Amar Nfser Hisab Release 1.3.0 — Mobile-first UX Refinement
-Required base: GitHub main at Release 1.2.9, commit dfb26bb15d2c24f5bb04b40c07fd179b11c242c7.
-Package version: 1.3.0
-Patch type: Frontend UI/UX, mobile layout, navigation and user-feedback refinement.
-Database schema change: None.
-SQL migration required: No.
-Supabase/RLS/RPC/API contract changes: None.
-Dependency changes: None; package.json and package-lock.json version metadata only.
-Environment variable changes: None.
+Amar Nfser Hisab Release 1.4.0 — Fresh Supabase Master Database
+Base: Release 1.3.0 on GitHub main, commit b965fd6c6c50cd7e08bb7769147f04b9d8f6119d.
+Branch: release/1.4.0-fresh-supabase-master
+Package version: 1.4.0
 
-The patch preserves tracker logic, relational data operations, authentication, reminders, theme storage, and existing feature routes.
-It updates the shared visual layer, removes sync timestamps from the visible header, suppresses background autosave success toasts, makes browser refresh default to Dashboard, resets scroll on section/history navigation, and improves mobile safe-area spacing.
+- One fresh-project Master SQL replaces numbered migrations.
+- 25 frontend Workspace collections, each with its own account-owned table.
+- No whole-workspace JSON snapshot table.
+- RLS, authenticated-only RPCs, optimistic version checks and account cascade.
+- Private journal attachment bucket and owner-scoped Storage policies.
+- Not an upgrade migration; existing databases are not modified.
