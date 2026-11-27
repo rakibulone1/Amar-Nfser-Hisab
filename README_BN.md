@@ -1,6 +1,6 @@
 # Amar Nfser Hisab
 
-ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.2.9-এ Desktop ও Mobile-এর জন্য একীভূত Premium Responsive UI, পরিমার্জিত Light/Dark Theme, উন্নত Card ও Typography এবং ছোট স্ক্রিনে Compact Sync Indicator রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
+ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.3.0-এ Mobile-first Workspace refinement, পরিমার্জিত Navigation ও Safe-area spacing, timestamp-বিহীন server-confirmed Sync Status, নীরব background autosave, Dashboard-first refresh behavior এবং উন্নত Card, Typography ও motion design রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
 
 ## ১. প্রয়োজনীয়তা
 
