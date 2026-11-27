@@ -886,6 +886,13 @@ begin
     ) then
       raise exception 'INVALID_COLLECTION_KEY' using errcode = '22023';
     end if;
+    if exists (
+      select 1 from jsonb_each(p_changes->'collections') as supplied(collection_key, delta)
+      where coalesce(jsonb_typeof(supplied.delta),'') <> 'object'
+         or (supplied.delta - array['upserts','deletes']) <> '{}'::jsonb
+    ) then
+      raise exception 'INVALID_COLLECTION_ENVELOPE' using errcode = '22023';
+    end if;
 
     for v_collection in select * from (values
       ('goals','workspace_goals','deadline'),('records','workspace_records','date'),
@@ -897,7 +904,7 @@ begin
       ('avoidEntries','workspace_avoid_entries','date'),('duaItems','workspace_dua_items',''),
       ('studyEntries','workspace_study_entries','date'),('habitDefinitions','workspace_habit_definitions',''),
       ('habitLogs','workspace_habit_logs','date'),('reflections','workspace_reflections','date'),
-      ('journeys','workspace_journeys','startDate'),('journeyMilestones','workspace_journey_milestones','completedAt'),
+      ('journeys','workspace_journeys','startDate'),('journeyMilestones','workspace_journey_milestones',''),
       ('journeyObservations','workspace_journey_observations','date'),('deadlinePlans','workspace_deadline_plans','startDate'),
       ('deadlineTasks','workspace_deadline_tasks','dueDate'),('prayerTimesCache','workspace_prayer_times_cache','date'),
       ('reminderEvents','workspace_reminder_events','date')

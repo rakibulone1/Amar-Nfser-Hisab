@@ -1,16 +1,15 @@
-Amar Nfser Hisab — Release 1.3.0
-Base lineage: Release 1.2.9 from GitHub main.
-Release branch: release/1.3.0-mobile-experience.
+Amar Nfser Hisab — Release 1.4.0
+Base: Release 1.3.0 on GitHub main.
+Purpose: Frontend-aligned fresh Supabase database.
 
-Includes the Next.js Bengali application, relational workspace, assets, and regression tests.
-Release 1.3.0 is a frontend experience update:
-- Mobile-first layout and safe-area-aware bottom navigation/content clearance.
-- Dashboard-first behavior on browser refresh; section/history navigation resets scroll position.
-- One consistent Dashboard return control for section headings.
-- Sync indicator shows only server-confirmed state words, never a timestamp.
-- Background autosave does not emit a global success toast; errors remain visible.
-- Centered, compact personal footer without a copyright mark.
-- Stronger section color grading, readable mobile typography, separated cards, and subtle motion with reduced-motion support.
+- One authoritative setup file: supabase/MASTER_DATABASE_SETUP.sql
+- 25 independent account-owned Workspace Collection tables.
+- Per-record JSONB only; no whole-workspace JSON snapshot.
+- Owner-scoped RLS and auth.users ON DELETE CASCADE.
+- Authenticated workspace load/save RPCs with optimistic version checks.
+- Private attachment bucket and account-level Storage cleanup.
+- Fresh-database preflight prevents reruns on an initialized database.
 
-No SQL migration, database schema, RLS/RPC/API contract, authentication logic, or dependency package is changed.
-No .env.local, personal credentials, node_modules, .next, or .git data is included.
+Removed from supabase/: old 001/002/003 migrations and snapshot audit SQL files.
+This SQL has not been run against the user's live Supabase project.
+No .env.local or personal credentials are included.

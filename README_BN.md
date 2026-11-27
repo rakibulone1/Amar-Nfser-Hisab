@@ -1,6 +1,6 @@
 # Amar Nfser Hisab
 
-ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.3.0-এ Mobile-first Workspace refinement, পরিমার্জিত Navigation ও Safe-area spacing, timestamp-বিহীন server-confirmed Sync Status, নীরব background autosave, Dashboard-first refresh behavior এবং উন্নত Card, Typography ও motion design রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
+ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.4.0-এ Mobile-first Interface-এর পাশাপাশি Frontend-এর ২৫টি Workspace Collection পৃথক Relational Table-এ সংরক্ষণের জন্য একক Fresh-Database Master SQL, Account-scoped RLS ও নিরাপদ RPC রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
 
 ## ১. প্রয়োজনীয়তা
 
@@ -64,13 +64,13 @@ npm run dev
 - মসজিদের জামাতের সময় Settings থেকে হাতে দিতে হবে; সেটি ওয়াক্তের শুরু/শেষের হিসাব থেকে আলাদা
 - API সময়সূচি না পেলে পূর্বে Cache করা সময় ব্যবহার হয়; প্রথমবার Offline থাকলে মাগরিবের সময় না পাওয়া পর্যন্ত দিন-পরিবর্তন নির্ধারণে সীমাবদ্ধতা থাকবে
 
-## ৭. বিদ্যমান Database Upgrade ও Legacy Snapshot অপসারণ
+## ৭. নতুন Database তৈরি
 
-Release 1.2.2-এর Relational Migration `002_relational_workspace.sql` একবার সম্পূর্ণ সফল হয়ে সব পুরোনো Snapshot Record আলাদা `workspace_*` টেবিলে স্থানান্তরিত এবং Audit দ্বারা যাচাই হওয়ার পরই `003_remove_legacy_snapshot.sql` চালাবে। এই Migration পুরোনো `user_workspace_snapshots` টেবিল ও `save_user_workspace_snapshot` RPC স্থায়ীভাবে Drop করে। এটি সক্রিয় `workspace_*` রেকর্ড মুছে না।
+Release 1.4.0-এর জন্য একটি নতুন, খালি Supabase Project তৈরি করবে। SQL Editor-এ শুধু `supabase/MASTER_DATABASE_SETUP.sql` একবার সম্পূর্ণ Run করবে। একক Master SQL-এ সক্রিয় Relational Tracker Table, Settings, RPC, Auth Trigger, RLS Policy, Permissions এবং Private Storage Bucket রয়েছে।
 
-**সতর্কতা:** 003 Migration পুরোনো Snapshot Archive-এর অবশিষ্ট কপি স্থায়ীভাবে মুছে ফেলে। আগে Supabase Backup নাও এবং `workspace_sync_state`, `workspace_user_settings`, Relational RPC ও গুরুত্বপূর্ণ Tracker Row Count যাচাই করো। Migration-এর প্রি-চেক ব্যর্থ হলে জোর করে Table Drop করবে না।
+পুরোনো `001/002/003` Migration ও Snapshot Audit SQL এই Release থেকে সরানো হয়েছে। এটি পুরোনো Database-এর Upgrade Script নয়। Preflight Guard আগে থেকে একই অ্যাপের Schema পেলে SQL বাতিল করবে।
 
-নতুন/খালি Database-এ শুধু `MASTER_DATABASE_SETUP.sql` চালাবে; 001, 002 বা 003 চালাবে না। বিদ্যমান Database-এ Master SQL পুনরায় চালাবে না।
+**সতর্কতা:** Master SQL Existing Database-এ চালাবে না। নতুন Supabase Project-এর URL ও Key Vercel Environment Variables-এ দিয়ে নতুন Database-এর সঙ্গে App যুক্ত করবে। পুরোনো Project-এর ডেটা স্বয়ংক্রিয়ভাবে স্থানান্তরিত হবে না।
 
 ## ৮. নিরাপত্তা
 
