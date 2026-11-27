@@ -1,22 +1,17 @@
-Amar Nfser Hisab Release 1.2.9 — Premium Responsive UI Upgrade
+Amar Nfser Hisab Release 1.3.0 — Mobile-first UX Refinement
 
 Files included:
 - src/app/globals.css
 - src/components/frontend-workspace.tsx
+- src/lib/workspace/store.ts
 - package.json
 - package-lock.json
-- README_BN.md
-- PROJECT_PACKAGE_MANIFEST.txt
-- tests/phase13-release-hardening.test.mjs
-- tests/phase16-visual-system.test.mjs
-- tests/phase17-account-cleanup.test.mjs
-- tests/phase19-ui-polish.test.mjs
-- tests/phase20-premium-ui.test.mjs
 - tests/phase21-real-time-experience.test.mjs
 - tests/phase23-visual-responsive.test.mjs
+- README_BN.md
+- PROJECT_PACKAGE_MANIFEST.txt
 - PATCH_BASE.txt
 - PATCH_FILE_MANIFEST.txt
-- PATCH_README_BN.md
-- RELEASE_NOTES_1.2.9_BN.md
+- RELEASE_NOTES_1.3.0_BN.md
 
-No database migration, Supabase policy, RPC, API, secret, .env.local, or dependency package is included.
+No SQL migration, Supabase policy, RPC, API route, secret, .env.local, or dependency package is included.

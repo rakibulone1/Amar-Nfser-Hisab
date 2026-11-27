@@ -407,7 +407,6 @@ async function pushWorkspaceChanges(data: WorkspaceData): Promise<void> {
       if (!hasUnsavedChanges) {
         pendingWorkspaceState = null;
         setCloudSyncState("synced", "সর্বশেষ পরিবর্তন অনলাইনে সংরক্ষিত হয়েছে।");
-        showAppToast("success", "পরিবর্তন সফলভাবে অনলাইনে সংরক্ষিত হয়েছে।");
         purgeLegacyBrowserStorage();
       } else {
         setCloudSyncState("syncing", "নতুন পরিবর্তনগুলোও অনলাইনে সংরক্ষণ হচ্ছে…");

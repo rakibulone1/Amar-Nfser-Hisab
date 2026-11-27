@@ -1,7 +1,16 @@
-Amar Nfser Hisab — Release 1.2.9
-Base lineage: Release 1.2.7 Full Project + Release 1.2.8 Experience Upgrade + Release 1.2.8 Fix 01 + Release 1.2.9 Premium Responsive UI.
+Amar Nfser Hisab — Release 1.3.0
+Base lineage: Release 1.2.9 from GitHub main.
+Release branch: release/1.3.0-mobile-experience.
 
-Includes the Next.js app, Bengali interface, assets, Supabase relational workspace, and regression tests.
-The Master SQL for a new/empty Supabase project is `supabase/MASTER_DATABASE_SETUP.sql`; do not run it over an existing production database.
-Release 1.2.9 is a frontend presentation update: refreshed light/dark theme tokens, desktop/mobile visual consistency, compact mobile sync header, improved small-screen content layout, and readable typography.
-No SQL migration, database schema change, RLS/RPC/API change, new dependency, local persistence, secret, .env.local, .git, node_modules, .next, or personal data is included.
+Includes the Next.js Bengali application, relational workspace, assets, and regression tests.
+Release 1.3.0 is a frontend experience update:
+- Mobile-first layout and safe-area-aware bottom navigation/content clearance.
+- Dashboard-first behavior on browser refresh; section/history navigation resets scroll position.
+- One consistent Dashboard return control for section headings.
+- Sync indicator shows only server-confirmed state words, never a timestamp.
+- Background autosave does not emit a global success toast; errors remain visible.
+- Centered, compact personal footer without a copyright mark.
+- Stronger section color grading, readable mobile typography, separated cards, and subtle motion with reduced-motion support.
+
+No SQL migration, database schema, RLS/RPC/API contract, authentication logic, or dependency package is changed.
+No .env.local, personal credentials, node_modules, .next, or .git data is included.

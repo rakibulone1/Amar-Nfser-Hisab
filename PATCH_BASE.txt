@@ -1,11 +1,12 @@
-Patch: Amar Nfser Hisab Release 1.2.9 — Premium Responsive UI Upgrade
-Required base: Release 1.2.8 Experience Upgrade + Release 1.2.8 Fix 01 must already be applied.
-Package version: 1.2.9
-Patch type: Frontend UI/UX and responsive presentation update.
+Patch: Amar Nfser Hisab Release 1.3.0 — Mobile-first UX Refinement
+Required base: GitHub main at Release 1.2.9, commit dfb26bb15d2c24f5bb04b40c07fd179b11c242c7.
+Package version: 1.3.0
+Patch type: Frontend UI/UX, mobile layout, navigation and user-feedback refinement.
 Database schema change: None.
 SQL migration required: No.
 Supabase/RLS/RPC/API contract changes: None.
-Dependency changes: None. package.json/package-lock.json version metadata only.
+Dependency changes: None; package.json and package-lock.json version metadata only.
 Environment variable changes: None.
 
-This patch redesigns the shared visual layer and mobile shell while retaining the existing relational workspace, record operations, cloud-sync mechanisms, notifications, theme switching, and navigation actions.
+The patch preserves tracker logic, relational data operations, authentication, reminders, theme storage, and existing feature routes.
+It updates the shared visual layer, removes sync timestamps from the visible header, suppresses background autosave success toasts, makes browser refresh default to Dashboard, resets scroll on section/history navigation, and improves mobile safe-area spacing.
