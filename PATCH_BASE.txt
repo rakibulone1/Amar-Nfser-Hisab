@@ -1,4 +1,2 @@
-Base: Amar Nfser Hisab Release 1.2.2 (after applying Release 1.2.2 Relational Journey & Hadith patch)
-Hotfix: Release 1.2.2 Build Fix 01
-Scope: Missing named import for getLocalDataServerSnapshot and regression coverage.
-No database changes. No environment changes.
+Apply only on Amar Nfser Hisab Release 1.2.3 with Release 1.2.2 Build Fix 01 already applied.
+No database migration is required. No environment variables or Supabase schema changes are included.

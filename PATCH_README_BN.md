@@ -1,32 +1,47 @@
-# Amar Nfser Hisab — Release 1.2.3 UI & Journey Polish
+# Amar Nfser Hisab — Release 1.2.4 Visual System Patch
 
-এই প্যাচটি Release 1.2.2 + Build Fix 01-এর ওপর বসানোর জন্য। এটি পূর্ণ Project ZIP নয়।
+## প্রযোজ্য Base
 
-## প্রয়োগ
+এই প্যাচটি Release 1.2.3 + Build Fix 01-এর ওপর তৈরি। একই প্রজেক্টের Root Folder-এ বসাবে, যেখানে `package.json` আছে।
 
-1. বর্তমান Project Folder-এর সম্পূর্ণ Backup রাখুন।
-2. ZIP-এর সব ফাইল `package.json` থাকা Project Root-এ Extract করে Replace করুন।
-3. `.env.local` অপরিবর্তিত রাখুন।
-4. Supabase SQL Migration প্রয়োজন নেই। এই Release-এ Database Schema বা RLS Policy পরিবর্তন করা হয়নি।
-5. Node.js 22.x ব্যবহার করে চালান:
+## কী বদলেছে
+
+- Desktop sidebar, topbar ও content frame-এর পরিমার্জন
+- Mobile bottom navigation, safe-area spacing ও responsive grid
+- Dashboard, journey, tracker, deadline, hadith, notification ও analytics card/list-এর সমন্বিত style
+- Button, tab, input ও selection control-এর একক interaction language
+- Light ও Dark theme-এর জন্য সমন্বিত semantic color palette
+- Login এবং loading state-এর refinement
+- Release metadata 1.2.4 এবং visual-system regression tests
+
+## নিরাপদে Apply
+
+1. চলমান প্রজেক্টের একটি Backup রাখো।
+2. ZIP extract করে একই Project Root-এ ফাইলগুলো Replace করো।
+3. `.env.local` এবং `.git` অপরিবর্তিত রাখবে।
+4. কোনো SQL Migration চালানোর দরকার নেই। কোনো Supabase table, RLS policy, API contract বা data model পরিবর্তন করা হয়নি।
+5. চালাও:
 
 ```powershell
 npm ci
-npm run verify:release
+npm run test:all
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-## এই Release-এ
+`npm run test:all`-এ `test:phase16` নতুনভাবে যুক্ত হয়েছে।
 
-- Dashboard ও আত্মশুদ্ধি Summary-কে সংক্ষিপ্ত করা হয়েছে; ১,৪৩৮ দিনের সংখ্যা UI-তে দেখানো হয় না।
-- ৭১টি Stage-এর নাম নতুন করে সাজানো হয়েছে; ভাষা আত্মনিয়ন্ত্রণ, মনোযোগ, শৃঙ্খলা, অধ্যবসায় ও অগ্রগতিকে কেন্দ্র করে। কোনো ব্যক্তিগত অভ্যাসকে সরাসরি শিরোনামে প্রকাশ করা হয়নি।
-- Stage তালিকায় Module, তারিখ, সময়কাল, অতিক্রান্ত দিন, বাকি দিন, অগ্রগতি ও অবস্থা দেখানো হয়।
-- Duplicate Dashboard Back Bar সরানো হয়েছে; পেজ-ভিত্তিক একটি করে Dashboard return control রাখা হয়েছে।
-- হাদিস বিস্তারিত পৃষ্ঠা থেকে একটিমাত্র Dashboard Return রাখা হয়েছে; হাদিসের তালিকা/বিভাগ থেকে পড়া যাবে।
-- Mobile ও Desktop-এর Journey, Notification, Hadith, Footer ও Dashboard spacing/type scale উন্নত করা হয়েছে।
-- নিষিদ্ধ মুহূর্তের কার্ডে AlAdhan-এর Sunrise/Sunset এবং সেগুলোর মধ্যবিন্দু থেকে Solar Noon reference দেখানো হয়। এটি পূর্ণ ফিকহি সময়সীমা বলে দাবি করা হয় না; হানাফি নির্দেশনায় নিষেধের সময়সীমা স্থান ও ঋতুভেদে পরিবর্তিত হতে পারে।
+## Git Push
 
-## যাচাইয়ের অবস্থা
+```powershell
+git add .
+git commit -m "ui: refresh the complete visual system"
+git push origin main
+```
 
-- JavaScript `.mjs` Contract/Regression Tests: 88/88 PASS
-- TypeScript/TSX Syntax Parse: 70 files, 0 syntax errors
-- Full `tsc --noEmit`, ESLint ও Next.js Production Build: এই প্যাকেজ তৈরির পরিবেশে dependency installation অনুপস্থিত থাকায় চালানো যায়নি। আপনার Windows/Vercel পরিবেশে `npm run verify:release` দিয়ে যাচাই করতে হবে।
+Production branch `main` হলে Vercel স্বয়ংক্রিয়ভাবে নতুন deployment চালাবে।
+
+## যাচাই সম্পর্কে
+
+এই প্যাচ তৈরির পরিবেশে 94টি `.mjs` regression/contract test পাস করেছে এবং `globals.css` TinyCSS2 parser দিয়ে পরীক্ষা করে 0 parse error পাওয়া গেছে। Dependency installation offline cache-এ একটি অনুপস্থিত package-এর কারণে ব্যর্থ হওয়ায় পূর্ণ TypeScript typecheck, ESLint ও Next.js production build এখানে চালানো যায়নি। এগুলো তোমার Node.js 22 পরিবেশে চালাতে হবে।

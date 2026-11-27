@@ -1,4 +1,4 @@
-Amar Nfser Hisab — Release 1.2.2 Project Package
+Amar Nfser Hisab — Release 1.2.4 Visual System Release
 
 Included:
 - Complete Next.js / React application source and public assets.
@@ -12,7 +12,8 @@ Included:
 - Maghrib-based Bangladesh date, Bengali Hijri month labels, prohibited prayer-time windows and exact tracker deep links.
 - Waqt-end notification opens the explicit prayed/not-prayed confirmation flow before recording qada.
 - Notification popover, section back navigation and personal two-line footer.
-- Release, regression, relational database and hadith-data tests.
+- Release, regression, relational database, hadith-data and unified visual-system tests.
+- Release 1.2.4 mobile-first design system for shell, cards, lists, forms, controls, notifications, hadith, journey, analytics and both color themes.
 - Bengali setup and migration notes in README_RELEASE_1.2_BN.md.
 
 Excluded by design:

@@ -1,7 +1,16 @@
-Amar Nfser Hisab Release 1.2.2 Build Fix 01
-Files included:
-PATCH_BASE.txt | 266 bytes | SHA256 afcdf60292a73b90d03be5ec9ab35f592b4fe03d9e6defd9add30cd1e5098b9a
-PATCH_README_BN.md | 1486 bytes | SHA256 ac38d2a6467d86619af443fdb12325c0458c9f33a38e64153cacdac8c24c2bea
-package.json | 2895 bytes | SHA256 2b7f2c42da32377703a4213e072a1e24130da5f17b7b454af7502ae3c8421ea8
-src/components/frontend-workspace.tsx | 111947 bytes | SHA256 84f4302adb5574d52e359aac34941eb7345996d4cb4f2439f1ba1101c6a7d588
-tests/phase14-server-snapshot-import.test.mjs | 1121 bytes | SHA256 335fc5106e5941af6b55ef83937621e83d816ade9d48e688e6db3a26d21cf648
+Amar Nfser Hisab — Release 1.2.4 Visual System Patch
+
+Files:
+- src/app/globals.css
+- package.json
+- package-lock.json
+- PROJECT_PACKAGE_MANIFEST.txt
+- tests/phase13-release-hardening.test.mjs
+- tests/phase16-visual-system.test.mjs (new)
+- PATCH_README_BN.md
+- PATCH_BASE.txt
+- PATCH_FILE_MANIFEST.txt
+
+Scope:
+- Unified visual design system only
+- No tracker state, data model, Supabase API, SQL, RLS, or environment variable changes
