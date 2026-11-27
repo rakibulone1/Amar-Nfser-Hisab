@@ -1,9 +1,11 @@
-Patch: Amar Nfser Hisab Release 1.2.8 Fix 01
-Required base: Release 1.2.8 Experience Upgrade Patch already applied to the project.
-Patch type: Incremental source/build fix only.
+Patch: Amar Nfser Hisab Release 1.2.9 — Premium Responsive UI Upgrade
+Required base: Release 1.2.8 Experience Upgrade + Release 1.2.8 Fix 01 must already be applied.
+Package version: 1.2.9
+Patch type: Frontend UI/UX and responsive presentation update.
 Database schema change: None.
 SQL migration required: No.
-Dependency or package-lock changes: None.
+Supabase/RLS/RPC/API contract changes: None.
+Dependency changes: None. package.json/package-lock.json version metadata only.
 Environment variable changes: None.
 
-This patch fixes the exact TypeScript errors and ESLint warnings reported in the user's Release 1.2.8 terminal log. It does not repeat the Experience Upgrade work.
+This patch redesigns the shared visual layer and mobile shell while retaining the existing relational workspace, record operations, cloud-sync mechanisms, notifications, theme switching, and navigation actions.

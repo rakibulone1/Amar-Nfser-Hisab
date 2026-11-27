@@ -1,7 +1,7 @@
-Amar Nfser Hisab — Release 1.2.7
-Base lineage: GitHub main Release 1.2.5 A+ Account-Owned Online + Fix Patch 01; cumulatively includes Release 1.2.6 changes
+Amar Nfser Hisab — Release 1.2.9
+Base lineage: Release 1.2.7 Full Project + Release 1.2.8 Experience Upgrade + Release 1.2.8 Fix 01 + Release 1.2.9 Premium Responsive UI.
 
-Includes full Next.js app, Bengali UI, assets, Supabase relational workspace, all prior features and regression tests.
-Master SQL for a new/empty Supabase project is included at `supabase/MASTER_DATABASE_SETUP.sql`; do not run it over an existing production database.
-The 1.2.7 delta is presentation-only: centered date, unified page headings, centered desktop layout, refined navigation, cards, controls, and mobile floating dock.
-No SQL migration, database schema change, new dependency, local persistence, secret, .env.local, .git, node_modules, .next, or personal data included.
+Includes the Next.js app, Bengali interface, assets, Supabase relational workspace, and regression tests.
+The Master SQL for a new/empty Supabase project is `supabase/MASTER_DATABASE_SETUP.sql`; do not run it over an existing production database.
+Release 1.2.9 is a frontend presentation update: refreshed light/dark theme tokens, desktop/mobile visual consistency, compact mobile sync header, improved small-screen content layout, and readable typography.
+No SQL migration, database schema change, RLS/RPC/API change, new dependency, local persistence, secret, .env.local, .git, node_modules, .next, or personal data is included.

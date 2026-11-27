@@ -96,7 +96,13 @@ function formatLastSyncTime(value: string | null) {
   if (!value) return "এখনো সিঙ্ক হয়নি";
   const date = new Date(value);
   if (!Number.isFinite(date.getTime())) return "এখনো সিঙ্ক হয়নি";
-  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(date);
+  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Dhaka" }).format(date);
+}
+function formatCompactLastSyncTime(value: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("bn-BD", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Dhaka" }).format(date);
 }
 function navigateToGoalPlan(planId: string) {
   const url = new URL(window.location.href);
@@ -895,7 +901,7 @@ function NotificationPopover({ events }: { events: ReminderEvent[] }) {
           <button type="button" className="notification-item-main" onClick={() => openTarget(item)}>
             <span className="notification-item-title">{item.title}</span>
             <span className="notification-item-summary">{item.message}</span>
-            <small>{formatCompactDate(item.date)} · {new Intl.DateTimeFormat("bn-BD", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Dhaka" }).format(new Date(item.createdAt))}</small>
+            <small>{formatCompactDate(item.date)} · {new Intl.DateTimeFormat("bn-BD", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Dhaka" }).format(new Date(item.createdAt))}</small>
             <span className="notification-open-target">সংশ্লিষ্ট অংশে যাও <ArrowRight size={13}/></span>
           </button>
           <button type="button" className="notification-delete-button" aria-label="নোটিফিকেশন মুছুন" onClick={() => removeOne(item.id)}><Trash2 size={14}/></button>
@@ -1031,6 +1037,21 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
   const [liveDay, setLiveDay] = useState("");
   const selected = NAV_ITEMS.find((item) => item.id === section) || NAV_ITEMS[0];
   const displayName = data?.preferences.displayName || userEmail.split("@")[0] || "আমার হিসাব";
+  const syncState = getCloudSyncState();
+  const lastSyncAt = getLastSuccessfulSyncAt();
+  const fullSyncTime = formatLastSyncTime(lastSyncAt);
+  const compactSyncTime = formatCompactLastSyncTime(lastSyncAt);
+  const syncDesktopLabel = syncState === "syncing" || syncState === "loading"
+    ? "সিঙ্ক হচ্ছে…"
+    : syncState === "offline" ? `শেষ সিঙ্ক · ${fullSyncTime}`
+      : syncState === "error" ? `সিঙ্ক সমস্যা · ${fullSyncTime}`
+        : `সর্বশেষ সিঙ্ক · ${fullSyncTime}`;
+  const syncMobileLabel = syncState === "syncing" || syncState === "loading" ? "সিঙ্ক" : compactSyncTime;
+  const syncTooltip = syncState === "syncing" || syncState === "loading"
+    ? "অনলাইন তথ্য সিঙ্ক হচ্ছে"
+    : syncState === "error" ? getCloudSyncMessage()
+      : syncState === "offline" ? `ইন্টারনেট সংযোগ নেই · শেষ সফল সিঙ্ক: ${fullSyncTime}`
+        : `সার্ভার নিশ্চিত করেছে: ${fullSyncTime}`;
   useEffect(() => {
     if (!data) return;
     const update = () => setLiveDay(todayKey(data.preferences.timeZone, data.preferences.maghribTime));
@@ -1067,7 +1088,22 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
     <AppToastViewport />
     <div className="workspace-app">
       <main className="workspace-main">
-        <header className="workspace-topbar"><div className="desktop-brand"><BrandMark/></div><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label last-sync-label cloud-status-${getCloudSyncState()}`} title={getCloudSyncState() === "syncing" ? "অনলাইন তথ্য সিঙ্ক হচ্ছে" : getCloudSyncState() === "error" ? getCloudSyncMessage() : `সার্ভার নিশ্চিত করেছে: ${formatLastSyncTime(getLastSuccessfulSyncAt())}`}><span/>{getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "সিঙ্ক হচ্ছে…" : getCloudSyncState() === "offline" ? `শেষ সিঙ্ক · ${formatLastSyncTime(getLastSuccessfulSyncAt())}` : getCloudSyncState() === "error" ? `সিঙ্ক সমস্যা · ${formatLastSyncTime(getLastSuccessfulSyncAt())}` : `সর্বশেষ সিঙ্ক · ${formatLastSyncTime(getLastSuccessfulSyncAt())}`}</span><NotificationPopover events={data.reminderEvents}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
+        <header className="workspace-topbar">
+          <div className="desktop-brand"><BrandMark/></div>
+          <div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div>
+          <div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div>
+          <div className="topbar-right">
+            <span className={`local-mode-label last-sync-label cloud-status-${syncState}`} title={syncTooltip} aria-label={syncTooltip}>
+              <span className="sync-status-dot" aria-hidden="true"/>
+              <span className="sync-label-desktop">{syncDesktopLabel}</span>
+              <span className="sync-label-mobile">{syncMobileLabel}</span>
+            </span>
+            <NotificationPopover events={data.reminderEvents}/>
+            <button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="সেটিংস"><Settings size={18}/></button>
+            <button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button>
+            <span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span>
+          </div>
+        </header>
         <nav className="workspace-desktop-nav" aria-label="প্রধান বিভাগ">{NAV_ITEMS.map((item) => { const Icon = item.icon; const active = section === item.id; return <button key={item.id} type="button" className={`workspace-desktop-tab ${active ? "active" : ""}`} onClick={() => navigateSection(item.id)} aria-current={active ? "page" : undefined}><Icon size={17}/><span>{item.label}</span></button>; })}</nav>
         <div className="workspace-content">
           {section === "home" && <DashboardView key={liveDay} data={data}/>} 

@@ -71,12 +71,12 @@ test("Settings keeps account deletion out of everyday UI and provides profile pl
   assert.match(deleteRoute, /admin\.auth\.admin\.deleteUser/);
 });
 
-test("Release 1.2.8 keeps dependencies unchanged and runs account cleanup checks", () => {
+test("Release 1.2.9 keeps dependencies unchanged and runs account cleanup checks", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.version, "1.2.8");
-  assert.equal(lock.version, "1.2.8");
-  assert.equal(lock.packages[""].version, "1.2.8");
+  assert.equal(pkg.version, "1.2.9");
+  assert.equal(lock.version, "1.2.9");
+  assert.equal(lock.packages[""].version, "1.2.9");
   assert.equal(pkg.scripts["test:phase17"], "node --test tests/phase17-account-cleanup.test.mjs");
   assert.match(pkg.scripts["test:all"], /test:phase17/);
   assert.deepEqual(pkg.dependencies, lock.packages[""].dependencies);

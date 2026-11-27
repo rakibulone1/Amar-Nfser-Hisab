@@ -1,16 +1,22 @@
-PATCH BASE: Amar Nfser Hisab Release 1.2.8 Experience Upgrade
-PATCH: Fix 01
+Amar Nfser Hisab Release 1.2.9 — Premium Responsive UI Upgrade
 
-FILES
+Files included:
+- src/app/globals.css
+- src/components/frontend-workspace.tsx
+- package.json
+- package-lock.json
+- README_BN.md
+- PROJECT_PACKAGE_MANIFEST.txt
+- tests/phase13-release-hardening.test.mjs
+- tests/phase16-visual-system.test.mjs
+- tests/phase17-account-cleanup.test.mjs
+- tests/phase19-ui-polish.test.mjs
+- tests/phase20-premium-ui.test.mjs
+- tests/phase21-real-time-experience.test.mjs
+- tests/phase23-visual-responsive.test.mjs
 - PATCH_BASE.txt
 - PATCH_FILE_MANIFEST.txt
-- FIX_README_BN.md
-- package.json
-- src/lib/workspace/store.ts
-- src/modules/trackers/tracker-center.tsx
-- src/components/frontend-workspace.tsx
-- src/providers/theme-provider.tsx
-- tests/phase08-followup.test.mjs
-- tests/phase22-build-fix.test.mjs
+- PATCH_README_BN.md
+- RELEASE_NOTES_1.2.9_BN.md
 
-No package-lock.json included because no dependency or lockfile changes were made.
+No database migration, Supabase policy, RPC, API, secret, .env.local, or dependency package is included.

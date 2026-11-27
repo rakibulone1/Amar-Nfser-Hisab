@@ -99,7 +99,7 @@ test("hadith detail page uses the unified heading and a clear source reference r
 });
 
 test("this release is a source/UI update only and does not add migrations or dependencies", () => {
-  assert.equal(packageJson.version, "1.2.8");
+  assert.equal(packageJson.version, "1.2.9");
   assert.match(packageJson.scripts["test:phase21"], /phase21-real-time-experience/);
   assert.doesNotMatch(packageJson.dependencies ? JSON.stringify(packageJson.dependencies) : "", /storage-bucket|uploadthing|new-package/);
 });
