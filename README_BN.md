@@ -1,6 +1,6 @@
 # Amar Nfser Hisab
 
-ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.2.6-এ মোবাইল-প্রথম নেভিগেশন, সংক্ষিপ্ত Section Heading, উন্নত Notification ও Settings Profile রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
+ব্যক্তিগত সালাত, আত্মশুদ্ধি, কুরআন, জিকির, সিয়াম, মুহাসাবা ও ব্যক্তিগত পরিকল্পনার ওয়েব অ্যাপ। অ্যাপের ব্র্যান্ড নাম ইংরেজিতে; ব্যবহারকারীর ইন্টারফেস বাংলায়। Release 1.2.7-এ পরিমার্জিত Premium UI, কেন্দ্রীভূত Dashboard Date, কমপ্যাক্ট Section Header, উন্নত Desktop Navigation এবং Mobile Floating Navigation রয়েছে। দিন গণনা বাংলাদেশের সময়ে মাগরিব থেকে শুরু হয়।
 
 ## ১. প্রয়োজনীয়তা
 
@@ -49,12 +49,12 @@ npm run dev
 
 ## ৫. তথ্য সংরক্ষণ — অনলাইন-নির্ভর
 
-- স্থায়ী Workspace তথ্য authenticated API-এর মাধ্যমে Supabase-এর `user_workspace_snapshots` টেবিলে সংরক্ষিত হয়; অ্যাপ নতুন করে IndexedDB বা Local Storage-এ Journal/Tracker ডেটা লেখে না।
-- থিমসহ ব্যবহারকারীর পছন্দ `user_preferences` টেবিলে সংরক্ষিত হয়।
-- আগের সংস্করণের IndexedDB/Local Storage-এ থাকা রেকর্ড কেবল একবার পড়ে Cloud-এ স্থানান্তরের চেষ্টা করা হয়। Cloud Save সফল না হওয়া পর্যন্ত পুরোনো কপি মোছা হয় না; সফল হলে পুরোনো ব্রাউজার কপি পরিষ্কার করা হয়।
+- স্থায়ী Workspace তথ্য authenticated API-এর মাধ্যমে আলাদা `workspace_*` Relational Table-এ সংরক্ষিত হয়; `workspace_sync_state` শুধু Revision Clock এবং `workspace_user_settings` ব্যক্তিগত সেটিংস রাখে।
+- থিমসহ ব্যবহারকারীর পছন্দ `workspace_user_settings` টেবিলে সংরক্ষিত হয়।
+- Runtime কোনো IndexedDB বা Local Storage Journal/Tracker Data পড়ে বা লেখে না। পুরোনো Browser Persistence কেবল Cleanup-only; সক্রিয় ডেটার উৎস Supabase Relational Table।
 - ইন্টারনেট না থাকলে নতুন পরিবর্তন স্থায়ীভাবে সংরক্ষিত হবে না। সংরক্ষণ ব্যর্থ হলে Status জানাবে; Refresh করলে অসম্প্রেরিত পরিবর্তন হারাতে পারে।
-- একক Workspace Snapshot-এর বর্তমান সীমা ৫ MB। বড় সংযুক্তি আলাদা Storage ব্যবস্থায় রাখতে হবে।
-- Hadith Card-এর দশটি প্রাথমিক রেফারেন্স `src/data/hadith-bn.json` থেকে আসে; Database query লাগে না।
+- বড় সংযুক্তি Private Supabase Storage-এ থাকে; প্রতিটি ব্যবহারকারীর ডেটা `auth.uid()`-ভিত্তিক RLS দ্বারা আলাদা থাকে।
+- Hadith Card-এর প্রাথমিক ২০টি রেফারেন্স `src/data/hadith-bn.json` থেকে আসে; Database query লাগে না।
 
 ## ৬. সালাতের দিন ও সময়
 

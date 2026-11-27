@@ -66,9 +66,9 @@ test("relational audit remains read-only and covers every key tracker and cache 
 test("release metadata and aggregate tests are advanced to 1.2.5", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.version, "1.2.6");
-  assert.equal(lock.version, "1.2.6");
-  assert.equal(lock.packages[""].version, "1.2.6");
+  assert.equal(pkg.version, "1.2.7");
+  assert.equal(lock.version, "1.2.7");
+  assert.equal(lock.packages[""].version, "1.2.7");
   assert.match(pkg.scripts["test:all"], /test:phase13/);
   assert.match(pkg.scripts["test:all"], /test:phase16/);
   assert.match(pkg.scripts["test:all"], /test:phase17/);

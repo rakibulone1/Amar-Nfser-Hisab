@@ -4291,3 +4291,422 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .workspace-desktop-tab, .section-back-button, .notification-popover { animation: none !important; transition: none !important; }
 }
+
+/* ========================================================================
+   Release 1.2.7 — Premium responsive polish
+   A restrained, centered visual system. No tracker, auth, or data semantics
+   are changed by this layer; it only refines presentation and interaction.
+   ======================================================================== */
+:root {
+  --page: #f5f8f5;
+  --paper: #ffffff;
+  --paper-soft: #f8faf8;
+  --paper-tint: #eef4ef;
+  --ink: #1b2a21;
+  --ink-soft: #56665c;
+  --muted: #78867d;
+  --line: #e3ebe4;
+  --line-strong: #d3dfd5;
+  --green: #286347;
+  --green-deep: #1d5037;
+  --green-soft: #e8f2eb;
+  --green-pale: #f1f7f2;
+  --gold: #a97d3f;
+  --gold-soft: #f7f1e6;
+  --blue: #557b9d;
+  --blue-soft: #edf3f8;
+  --rose: #a66670;
+  --rose-soft: #f8eff0;
+  --danger: #a34f4b;
+  --shadow-1: 0 2px 5px rgba(23, 48, 31, .035), 0 12px 30px rgba(23, 48, 31, .045);
+  --shadow-2: 0 18px 48px rgba(23, 48, 31, .10);
+  --radius: 19px;
+  --radius-sm: 13px;
+}
+:root[data-theme="dark"] {
+  --page: #101914;
+  --paper: #17231b;
+  --paper-soft: #1c2b22;
+  --paper-tint: #25372b;
+  --ink: #eff5ef;
+  --ink-soft: #c0cec3;
+  --muted: #93a398;
+  --line: #2a3d31;
+  --line-strong: #3a5142;
+  --green: #a9d2b5;
+  --green-deep: #c2e1ca;
+  --green-soft: #243a2b;
+  --green-pale: #1b2c21;
+  --gold: #d9b77c;
+  --gold-soft: #3a3224;
+  --blue: #a8c4dc;
+  --blue-soft: #243541;
+  --rose: #d9a5aa;
+  --rose-soft: #3d2d31;
+  --danger: #e0a09b;
+  --shadow-1: 0 2px 7px rgba(0, 0, 0, .18), 0 12px 30px rgba(0, 0, 0, .12);
+  --shadow-2: 0 20px 52px rgba(0, 0, 0, .34);
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 118px; }
+body { background: var(--page); color: var(--ink); font-size: 14px; line-height: 1.7; }
+.workspace-app { min-height: 100svh; background: radial-gradient(ellipse at 50% -24rem, color-mix(in srgb, var(--green-soft) 72%, transparent), transparent 62%), var(--page); }
+.workspace-main { width: 100%; min-width: 0; }
+
+/* The topbar and primary tabs form one calm, consistent navigation system. */
+.workspace-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 70;
+  min-height: 72px;
+  grid-template-columns: minmax(220px, 1fr) auto minmax(220px, 1fr);
+  gap: clamp(12px, 2vw, 26px);
+  padding: 10px max(24px, calc((100vw - 1480px) / 2));
+  border-bottom-color: color-mix(in srgb, var(--line) 80%, transparent);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  box-shadow: 0 5px 24px rgba(26, 52, 35, .035);
+  -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  backdrop-filter: blur(18px) saturate(1.25);
+}
+.desktop-brand .brand-mark-icon { width: 42px; height: 42px; border-radius: 14px; box-shadow: 0 3px 10px rgba(35, 86, 55, .08); }
+.desktop-brand .brand-mark-copy strong { color: var(--ink); font-size: 14px; font-weight: 850; }
+.desktop-brand .brand-mark-copy small { color: var(--muted); font-size: 9px; letter-spacing: .05em; }
+.topbar-context { justify-self: center; gap: 9px; padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); background: var(--paper-soft); font-size: 10px; white-space: nowrap; }
+.topbar-context strong { color: var(--ink-soft); font-size: 11px; font-weight: 800; }
+.topbar-right { justify-self: end; display: flex; align-items: center; gap: 8px; }
+.local-mode-label { min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 0 11px; border: 1px solid color-mix(in srgb, var(--green) 16%, var(--line)); border-radius: 999px; color: var(--green-deep); background: var(--green-pale); font-size: 9px; font-weight: 800; white-space: nowrap; }
+.local-mode-label > span { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: #3b9861; box-shadow: 0 0 0 3px color-mix(in srgb, #3b9861 13%, transparent); }
+.topbar-icon-button { width: 40px; height: 40px; border-radius: 13px; color: var(--ink-soft); background: var(--paper-soft); transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease; }
+.topbar-icon-button:hover { border-color: var(--line-strong); color: var(--green-deep); background: var(--green-soft); box-shadow: var(--shadow-1); transform: translateY(-1px); }
+.topbar-avatar { width: 40px; height: 40px; border: 1px solid var(--line-strong); color: var(--green-deep); background: var(--green-soft); font-weight: 850; }
+.workspace-desktop-nav {
+  position: sticky;
+  top: 72px;
+  z-index: 60;
+  min-height: 62px;
+  gap: 8px;
+  padding: 9px 20px;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+  backdrop-filter: blur(16px) saturate(1.15);
+}
+.workspace-desktop-tab {
+  min-width: 142px;
+  min-height: 42px;
+  gap: 9px;
+  padding: 0 17px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+.workspace-desktop-tab svg { opacity: .8; }
+.workspace-desktop-tab:hover { border-color: var(--line); color: var(--green-deep); background: var(--paper-soft); transform: translateY(-1px); }
+.workspace-desktop-tab.active { border-color: color-mix(in srgb, var(--green) 23%, var(--line)); color: var(--green-deep); background: var(--green-soft); box-shadow: inset 0 1px 0 rgba(255,255,255,.38), 0 3px 10px rgba(31, 82, 49, .045); }
+.workspace-desktop-tab.active svg { opacity: 1; }
+
+/* Keep the working area wide enough for desktop and naturally centered. */
+.workspace-content { width: min(100%, 1460px); max-width: 1460px; margin-inline: auto; padding: clamp(22px, 2.8vw, 38px) clamp(18px, 3.3vw, 52px) 30px; }
+.view-stack { gap: clamp(17px, 1.7vw, 24px); }
+.content-grid, .metric-grid, .quran-dashboard-summary, .journey-current-meta { min-width: 0; }
+.workspace-panel, .panel, .tracker-panel, .settings-card, .backup-workspace,
+.stage-observation-panel, .stage-reward-panel, .goal-plans-section,
+.prayer-wizard, .prayer-time-widget, .hadith-detail-card,
+.deadline-plan-card, .journey-stage-card, .journey-summary-card, .notification-item {
+  border-color: var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow-1);
+}
+.workspace-panel, .panel, .tracker-panel, .settings-card, .backup-workspace { padding: clamp(17px, 2vw, 25px); }
+.workspace-panel:hover, .panel:hover, .deadline-plan-card:hover, .journey-module-card:hover { border-color: color-mix(in srgb, var(--green) 22%, var(--line)); box-shadow: 0 8px 25px rgba(25, 61, 38, .07); }
+.panel-title-row, .panel-heading, .section-heading, .goal-section-heading, .stage-section-head { align-items: center; gap: 13px; margin-bottom: 15px; }
+.panel-title-row h2, .panel-heading h2, .section-heading h2, .goal-section-heading h2, .stage-section-head h2 { color: var(--ink); font-size: clamp(15px, 1.25vw, 19px); font-weight: 850; line-height: 1.45; }
+
+/* Section headings: one compact back action, balanced title and optional action. */
+.page-intro, .goals-page-heading, .tracker-page-heading, .stage-detail-heading, .hadith-page-heading {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 17px;
+  padding: 3px 0 15px;
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 80%, transparent);
+}
+.page-intro-main { min-width: 0; display: flex; align-items: center; gap: 14px; }
+.page-intro-title, .goals-page-heading > div, .stage-detail-heading > div, .hadith-page-title { min-width: 0; display: grid; gap: 1px; }
+.page-intro .eyebrow, .goals-page-heading .eyebrow, .stage-detail-heading .eyebrow, .hadith-page-title .eyebrow { color: var(--green); font-size: 9px; font-weight: 850; letter-spacing: .045em; }
+.page-intro h1, .goals-page-heading h1, .tracker-page-heading h1, .stage-detail-heading h1, .hadith-page-heading h1, .hadith-page-title h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(22px, 2vw, 29px);
+  font-weight: 880;
+  letter-spacing: -.04em;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.page-intro-action { margin-left: auto; }
+.section-back-button, .tracker-back-button {
+  min-width: 40px;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  color: var(--ink-soft);
+  background: var(--paper);
+  font-size: 10px;
+  font-weight: 800;
+  box-shadow: 0 2px 7px rgba(20, 45, 28, .035);
+  transition: color .18s ease, border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+.section-back-button:hover, .tracker-back-button:hover { border-color: color-mix(in srgb, var(--green) 32%, var(--line)); color: var(--green-deep); background: var(--green-soft); box-shadow: 0 4px 12px rgba(27, 78, 44, .07); transform: translateX(-2px); }
+.section-back-button svg, .tracker-back-button svg { width: 16px; height: 16px; }
+.stage-detail-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 14px; row-gap: 1px; }
+.stage-detail-heading > .section-back-button { grid-column: 1; grid-row: 1 / span 3; align-self: center; }
+.stage-detail-heading > .eyebrow, .stage-detail-heading > h1, .stage-detail-heading > p { grid-column: 2; }
+.stage-detail-heading p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
+.tracker-page-heading { min-height: 55px; justify-content: flex-start; }
+.tracker-page-heading-copy { display: flex; align-items: center; gap: 12px; }
+.tracker-page-heading-copy h1 { margin: 0; font-size: clamp(21px, 2vw, 28px); }
+
+/* The date is the dashboard's quiet focal point, not a full-width banner. */
+.dashboard-date-card.dashboard-date-card-centered {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 9px 13px;
+  margin: 0 auto 1px;
+  padding: 9px 18px;
+  border: 1px solid color-mix(in srgb, var(--green) 15%, var(--line));
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--paper) 86%, var(--green-soft));
+  box-shadow: 0 4px 14px rgba(26, 60, 37, .045);
+  text-align: center;
+}
+.dashboard-date-card-centered > span:first-child { color: var(--ink); font-size: 12px; font-weight: 800; line-height: 1.5; font-family: "Noto Sans Bengali", "Hind Siliguri", "SolaimanLipi", sans-serif; }
+.dashboard-date-divider { width: 1px; height: 19px; flex: 0 0 auto; background: var(--line-strong); }
+.dashboard-date-card-centered > span:last-child { color: var(--green-deep); font-size: 11px; font-weight: 800; line-height: 1.5; }
+
+/* Dashboard cards and tracker modules gain clear hierarchy without loud color. */
+.metric-grid { gap: 13px; }
+.metric-card { min-width: 0; min-height: 135px; padding: 16px 17px; border: 1px solid color-mix(in srgb, var(--line) 82%, transparent); border-radius: 18px; box-shadow: 0 4px 15px rgba(23, 49, 31, .035); text-align: left; }
+.metric-card strong { display: block; margin-top: 7px; color: var(--ink); font-size: clamp(23px, 2.2vw, 31px); font-weight: 900; letter-spacing: -.035em; line-height: 1.2; }
+.metric-card-top { align-items: center; gap: 8px; color: var(--ink-soft); font-size: 11px; font-weight: 800; }
+.metric-icon { width: 34px; height: 34px; border: 1px solid color-mix(in srgb, var(--line) 76%, transparent); border-radius: 11px; background: color-mix(in srgb, var(--paper) 70%, transparent); }
+.metric-card small { display: block; margin-top: 8px; color: var(--muted); font-size: 9px; line-height: 1.65; }
+.metric-card-button { cursor: pointer; transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+.metric-card-button:hover { border-color: color-mix(in srgb, var(--green) 28%, var(--line)); box-shadow: 0 10px 24px rgba(25, 61, 38, .085); transform: translateY(-2px); }
+.dashboard-journey-card-compact, .journey-current-hero-compact { border-radius: 21px; box-shadow: var(--shadow-1); }
+.dashboard-journey-card-compact { padding: clamp(16px, 2.1vw, 24px); }
+.dashboard-journey-facts { gap: 10px; }
+.dashboard-journey-facts > div { min-width: 0; border: 1px solid color-mix(in srgb, var(--line) 75%, transparent); border-radius: 13px; background: color-mix(in srgb, var(--paper) 68%, transparent); }
+.hadith-daily-card { border: 1px solid color-mix(in srgb, #6d9e79 25%, var(--line)); border-radius: 21px; background: color-mix(in srgb, var(--green-soft) 72%, var(--paper)); box-shadow: var(--shadow-1); }
+.hadith-daily-head { padding: 16px 20px 0; }
+.hadith-daily-head > span { color: var(--green-deep); font-size: 11px; font-weight: 850; }
+.hadith-refresh-button { min-height: 34px; padding: 0 12px; border-color: color-mix(in srgb, var(--green) 20%, var(--line)); color: var(--green-deep); background: var(--paper); font-size: 10px; }
+.hadith-daily-summary { gap: 9px; padding: 13px 20px 19px; }
+.hadith-daily-summary > strong { color: var(--ink); font-size: clamp(15px, 1.35vw, 18px); line-height: 1.85; }
+.hadith-daily-reference { color: var(--muted); font-size: 10px; }
+.hadith-daily-open { color: var(--green-deep); font-size: 10px; }
+
+/* Lists and selectable rows have reliable spacing and readable touch areas. */
+.journey-module-card, .deadline-plan-card, .stage-observation-panel, .stage-reward-panel, .stage-detail-status { border-color: var(--line); border-radius: 18px; box-shadow: var(--shadow-1); }
+.journey-module-card { padding-bottom: 4px; }
+.journey-module-heading { padding: 17px 19px 13px; }
+.journey-module-heading h3 { color: var(--ink); font-size: 15px; font-weight: 850; }
+.journey-stage-list { gap: 9px; padding: 0 14px 15px; }
+.journey-stage-row { min-height: 72px; gap: 10px; padding: 10px 13px; border-radius: 14px; transition: border-color .16s ease, background .16s ease, transform .16s ease; }
+.journey-stage-row:hover { border-color: color-mix(in srgb, var(--green) 30%, var(--line)); transform: translateY(-1px); }
+.journey-stage-title-line strong { color: var(--ink); font-size: 12px; line-height: 1.55; }
+.journey-stage-main > small, .journey-stage-trailing small { color: var(--muted); line-height: 1.5; }
+.tracker-picker-grid { gap: 12px; }
+.tracker-picker-card { min-height: 92px; border-radius: 16px; background: var(--paper); box-shadow: var(--shadow-1); }
+.tracker-picker-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.tracker-history-row, .notification-item, .notification-popover-item { border-radius: 14px; }
+.prayer-check-list, .tracker-history-list, .hadith-list-grid, .notification-list { gap: 9px; }
+.prayer-check-row, .tracker-history-row, .notification-item { min-height: 60px; }
+
+/* Buttons and form elements share shape, focus, motion and touch standards. */
+.button-primary, .tracker-primary-button, .button-secondary, .tracker-secondary-button, .tracker-quiet-button,
+.settings-logout-button, .form-actions button, .text-action {
+  min-height: 42px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease, border-color .16s ease;
+}
+.button-primary:hover, .tracker-primary-button:hover, .settings-logout-button:hover { box-shadow: 0 8px 18px color-mix(in srgb, var(--green) 18%, transparent); transform: translateY(-1px); }
+.button-secondary:hover, .tracker-secondary-button:hover, .tracker-quiet-button:hover { border-color: var(--line-strong); background: var(--paper-tint); transform: translateY(-1px); }
+.tracker-input, .workspace-form input, .workspace-form select, .workspace-form textarea,
+.settings-profile-form input, .tracker-field input, .tracker-field select, .tracker-field textarea {
+  min-height: 45px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 12px;
+  transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+}
+.tracker-input:focus, .workspace-form input:focus, .workspace-form select:focus, .workspace-form textarea:focus,
+.settings-profile-form input:focus, .tracker-field input:focus, .tracker-field select:focus, .tracker-field textarea:focus {
+  border-color: color-mix(in srgb, var(--green) 58%, var(--line));
+  background: var(--paper);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 12%, transparent);
+  outline: 0;
+}
+:where(button, a, input, select, textarea, [role="button"]):focus-visible { outline: 3px solid color-mix(in srgb, var(--green) 30%, transparent); outline-offset: 3px; }
+button:disabled { cursor: not-allowed; opacity: .58; transform: none !important; box-shadow: none !important; }
+
+/* Hadith reader and detail pages are deliberately calm and centered. */
+.hadith-library { width: min(100%, 1080px); margin-inline: auto; padding-top: clamp(18px, 2.5vw, 32px); }
+.hadith-detail-card { gap: 17px; padding: clamp(20px, 3vw, 34px); border-radius: 22px; background: color-mix(in srgb, var(--green-soft) 36%, var(--paper)); }
+.hadith-detail-summary { color: var(--ink); font-size: clamp(17px, 1.6vw, 21px); line-height: 1.9; }
+.hadith-detail-text { max-width: 82ch; color: var(--ink-soft); font-size: 14px; line-height: 2.12; letter-spacing: .002em; }
+.hadith-detail-meta > div { border-color: var(--line); border-radius: 13px; background: color-mix(in srgb, var(--paper) 84%, var(--green-soft)); }
+.hadith-list-card { min-height: 76px; border-color: var(--line); border-radius: 15px; background: var(--paper); box-shadow: 0 3px 12px rgba(20, 45, 28, .025); }
+.hadith-list-card:hover { border-color: color-mix(in srgb, var(--green) 28%, var(--line)); box-shadow: var(--shadow-1); transform: translateY(-1px); }
+
+/* Footer stays quiet and centered, never competes with the page. */
+.workspace-footer { width: min(100%, 900px); min-height: 34px; margin: 24px auto 0; padding: 8px 8px 2px; color: var(--muted); }
+.workspace-footer > span, .workspace-footer-copy > span { color: var(--muted); font-size: 10px; line-height: 1.6; }
+
+/* Dark surfaces are re-mixed from theme tokens to avoid pale, low-contrast cards. */
+:root[data-theme="dark"] .workspace-topbar,
+:root[data-theme="dark"] .workspace-desktop-nav { background: color-mix(in srgb, var(--paper) 88%, transparent); border-color: var(--line); }
+:root[data-theme="dark"] .dashboard-date-card-centered { color: var(--ink-soft); border-color: var(--line-strong); background: color-mix(in srgb, var(--green-soft) 60%, var(--paper)); }
+:root[data-theme="dark"] .metric-card { border-color: var(--line); box-shadow: 0 4px 15px rgba(0,0,0,.12); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 1) { background: color-mix(in srgb, #284a35 57%, var(--paper)); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 2) { background: color-mix(in srgb, #2b4053 55%, var(--paper)); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 3) { background: color-mix(in srgb, #51432d 48%, var(--paper)); }
+:root[data-theme="dark"] .metric-grid .metric-card:nth-child(4n + 4) { background: color-mix(in srgb, #48384e 50%, var(--paper)); }
+:root[data-theme="dark"] .hadith-daily-card { border-color: var(--line-strong); background: color-mix(in srgb, var(--green-soft) 70%, var(--paper)); }
+:root[data-theme="dark"] .hadith-daily-summary > strong { color: var(--ink); }
+:root[data-theme="dark"] .hadith-detail-card { border-color: var(--line); background: var(--paper); }
+:root[data-theme="dark"] .hadith-detail-summary, :root[data-theme="dark"] .hadith-detail-text { color: var(--ink); }
+:root[data-theme="dark"] .hadith-detail-meta > div { border-color: var(--line); background: var(--paper-soft); }
+:root[data-theme="dark"] .journey-stage-row { border-color: var(--line); background: var(--paper-soft); }
+:root[data-theme="dark"] .journey-stage-row.stage-current { background: color-mix(in srgb, var(--green-soft) 83%, var(--paper)); }
+:root[data-theme="dark"] .journey-stage-row.stage-completed { background: color-mix(in srgb, var(--blue-soft) 82%, var(--paper)); }
+
+@media (min-width: 861px) {
+  .workspace-content { min-height: calc(100svh - 134px); }
+  .mobile-navigation { display: none !important; }
+  .workspace-footer { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+}
+@media (max-width: 1100px) and (min-width: 861px) {
+  .workspace-topbar { grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr); padding-inline: 20px; }
+  .workspace-desktop-tab { min-width: 122px; padding-inline: 13px; }
+  .workspace-content { padding-inline: 22px; }
+  .local-mode-label { max-width: 178px; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 860px) {
+  html { scroll-padding-top: 76px; }
+  .workspace-topbar {
+    position: sticky;
+    top: 0;
+    min-height: 62px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 7px 14px;
+  }
+  .desktop-brand, .topbar-context, .workspace-desktop-nav { display: none !important; }
+  .mobile-brand { display: flex; min-width: 0; align-items: center; gap: 8px; }
+  .mobile-brand strong { max-width: 174px; overflow: hidden; color: var(--ink); font-size: 11px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-brand .brand-mark-icon { width: 32px; height: 32px; border-radius: 10px; }
+  .topbar-right { gap: 5px; }
+  .local-mode-label { min-height: 31px; max-width: 128px; padding-inline: 8px; overflow: hidden; font-size: 8px; text-overflow: ellipsis; }
+  .topbar-icon-button { width: 37px; height: 37px; }
+  .topbar-avatar { width: 35px; height: 35px; }
+  .workspace-content { width: min(100%, 780px); padding: 17px 14px calc(110px + env(safe-area-inset-bottom)); }
+  .view-stack { gap: 16px; }
+  .page-intro, .goals-page-heading, .tracker-page-heading, .stage-detail-heading, .hadith-page-heading { gap: 10px; margin-bottom: 12px; padding-bottom: 12px; }
+  .page-intro-main { gap: 10px; }
+  .page-intro h1, .goals-page-heading h1, .tracker-page-heading h1, .stage-detail-heading h1, .hadith-page-heading h1, .hadith-page-title h1 { font-size: 21px; line-height: 1.35; }
+  .page-intro .eyebrow, .goals-page-heading .eyebrow, .stage-detail-heading .eyebrow, .hadith-page-title .eyebrow { font-size: 8px; }
+  .section-back-button, .tracker-back-button { min-width: 38px; min-height: 38px; padding-inline: 10px; border-radius: 12px; font-size: 9px; }
+  .dashboard-date-card.dashboard-date-card-centered { width: fit-content; max-width: 100%; min-height: 40px; gap: 7px 10px; margin: 0 auto; padding: 8px 14px; border-radius: 15px; }
+  .dashboard-date-card-centered > span:first-child { font-size: 11px; }
+  .dashboard-date-card-centered > span:last-child { font-size: 10px; }
+  .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .metric-card { min-height: 126px; padding: 13px; border-radius: 16px; }
+  .metric-card strong { font-size: clamp(21px, 5vw, 27px); }
+  .metric-card small { font-size: 9px; }
+  .workspace-panel, .panel, .tracker-panel, .settings-card, .backup-workspace { padding: 16px; border-radius: 17px; }
+  .journey-stage-list { gap: 8px; padding-inline: 10px; }
+  .journey-stage-row { min-height: 68px; padding: 9px 10px; }
+  .hadith-library { padding: 18px 14px calc(24px + env(safe-area-inset-bottom)); }
+  .hadith-detail-card { padding: 19px 16px; }
+  .hadith-detail-text { font-size: 13px; line-height: 2.05; }
+  .mobile-navigation {
+    position: fixed;
+    z-index: 100;
+    inset: auto 12px calc(10px + env(safe-area-inset-bottom));
+    width: auto;
+    min-height: 66px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    padding: 6px;
+    border: 1px solid color-mix(in srgb, var(--line-strong) 82%, transparent);
+    border-radius: 20px;
+    background: color-mix(in srgb, var(--paper) 94%, transparent);
+    box-shadow: 0 12px 34px rgba(17, 42, 25, .16);
+    -webkit-backdrop-filter: blur(18px) saturate(1.3);
+    backdrop-filter: blur(18px) saturate(1.3);
+  }
+  .mobile-navigation button { min-width: 0; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 3px; padding: 4px 2px; border: 1px solid transparent; border-radius: 13px; color: var(--muted); background: transparent; font-size: 9px; font-weight: 800; }
+  .mobile-navigation button svg { width: 19px; height: 19px; }
+  .mobile-navigation button.active { border-color: color-mix(in srgb, var(--green) 20%, var(--line)); color: var(--green-deep); background: var(--green-soft); }
+  .workspace-footer { margin-top: 18px; padding-bottom: 6px; }
+}
+@media (max-width: 520px) {
+  .workspace-topbar { min-height: 58px; padding-inline: 10px; }
+  .mobile-brand strong { max-width: 126px; font-size: 10px; }
+  .topbar-right { gap: 3px; }
+  .local-mode-label { max-width: 96px; font-size: 7px; }
+  .topbar-icon-button { width: 34px; height: 34px; border-radius: 11px; }
+  .topbar-avatar { width: 32px; height: 32px; }
+  .workspace-content { padding: 15px 11px calc(105px + env(safe-area-inset-bottom)); }
+  .page-intro, .goals-page-heading, .tracker-page-heading, .stage-detail-heading, .hadith-page-heading { gap: 8px; }
+  .page-intro-main { gap: 8px; }
+  .page-intro h1, .goals-page-heading h1, .tracker-page-heading h1, .stage-detail-heading h1, .hadith-page-heading h1, .hadith-page-title h1 { font-size: 18px; }
+  .section-back-button, .tracker-back-button { min-width: 35px; min-height: 35px; gap: 5px; padding-inline: 8px; font-size: 9px; }
+  .section-back-button svg { width: 15px; height: 15px; }
+  .dashboard-date-card.dashboard-date-card-centered { width: 100%; justify-content: center; gap: 6px 9px; padding: 8px 10px; }
+  .dashboard-date-card-centered > span:first-child { font-size: 10px; }
+  .dashboard-date-card-centered > span:last-child { font-size: 9px; }
+  .dashboard-date-divider { height: 15px; }
+  .metric-grid { gap: 8px; }
+  .metric-card { min-height: 116px; padding: 11px; }
+  .metric-card-top { font-size: 9px; }
+  .metric-icon { width: 29px; height: 29px; border-radius: 9px; }
+  .metric-card strong { font-size: 21px; }
+  .metric-card small { font-size: 8px; line-height: 1.55; }
+  .dashboard-journey-card-compact, .journey-current-hero-compact { padding: 15px 13px; }
+  .journey-stage-row { grid-template-columns: 28px minmax(0, 1fr) 62px; gap: 7px; }
+  .journey-stage-title-line strong { font-size: 10px; }
+  .journey-stage-trailing b { font-size: 10px; }
+  .hadith-daily-head { padding: 13px 14px 0; }
+  .hadith-daily-summary { padding: 11px 14px 15px; }
+  .hadith-detail-card { padding: 16px 13px; }
+  .hadith-detail-navigation { gap: 7px; }
+  .hadith-detail-navigation .button-secondary { min-width: 0; padding-inline: 8px; font-size: 9px; }
+  .mobile-navigation { inset-inline: 8px; bottom: calc(7px + env(safe-area-inset-bottom)); min-height: 62px; padding: 5px; border-radius: 17px; }
+  .mobile-navigation button { min-height: 48px; font-size: 8px; }
+  .mobile-navigation button svg { width: 18px; height: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}

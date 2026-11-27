@@ -90,12 +90,12 @@ test("notification routing carries the Maghrib-based journal date into the praye
   assert.match(tracker, /initialDate=\{initialDate\}/);
 });
 
-test("release metadata is 1.2.6 and dependencies remain unchanged", () => {
+test("release metadata is 1.2.7 and dependencies remain unchanged", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.version, "1.2.6");
-  assert.equal(lock.version, "1.2.6");
-  assert.equal(lock.packages[""].version, "1.2.6");
+  assert.equal(pkg.version, "1.2.7");
+  assert.equal(lock.version, "1.2.7");
+  assert.equal(lock.packages[""].version, "1.2.7");
   assert.match(pkg.scripts["test:all"], /test:phase19/);
   assert.deepEqual(pkg.dependencies, lock.packages[""].dependencies);
   assert.deepEqual(pkg.devDependencies, lock.packages[""].devDependencies);

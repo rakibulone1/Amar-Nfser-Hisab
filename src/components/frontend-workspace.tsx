@@ -104,7 +104,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
 
 function PageIntro({ eyebrow, title, action, onBack }: { eyebrow: string; title: string; description: string; action?: React.ReactNode; onBack: () => void }) {
   return (
-    <div className="page-intro">
+    <div className="page-intro release-page-heading">
       <div className="page-intro-main">
         <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
         <div className="page-intro-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1></div>
@@ -169,7 +169,13 @@ function formatEnglishGregorianDate(dateKey: string) {
   }).format(date);
 }
 function DashboardDateCard({ date }: { date: string }) {
-  return <div className="dashboard-date-card"><span lang="bn">{formatEnglishGregorianDate(date)}</span><span className="dashboard-date-divider"/><span>{getHijriLabel(date)}</span></div>;
+  return (
+    <div className="dashboard-date-card dashboard-date-card-centered" aria-label={`ইংরেজি তারিখ ${formatEnglishGregorianDate(date)} · হিজরি ${getHijriLabel(date)}`}>
+      <span lang="bn">{formatEnglishGregorianDate(date)}</span>
+      <span className="dashboard-date-divider" aria-hidden="true"/>
+      <span>{getHijriLabel(date)}</span>
+    </div>
+  );
 }
 function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof getWorkspaceData>; date: string }) {
   const progress = getFixedJourneyProgress(date);
@@ -475,8 +481,8 @@ function StageDetailView({
     .sort((a, b) => b.count - a.count)[0];
 
   return <div className="stage-detail-view view-stack">
-    <div className="stage-detail-heading">
-      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
+    <div className="stage-detail-heading release-page-heading">
+      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
       <span className="eyebrow">মডিউল {stage.module.toLocaleString("bn-BD")} · পর্যায় {stage.stageNumber.toLocaleString("bn-BD")}</span>
       <h1>{stage.title}</h1>
       <p>{formatCompactDate(stage.startDate)} – {formatCompactDate(stage.endDate)} · {stage.durationDays.toLocaleString("bn-BD")} দিন</p>
@@ -643,8 +649,8 @@ function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   if (selectedStage) return <div className="view-stack"><StageDetailView stage={selectedStage} data={data} currentDate={dateNow} onBack={() => navigateSection("home")}/></div>;
 
   return <div className="view-stack goals-workspace">
-    <div className="goals-page-heading">
-      <button type="button" className="section-back-button" onClick={() => navigateSection("home")} aria-label="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
+    <div className="goals-page-heading release-page-heading">
+      <button type="button" className="section-back-button" onClick={() => navigateSection("home")} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={17}/><span>ফিরে যাও</span></button>
       <div><span className="eyebrow">নিজের পথ ও পরিকল্পনা</span><h1>লক্ষ্য</h1></div>
     </div>
     <div className="goals-mode-tabs" role="tablist" aria-label="লক্ষ্যের বিভাগ">

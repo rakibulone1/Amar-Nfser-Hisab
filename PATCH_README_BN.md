@@ -1,47 +1,34 @@
-# Amar Nfser Hisab — Release 1.2.6 Fix Patch
+# Amar Nfser Hisab — Release 1.2.7 Premium UI Cumulative Patch
 
-## কোন সংস্করণের জন্য
+## কোন সংস্করণে বসাবে
 
-এই প্যাচটি **Release 1.2.5 A+ Account-Owned Online + Fix Patch 01**-এর ওপর বসানোর জন্য। Release 1.2.4 বা তার আগের সংস্করণে বসাবে না। একই প্যাচ দ্বিতীয়বার প্রয়োগ করার দরকার নেই।
+এই প্যাচটি পাবলিক GitHub `main`-এ পাওয়া বর্তমান **Release 1.2.5 A+ Account-Owned Online + Fix Patch 01**-কে Base ধরে তৈরি। এতে Release 1.2.6-এর মধ্যবর্তী সংশোধন এবং Release 1.2.7-এর নতুন UI উন্নয়ন একসঙ্গে অন্তর্ভুক্ত আছে। তাই আগে আলাদা করে Release 1.2.6 Patch বসাতে হবে না। একবারই এই প্যাচ বসাবে।
 
-## এই প্যাচে কী আছে
+**Version Check:** তোমার Project Root-এর `package.json` প্রথমে `1.2.5` দেখাতে পারে। Fix Patch 01-এর সংশোধন/Tests থাকতে হবে। প্যাচ প্রয়োগের পরে package version হবে `1.2.7`।
 
-1. মাগরিব-ভিত্তিক তারিখের Test-এ পুরোনো `getLocalJournalDate` নাম বাদ দিয়ে বর্তমান `getJournalDate` ব্যবহার। মূল তারিখ গণনার লজিক অপরিবর্তিত।
-2. পুরোনো Journey Archive-এর Stage 3 নামের Backward Compatibility রাখা; নতুন ৭১টি Fixed Stage-এর নাম ও তারিখ অপরিবর্তিত।
-3. হাদিস কার্ডের প্রথম নির্বাচন SSR/Hydration-safe করা; Effect-এ অপ্রয়োজনীয় State Update নেই।
-4. Quick Note নতুন মাগরিব-ভিত্তিক দিনে সঠিকভাবে Reset হয়।
-5. Stage Reward Draft-এর Server Data Synchronization React-এর guarded render update দিয়ে করা; cascading Effect সরানো।
-6. Notification থেকে নির্দিষ্ট সালাত ও তারিখে সরাসরি Tracker Entry-তে যাওয়া; প্যানেল খোলা থাকলে ব্যাকগ্রাউন্ড Scroll বন্ধ এবং বাইরে ক্লিক/Escape-এ প্যানেল বন্ধ।
-7. Section Heading-এর Back Button ছোট ও একক রাখা; Desktop-এ পূর্ণ-প্রস্থ Top Tabs এবং Mobile-এ Bottom Navigation বজায় রাখা।
-8. Dashboard Gregorian Date বাংলা Typography-তে; নিষিদ্ধ সময়ের Panel সরানো।
-9. Notification Detail Expansion বাদ; ক্লিক করলে নির্দিষ্ট Section/Entry খোলে।
-10. Settings-এ Profile ও Logout; Settings UI থেকে Account Delete সরানো। Profile Server API যুক্ত।
-11. সালাত Entry প্রতি মাগরিব-ভিত্তিক তারিখে একবার; আগে রেকর্ড থাকলে নতুন Entry নয়, Existing Entry Edit করা যাবে। বাসায়/একাকী আদায়ে অপ্রয়োজনীয় দ্বিতীয় Completion প্রশ্ন নেই।
-12. Release metadata 1.2.6 এবং Regression Tests আপডেট।
+## কী কী উন্নত হয়েছে
 
-## বসানোর নিয়ম
+- Dashboard-এর Gregorian/Hijri Date Card কেন্দ্রে, বাংলা Typography ও compact pill layout।
+- Section Header-এ একক Back Button, Eyebrow, Heading ও Action-এর একই visual rhythm। Stage Detail Header-ও একই Grid Rhythm ব্যবহার করে।
+- Desktop Topbar/Primary Tabs-এর alignment, active state, sticky behavior এবং centered content canvas।
+- Mobile Bottom Navigation safe-area-aware floating dock; বড় Touch Target ও পরিষ্কার Active State।
+- Card family, Stage List, Hadith Reader, Tracker Panel, Button, Form এবং Interaction-এর shared design refinement।
+- Light/Dark palette, focus indicator, keyboard accessibility ও reduced-motion support।
 
-1. চলমান Project-এর Backup রাখো।
-2. ZIP Extract করে Project Root-এ Replace করো—যেখানে `package.json` আছে।
-3. `.env.local`, `.git` এবং Supabase Credentials অপরিবর্তিত রাখো।
-4. **কোনো SQL Migration লাগবে না।** Database Schema, RLS, API Contract বা Durable Data Format পরিবর্তন করা হয়নি।
-5. নতুন Dependency যোগ করা হয়নি; `package-lock.json`-এ শুধু Root Package Version 1.2.6 করা হয়েছে।
+## পূর্বের ফিচার ও ডেটা অক্ষত
 
-## পরীক্ষা
+- Release 1.2.6-এর Notification routing, Profile/Logout, Compact Headers, Prayer Entry uniqueness/edit flow এবং Hadith/Stage fixes অন্তর্ভুক্ত।
+- Supabase Relational Tables, RLS, RPC/API contract, Account Ownership ও `ON DELETE CASCADE` অপরিবর্তিত।
+- Prayer, Qada, Maghrib Day, Journey, Goals, Hadith ও Notification business logic অপরিবর্তিত।
+- কোনো SQL Migration, Table, নতুন Dependency, Environment Variable, Cron, Edge Function বা Storage Bucket নেই।
 
-প্যাকেজিং পরিবেশে সরাসরি চালানো হয়েছে:
+## Apply
 
-- Node `.mjs` Regression/Contract Tests: **119/119 PASS**
-- TypeScript Runtime Tests: **18/18 PASS** (Node 22 native type stripping)
-- TypeScript/TSX syntax transpilation: **75 files, 0 syntax errors**
-- Patch Apply Test: Release 1.2.5 + Fix 01-এর clean copy-তে সফল
-- ZIP Integrity: PASS
-
-এখানে `npm ci` নেটওয়ার্ক টাইমআউটে অসম্পূর্ণ হয়েছে। তাই পূর্ণ `tsc --noEmit`, ESLint ও Next.js Production Build এই পরিবেশে চালানো যায়নি; এগুলো পাস হয়েছে বলে দাবি করা হচ্ছে না।
-
-## তোমার কম্পিউটারে যাচাই
-
-Node.js 22.x ব্যবহার করে:
+1. বর্তমান Project Folder-এর Backup রাখবে।
+2. ZIP Extract করে Project Root-এ Replace করবে—যেখানে `package.json` আছে।
+3. `.env.local` এবং `.git` অক্ষত রাখবে।
+4. Database SQL আবার চালানোর দরকার নেই।
+5. Node.js 22.x ব্যবহার করে নিচের পরীক্ষা চালাবে।
 
 ```powershell
 npm ci
@@ -51,4 +38,12 @@ npm run lint
 npm run build
 ```
 
-Node.js 24.21.0 ব্যবহার করলে `engines: 22.x`-এর EBADENGINE Warning দেখা যেতে পারে; এটি নিজে Build Failure নয়। সামঞ্জস্যের জন্য Node.js 22.x ব্যবহার করো।
+## Validation
+
+- JavaScript Contract/Regression Tests: ১২৬/১২৬ PASS।
+- TypeScript Runtime Tests: ১৮/১৮ PASS (Node.js Type Stripping দিয়ে)।
+- ৭২টি TS/TSX Source Parse: Syntax Diagnostic নেই।
+- CSS PostCSS Parse: PASS।
+- GitHub Base + Fix 01 + prior 1.2.6 layer + 1.2.7 patch: Clean Apply PASS।
+- Patch ZIP ও Full ZIP Integrity: PASS।
+- এই প্যাকেজিং পরিবেশে `tsc --noEmit`, ESLint ও Next.js Production Build চালানো হয়নি; পূর্ণ `node_modules` ইনস্টল ছিল না। তোমার PC-তে `npm ci`-এর পর এগুলো সফল না হওয়া পর্যন্ত Production Deploy করবে না।

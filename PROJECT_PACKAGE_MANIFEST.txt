@@ -1,26 +1,7 @@
-Amar Nfser Hisab — Release 1.2.6
-Base lineage: Release 1.2.5 A+ Account-Owned Online + Fix Patch 01
+Amar Nfser Hisab — Release 1.2.7
+Base lineage: GitHub main Release 1.2.5 A+ Account-Owned Online + Fix Patch 01; cumulatively includes Release 1.2.6 changes
 
-Included:
-- Complete Next.js / React app source, Bengali UI, public assets and tests.
-- Account-authenticated per-record Supabase relational workspace and RLS/RPCs.
-- Supabase Master setup script: `supabase/MASTER_DATABASE_SETUP.sql` (new/empty projects only).
-- Master SQL creates the relational workspace schema for new/empty projects only; do not run it over an existing production database.
-- No runtime JSON workspace snapshot and no durable IndexedDB/Local Storage persistence.
-- Profile API and Settings profile/logout UI; no Account Delete control in Settings.
-- Dashboard, Goals, Journal, Nafs Mirror, Hadith, Notifications and Settings UI refinements.
-- Compact section heading/back control; full-width desktop top tabs and mobile bottom navigation.
-- Notification navigation to the exact target entry, background scroll lock, outside-click and Escape close.
-- Maghrib-based prayer accounting day and duplicate-safe prayer entry/edit workflow.
-- Existing Journey, Hadith library, tracker forms, data formats and relational Database schema preserved.
-- Release 1.2.6 regression and UI contract tests.
-
-Not included:
-- `.env.local`, private Supabase keys, session cookies, node_modules, .next, Git metadata,
-  TypeScript build cache, personal data or private backups.
-- No new dependency, database migration, table, cron, Edge Function or paid service.
-
-Apply instructions:
-- Incremental patch target: Release 1.2.5 A+ Account-Owned Online with Fix Patch 01 already applied.
-- No SQL Migration required for Release 1.2.6.
-- Keep `.env.local` untouched; run npm ci and verify:release locally before deployment.
+Includes full Next.js app, Bengali UI, assets, Supabase relational workspace, all prior features and regression tests.
+Master SQL for a new/empty Supabase project is included at `supabase/MASTER_DATABASE_SETUP.sql`; do not run it over an existing production database.
+The 1.2.7 delta is presentation-only: centered date, unified page headings, centered desktop layout, refined navigation, cards, controls, and mobile floating dock.
+No SQL migration, database schema change, new dependency, local persistence, secret, .env.local, .git, node_modules, .next, or personal data included.
