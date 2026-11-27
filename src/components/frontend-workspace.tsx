@@ -21,7 +21,7 @@ import { SURAHS } from "@/modules/journal/surahs";
 import { PrayerTimeWidget } from "@/modules/trackers/prayer-time-widget";
 import { PrayerSettingsPanel, PrayerReminderEngine } from "@/modules/trackers/prayer-settings";
 import {
-  createWorkspaceRecordId, getCloudSyncMessage, getCloudSyncState, getLastSuccessfulSyncAt, getWorkspaceData, getWorkspaceServerData, getJournalDate, getWorkspaceLoadError,
+  createWorkspaceRecordId, getCloudSyncMessage, getCloudSyncState, getWorkspaceData, getWorkspaceServerData, getJournalDate, getWorkspaceLoadError,
   hydrateWorkspaceData, replaceWorkspaceData, subscribeWorkspaceData, updateWorkspaceData, flushWorkspaceChanges,
   type AppSection, type DeadlinePlan, type DeadlineTask, type JourneyMilestone, type JourneyObservation, type PrayerId, type ReminderEvent
 } from "@/lib/workspace/store";
@@ -47,10 +47,14 @@ function getSectionFromLocation(): AppSection {
   return NAV_ITEMS.some((item) => item.id === section) ? section as AppSection : "home";
 }
 function subscribeSection(listener: () => void) {
-  window.addEventListener("popstate", listener);
+  const handlePopState = () => {
+    listener();
+    window.scrollTo({ top: 0, behavior: "auto" });
+  };
+  window.addEventListener("popstate", handlePopState);
   window.addEventListener(SECTION_EVENT, listener);
   return () => {
-    window.removeEventListener("popstate", listener);
+    window.removeEventListener("popstate", handlePopState);
     window.removeEventListener(SECTION_EVENT, listener);
   };
 }
@@ -92,18 +96,6 @@ function formatCompactDate(value: string) {
   if (!Number.isFinite(date.getTime())) return value;
   return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(date);
 }
-function formatLastSyncTime(value: string | null) {
-  if (!value) return "এখনো সিঙ্ক হয়নি";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "এখনো সিঙ্ক হয়নি";
-  return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Dhaka" }).format(date);
-}
-function formatCompactLastSyncTime(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (!Number.isFinite(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("bn-BD", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Asia/Dhaka" }).format(date);
-}
 function navigateToGoalPlan(planId: string) {
   const url = new URL(window.location.href);
   url.pathname = "/dashboard";
@@ -113,6 +105,7 @@ function navigateToGoalPlan(planId: string) {
   for (const key of ["tracker", "action", "prayer", "entryDate"]) url.searchParams.delete(key);
   window.history.pushState({ section: "goals", tab: "goals", goalId: planId }, "", `${url.pathname}${url.search}${url.hash}`);
   window.dispatchEvent(new Event(SECTION_EVENT));
+  window.scrollTo({ top: 0, behavior: "auto" });
 }
 function getInitials(name: string) {
   const clean = name.trim();
@@ -133,7 +126,7 @@ function PageIntro({ title, action, onBack, variant }: { eyebrow?: string; title
   const headingClass = variant === "goals" ? "goals-page-heading release-page-heading page-intro section-heading-unified" : "page-intro release-page-heading section-heading-unified";
   return (
     <header className={headingClass}>
-      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={16}/><span>ফিরে যাও</span></button>
+      <button type="button" className="section-back-button" onClick={onBack} aria-label="ড্যাশবোর্ডে ফিরে যাও" title="ড্যাশবোর্ডে ফিরে যাও"><ArrowLeft size={16}/><span>ড্যাশবোর্ড</span></button>
       <div className="page-intro-title-chip"><h1>{title}</h1></div>
       <div className="page-intro-action">{action || null}</div>
     </header>
@@ -1038,20 +1031,18 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
   const selected = NAV_ITEMS.find((item) => item.id === section) || NAV_ITEMS[0];
   const displayName = data?.preferences.displayName || userEmail.split("@")[0] || "আমার হিসাব";
   const syncState = getCloudSyncState();
-  const lastSyncAt = getLastSuccessfulSyncAt();
-  const fullSyncTime = formatLastSyncTime(lastSyncAt);
-  const compactSyncTime = formatCompactLastSyncTime(lastSyncAt);
-  const syncDesktopLabel = syncState === "syncing" || syncState === "loading"
-    ? "সিঙ্ক হচ্ছে…"
-    : syncState === "offline" ? `শেষ সিঙ্ক · ${fullSyncTime}`
-      : syncState === "error" ? `সিঙ্ক সমস্যা · ${fullSyncTime}`
-        : `সর্বশেষ সিঙ্ক · ${fullSyncTime}`;
-  const syncMobileLabel = syncState === "syncing" || syncState === "loading" ? "সিঙ্ক" : compactSyncTime;
-  const syncTooltip = syncState === "syncing" || syncState === "loading"
-    ? "অনলাইন তথ্য সিঙ্ক হচ্ছে"
-    : syncState === "error" ? getCloudSyncMessage()
-      : syncState === "offline" ? `ইন্টারনেট সংযোগ নেই · শেষ সফল সিঙ্ক: ${fullSyncTime}`
-        : `সার্ভার নিশ্চিত করেছে: ${fullSyncTime}`;
+  const syncLabel = syncState === "synced"
+    ? "সিঙ্ক হয়েছে"
+    : syncState === "syncing" || syncState === "loading"
+      ? "সিঙ্ক হচ্ছে…"
+      : syncState === "offline"
+        ? "সংযোগ নেই"
+        : syncState === "error"
+          ? "সিঙ্ক ব্যর্থ"
+          : "প্রস্তুত";
+  const syncTooltip = syncState === "error" || syncState === "offline"
+    ? getCloudSyncMessage()
+    : syncLabel;
   useEffect(() => {
     if (!data) return;
     const update = () => setLiveDay(todayKey(data.preferences.timeZone, data.preferences.maghribTime));
@@ -1059,6 +1050,19 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
     const timer = window.setInterval(update, 15_000);
     return () => window.clearInterval(timer);
   }, [data]);
+
+  useEffect(() => {
+    const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
+    if (navigation?.type !== "reload") return;
+    const url = new URL(window.location.href);
+    if (url.pathname !== "/dashboard") return;
+    const transientKeys = ["section", "tracker", "action", "prayer", "entryDate", "tab", "goalId"];
+    if (!transientKeys.some((key) => url.searchParams.has(key))) return;
+    transientKeys.forEach((key) => url.searchParams.delete(key));
+    window.history.replaceState({ section: "home" }, "", `${url.pathname}${url.search}${url.hash}`);
+    window.dispatchEvent(new Event(SECTION_EVENT));
+    window.scrollTo({ top: 0, behavior: "auto" });
+  }, []);
 
   useEffect(() => {
     NAV_ITEMS.forEach((item) => {
@@ -1093,10 +1097,9 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
           <div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div>
           <div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div>
           <div className="topbar-right">
-            <span className={`local-mode-label last-sync-label cloud-status-${syncState}`} title={syncTooltip} aria-label={syncTooltip}>
+            <span className={`local-mode-label last-sync-label cloud-status-${syncState}`} title={syncTooltip} aria-label={syncTooltip} role="status">
               <span className="sync-status-dot" aria-hidden="true"/>
-              <span className="sync-label-desktop">{syncDesktopLabel}</span>
-              <span className="sync-label-mobile">{syncMobileLabel}</span>
+              <span className="sync-label">{syncLabel}</span>
             </span>
             <NotificationPopover events={data.reminderEvents}/>
             <button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="সেটিংস"><Settings size={18}/></button>
@@ -1111,7 +1114,7 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
           {section === "journal" && <JournalView data={data}/>} 
           {section === "mirror" && <MirrorView data={data}/>} 
           {section === "settings" && <SettingsView data={data} userEmail={userEmail} onLogout={() => void logout()} loggingOut={loggingOut}/>} 
-          <footer className="workspace-footer"><span className="workspace-footer-copy"><span className="footer-copyright-mark">©</span><span>রাকিব তুমি তোমার বাবা-মায়ের বিশ্বাসটা ভেঙ্গোনা।</span></span><span>তাহলে তাদের আর যাওয়ার মতো জায়গা থাকবে না!</span></footer>
+          <footer className="workspace-footer"><span>রাকিব তুমি তোমার বাবা-মায়ের বিশ্বাসটা ভেঙ্গোনা।</span><span>তাহলে তাদের আর যাওয়ার মতো জায়গা থাকবে না!</span></footer>
         </div>
       </main>
       <nav className="mobile-navigation" aria-label="মোবাইল প্রধান বিভাগ">{NAV_ITEMS.slice(0, 4).map((item) => { const Icon = item.icon; return <button key={item.id} type="button" className={section === item.id ? "active" : ""} onClick={() => navigateSection(item.id)}><Icon size={19}/><span>{item.shortLabel}</span></button>; })}<button type="button" className={section === "settings" ? "active" : ""} onClick={() => navigateSection("settings")}><MoreHorizontal size={19}/><span>আরও</span></button></nav>

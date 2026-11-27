@@ -13,12 +13,15 @@ const toastBus = read("../src/lib/ui/toast.ts");
 const goalsCss = read("../src/app/globals.css");
 const packageJson = JSON.parse(read("../package.json"));
 
-test("top bar uses the last server-confirmed sync timestamp, not a generic saved label", () => {
+test("top bar shows a concise server-confirmed sync state without exposing timestamps", () => {
   assert.match(store, /export function getLastSuccessfulSyncAt\(\)/);
   assert.match(store, /lastSuccessfulSyncAt = remoteUpdatedAt/);
-  assert.match(workspace, /getLastSuccessfulSyncAt\(\)/);
-  assert.match(workspace, /সর্বশেষ সিঙ্ক/);
-  assert.doesNotMatch(workspace, /অনলাইনে সংরক্ষিত<\/span>/);
+  assert.match(workspace, /const syncLabel = syncState === "synced"/);
+  assert.match(workspace, /"সিঙ্ক হয়েছে"/);
+  assert.match(workspace, /"সিঙ্ক হচ্ছে…"/);
+  assert.doesNotMatch(workspace, /getLastSuccessfulSyncAt\(\)/);
+  assert.doesNotMatch(workspace, /সর্বশেষ সিঙ্ক/);
+  assert.doesNotMatch(workspace, /formatCompactLastSyncTime/);
 });
 
 test("redundant footer cloud-sync note is removed from dashboard and settings", () => {
@@ -80,9 +83,10 @@ test("tracker edits update the existing relational record ID rather than creatin
   assert.match(tracker, /updateWorkspaceData\(\(current\) =>/);
 });
 
-test("success/error feedback is tied to completed online saves and direct settings requests", () => {
-  assert.match(store, /showAppToast\("success", "পরিবর্তন সফলভাবে অনলাইনে সংরক্ষিত হয়েছে।"\)/);
+test("background auto-save stays quiet while confirmed failures and explicit theme updates remain visible", () => {
+  assert.doesNotMatch(store, /showAppToast\("success"/);
   assert.match(store, /showAppToast\("error", message\)/);
+  assert.match(store, /setCloudSyncState\("synced"/);
   assert.match(theme, /showAppToast\("success"/);
   assert.match(theme, /showAppToast\("error"/);
   assert.match(toast, /aria-live=/);
@@ -99,7 +103,7 @@ test("hadith detail page uses the unified heading and a clear source reference r
 });
 
 test("this release is a source/UI update only and does not add migrations or dependencies", () => {
-  assert.equal(packageJson.version, "1.2.9");
+  assert.equal(packageJson.version, "1.3.0");
   assert.match(packageJson.scripts["test:phase21"], /phase21-real-time-experience/);
   assert.doesNotMatch(packageJson.dependencies ? JSON.stringify(packageJson.dependencies) : "", /storage-bucket|uploadthing|new-package/);
 });
