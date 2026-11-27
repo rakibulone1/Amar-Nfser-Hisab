@@ -8,7 +8,7 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 test("all durable workspace records are persisted through the authenticated relational API", () => {
   const route = read("src/app/api/workspace/route.ts");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   const migration = read("supabase/migrations/002_relational_workspace.sql");
   assert.match(route, /rpc\("load_relational_workspace"\)/);
   assert.match(route, /rpc\("save_relational_workspace_changes"/);
@@ -22,18 +22,17 @@ test("all durable workspace records are persisted through the authenticated rela
   assert.match(migration, /workspace_habit_logs/);
 });
 
-test("old device records are only migration input and are removed only after confirmed cloud save", () => {
-  const store = read("src/lib/local/store.ts");
-  assert.match(store, /readLegacyBrowserData/);
-  assert.match(store, /clearLegacyBrowserData\(\)/);
-  assert.match(store, /clearLegacyBrowserData\(\);/);
-  assert.doesNotMatch(store, /localStorage\.setItem/);
-  assert.doesNotMatch(store, /indexedDB\.open\([^)]*"readwrite"/);
+test("legacy browser persistence is deleted only; the runtime never imports or writes it", () => {
+  const store = read("src/lib/workspace/store.ts");
+  assert.match(store, /purgeLegacyBrowserStorage/);
+  assert.match(store, /localStorage\.removeItem/);
+  assert.match(store, /indexedDB\.deleteDatabase/);
+  assert.doesNotMatch(store, /readLegacyBrowserData|indexedDB\.open|localStorage\.getItem|localStorage\.setItem/);
 });
 
 test("theme preference stays online and refresh fetches current relational records", () => {
   const theme = read("src/providers/theme-provider.tsx");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   assert.match(theme, /\/api\/preferences/);
   assert.match(store, /fetch\("\/api\/workspace", \{ cache: "no-store"/);
 });

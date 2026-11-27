@@ -68,7 +68,7 @@ test("forbidden-time display uses AlAdhan's sunrise, sunset and a solar-noon ref
 });
 
 test("prayer-time cache preserves real astronomical reference fields after hydration", () => {
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   assert.match(store, /solarNoon\?: string/);
   assert.match(store, /raw\.forbiddenTimes\.zawal/);
   assert.match(store, /sunset: typeof raw\.sunset/);

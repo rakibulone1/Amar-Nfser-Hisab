@@ -1,6 +1,6 @@
 import { FrontendWorkspace } from "@/components/frontend-workspace";
 import { requireUser } from "@/lib/auth/require-user";
-import type { AppSection } from "@/lib/local/store";
+import type { AppSection } from "@/lib/workspace/store";
 
 export const dynamic = "force-dynamic";
 

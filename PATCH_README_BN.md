@@ -1,47 +1,31 @@
-# Amar Nfser Hisab — Release 1.2.4 Visual System Patch
+# Amar Nfser Hisab — Release 1.2.5 A+ Online & Account-Owned Patch
 
-## প্রযোজ্য Base
+## Base Project
 
-এই প্যাচটি Release 1.2.3 + Build Fix 01-এর ওপর তৈরি। একই প্রজেক্টের Root Folder-এ বসাবে, যেখানে `package.json` আছে।
+এই প্যাচটি Release 1.2.4 Full Project-এর ওপর তৈরি (যেখানে আগের Release 1.2.3 UI/Journey এবং Build Fix 01 ইতিমধ্যে অন্তর্ভুক্ত)। সরাসরি চলমান 1.2.4 Project Root-এ Apply করবে। আগের Patch আবার Apply করবে না।
 
-## কী বদলেছে
+## এই Release-এ
 
-- Desktop sidebar, topbar ও content frame-এর পরিমার্জন
-- Mobile bottom navigation, safe-area spacing ও responsive grid
-- Dashboard, journey, tracker, deadline, hadith, notification ও analytics card/list-এর সমন্বিত style
-- Button, tab, input ও selection control-এর একক interaction language
-- Light ও Dark theme-এর জন্য সমন্বিত semantic color palette
-- Login এবং loading state-এর refinement
-- Release metadata 1.2.4 এবং visual-system regression tests
+- Runtime Workspace JSON Snapshot বাদ; Tracker Record পৃথক authenticated `workspace_*` টেবিলে থাকে।
+- অ্যাপ পুরোনো IndexedDB/Local Storage পড়ে বা নতুন Durable Data সেখানে লেখে না; শুধু নির্দিষ্ট পুরোনো Key/Database Cleanup-only মুছে দেয়।
+- নতুন Master SQL আর `user_workspace_snapshots` তৈরি করে না।
+- Existing Database-এর জন্য Migration 003 পুরোনো Snapshot Table ও RPC সরায়; Migration 002-এর relational data অক্ষত রাখে।
+- Settings-এ Account Delete: বর্তমান পাসওয়ার্ড, `DELETE` নিশ্চিতকরণ, account-prefixed private files অপসারণ, তারপর Auth User Delete। Relational Account Data FK Cascade-এ মুছে যায়।
+- Supabase schema-তে Account Cascade preflight check রয়েছে।
+- কোনো নতুন package/dependency বা environment variable নেই।
 
-## নিরাপদে Apply
+## Apply
 
-1. চলমান প্রজেক্টের একটি Backup রাখো।
-2. ZIP extract করে একই Project Root-এ ফাইলগুলো Replace করো।
-3. `.env.local` এবং `.git` অপরিবর্তিত রাখবে।
-4. কোনো SQL Migration চালানোর দরকার নেই। কোনো Supabase table, RLS policy, API contract বা data model পরিবর্তন করা হয়নি।
-5. চালাও:
+1. Project Folder ও Supabase-এর Backup রাখো।
+2. ZIP Extract করে Release 1.2.4 Project Root-এ Replace করো; `.env.local` ও `.git` অক্ষত রাখবে।
+3. `npm ci` এবং `npm run test:all`, `npm run typecheck`, `npm run lint`, `npm run build` চালাও।
+4. Existing Database হলে আগে নিশ্চিত হও `002_relational_workspace.sql` সম্পূর্ণ সফল হয়েছে এবং Relational Row Count ঠিক আছে। তারপর `003_remove_legacy_snapshot.sql` একবার চালাও। এটি পুরোনো Snapshot Archive স্থায়ীভাবে Drop করবে।
+5. নতুন/খালি Database হলে শুধু `MASTER_DATABASE_SETUP.sql` চালাও; 001/002/003 আলাদা চালাবে না।
 
-```powershell
-npm ci
-npm run test:all
-npm run typecheck
-npm run lint
-npm run build
-```
+## Account Delete
 
-`npm run test:all`-এ `test:phase16` নতুনভাবে যুক্ত হয়েছে।
+Settings → Account Delete-এ বর্তমান পাসওয়ার্ড দিয়ে পরিচয় নিশ্চিত করে `DELETE` লিখে Submit করতে হবে। এটি অপরিবর্তনীয়; অ্যাকাউন্টের Relational Data ও private account-prefixed files সরিয়ে দেয়। শুধু UI থেকে Account Delete করলেই সঠিক cleanup path চালু হয়; Auth Dashboard থেকে সরাসরি user delete করলে private Storage cleanup route চলবে না।
 
-## Git Push
+## Verification
 
-```powershell
-git add .
-git commit -m "ui: refresh the complete visual system"
-git push origin main
-```
-
-Production branch `main` হলে Vercel স্বয়ংক্রিয়ভাবে নতুন deployment চালাবে।
-
-## যাচাই সম্পর্কে
-
-এই প্যাচ তৈরির পরিবেশে 94টি `.mjs` regression/contract test পাস করেছে এবং `globals.css` TinyCSS2 parser দিয়ে পরীক্ষা করে 0 parse error পাওয়া গেছে। Dependency installation offline cache-এ একটি অনুপস্থিত package-এর কারণে ব্যর্থ হওয়ায় পূর্ণ TypeScript typecheck, ESLint ও Next.js production build এখানে চালানো যায়নি। এগুলো তোমার Node.js 22 পরিবেশে চালাতে হবে।
+এই প্যাকেজ প্রস্তুতের পরিবেশে ১০১টি Node `.mjs` regression/contract test পাস করেছে। `tsx` Dependency অনুপস্থিত থাকায় `tests/*.test.ts`, পূর্ণ TypeScript typecheck, ESLint এবং Next.js production build চালানো যায়নি। এগুলো তোমার Node.js 22 পরিবেশে যাচাই করতে হবে। Live Supabase migration বা account deletion চালানো হয়নি।

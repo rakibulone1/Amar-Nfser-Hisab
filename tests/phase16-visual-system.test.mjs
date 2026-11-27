@@ -44,12 +44,13 @@ test("reduced-motion preference remains respected", () => {
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
 });
 
-test("Release 1.2.4 changes presentation and test metadata without changing dependencies", () => {
-  assert.equal(pkg.version, "1.2.4");
-  assert.equal(lock.version, "1.2.4");
-  assert.equal(lock.packages[""].version, "1.2.4");
+test("Release 1.2.5 changes account cleanup and package metadata without changing dependencies", () => {
+  assert.equal(pkg.version, "1.2.5");
+  assert.equal(lock.version, "1.2.5");
+  assert.equal(lock.packages[""].version, "1.2.5");
   assert.equal(pkg.scripts["test:phase16"], "node --test tests/phase16-visual-system.test.mjs");
   assert.match(pkg.scripts["test:all"], /test:phase16/);
+  assert.match(pkg.scripts["test:all"], /test:phase17/);
   assert.deepEqual(pkg.dependencies, lock.packages[""].dependencies);
   assert.deepEqual(pkg.devDependencies, lock.packages[""].devDependencies);
 });

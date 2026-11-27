@@ -1,16 +1,14 @@
-Amar Nfser Hisab — Release 1.2.4 Visual System Patch
-
-Files:
-- src/app/globals.css
+Modified files:
 - package.json
-- package-lock.json
-- PROJECT_PACKAGE_MANIFEST.txt
-- tests/phase13-release-hardening.test.mjs
-- tests/phase16-visual-system.test.mjs (new)
-- PATCH_README_BN.md
-- PATCH_BASE.txt
-- PATCH_FILE_MANIFEST.txt
+- src/components/frontend-workspace.tsx
+- src/lib/journey/stages.ts
+- src/lib/workspace/store.ts
+- src/modules/trackers/tracker-center.tsx
+- tests/phase08-followup.test.mjs
+- tests/phase09-semi-final.test.ts
 
-Scope:
-- Unified visual design system only
-- No tracker state, data model, Supabase API, SQL, RLS, or environment variable changes
+New files:
+- tests/phase18-fix-patch.test.mjs
+
+No database migrations, schema changes, environment variables, package dependencies,
+Supabase configuration, account lifecycle, or user data formats are changed.

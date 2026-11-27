@@ -5,18 +5,18 @@ export type PrayerPartCategory = "sunnah" | "fard" | "wajib" | "nafl";
 export type TrackerKind = "prayer" | "quran" | "dhikr" | "fasting" | "good" | "avoid" | "ilm" | "habit" | "reflection";
 export type RecordKind = TrackerKind | "bad";
 
-export type LocalGoal = {
+export type WorkspaceGoal = {
   id: string; title: string; details: string; deadline: string;
   progress: number; complete: boolean; createdAt: string;
 };
-export type LocalRecord = {
+export type WorkspaceRecord = {
   id: string; kind: RecordKind; title: string; details: string; amount: number; unit: string;
   prayerName?: PrayerId; prayerMethod?: "jamaat" | "alone" | "qada" | "missed";
   takbirUla?: boolean; missedRakah?: number; sunnahBefore?: boolean; sunnahAfter?: boolean;
   date: string; createdAt: string;
 };
 export type PrayerDay = { date: string; completed: Record<PrayerId, boolean>; updatedAt: string };
-export type LocalNote = { date: string; mood: string; body: string; reflection: string; gratitude: string; updatedAt: string };
+export type WorkspaceNote = { date: string; mood: string; body: string; reflection: string; gratitude: string; updatedAt: string };
 
 export type PrayerPartConfig = { id: string; label: string; category: PrayerPartCategory; rakats: number; enabled: boolean; required: boolean; omissionReason?: string };
 export type PrayerConfig = Record<PrayerId, PrayerPartConfig[]>;
@@ -53,7 +53,7 @@ export type MosqueTimes = Record<PrayerId, string>;
 export type PrayerTimesCache = { date: string; fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string; sunset?: string; solarNoon?: string; forbiddenTimes?: { sunrise: string; zawal: string; sunset: string }; source: string; fetchedAt: string; latitude: number; longitude: number };
 export type ReminderEvent = { id: string; key: string; kind: "waqt-ended" | "jamaat-soon" | "night-qada"; date: string; prayer: PrayerId | null; title: string; message: string; createdAt: string; resolved: boolean; readAt?: string | null; response: "prayed" | "not-prayed" | null };
 
-export type LocalPreferences = {
+export type WorkspacePreferences = {
   displayName: string; timeZone: string; maghribTime: string; maghribRollover: boolean;
   remindersEnabled: boolean; prayerReminderMinutes: number; sleepReminder: string;
 };
@@ -62,10 +62,10 @@ export type PrayerPreferences = {
   mosqueTimes: MosqueTimes; mosqueReminderMinutes: number; waqtEndPrompt: boolean; nightQadaReminder: string;
   notificationPermissionAsked: boolean; lastTimesFetchedAt: string;
 };
-export type LocalAppData = {
+export type WorkspaceData = {
   schemaVersion: 3;
-  goals: LocalGoal[]; records: LocalRecord[]; prayerDays: PrayerDay[]; notes: LocalNote[];
-  preferences: LocalPreferences; prayerConfig: PrayerConfig; prayerEntries: PrayerEntry[]; qadaEntries: QadaRecord[];
+  goals: WorkspaceGoal[]; records: WorkspaceRecord[]; prayerDays: PrayerDay[]; notes: WorkspaceNote[];
+  preferences: WorkspacePreferences; prayerConfig: PrayerConfig; prayerEntries: PrayerEntry[]; qadaEntries: QadaRecord[];
   quranEntries: QuranEntry[]; extraPrayerEntries: ExtraPrayerEntry[]; dhikrTemplates: DhikrTemplate[]; dhikrSessions: DhikrSession[];
   fastingEntries: FastingEntry[]; deedEntries: DeedEntry[]; avoidEntries: AvoidEntry[]; duaItems: DuaItem[];
   studyEntries: StudyEntry[]; habitDefinitions: HabitDefinition[]; habitLogs: HabitLog[];
@@ -74,10 +74,6 @@ export type LocalAppData = {
 };
 
 export const PRAYER_NAMES: Record<PrayerId, string> = { fajr: "ফজর", dhuhr: "যোহর", asr: "আসর", maghrib: "মাগরিব", isha: "ইশা" };
-const STORAGE_KEY = "amar-nfser-hisab:frontend-workspace:v1";
-const DB_NAME = "amar-nfser-hisab-local";
-const DB_VERSION = 1;
-const DB_STORE = "workspace";
 const EMPTY_PRAYER_CONFIG: PrayerConfig = {
   fajr: [{ id: "fajr-sunnah", label: "আগের সুন্নত", category: "sunnah", rakats: 2, enabled: true, required: false }, { id: "fajr-fard", label: "ফরজ", category: "fard", rakats: 2, enabled: true, required: true }],
   dhuhr: [{ id: "dhuhr-sunnah-before", label: "আগের সুন্নত", category: "sunnah", rakats: 4, enabled: true, required: false }, { id: "dhuhr-fard", label: "ফরজ", category: "fard", rakats: 4, enabled: true, required: true }, { id: "dhuhr-sunnah-after", label: "পরের সুন্নত", category: "sunnah", rakats: 2, enabled: true, required: false }],
@@ -85,7 +81,7 @@ const EMPTY_PRAYER_CONFIG: PrayerConfig = {
   maghrib: [{ id: "maghrib-fard", label: "ফরজ", category: "fard", rakats: 3, enabled: true, required: true }, { id: "maghrib-sunnah-after", label: "পরের সুন্নত", category: "sunnah", rakats: 2, enabled: true, required: false }],
   isha: [{ id: "isha-sunnah-before", label: "আগের সুন্নত", category: "sunnah", rakats: 4, enabled: false, required: false }, { id: "isha-fard", label: "ফরজ", category: "fard", rakats: 4, enabled: true, required: true }, { id: "isha-sunnah-after", label: "পরের সুন্নত", category: "sunnah", rakats: 2, enabled: true, required: false }, { id: "isha-witr", label: "বিতর ওয়াজিব", category: "wajib", rakats: 3, enabled: true, required: true }]
 };
-const EMPTY_DATA: LocalAppData = {
+const EMPTY_DATA: WorkspaceData = {
   schemaVersion: 3, goals: [], records: [], prayerDays: [], notes: [],
   preferences: { displayName: "", timeZone: "Asia/Dhaka", maghribTime: "", maghribRollover: true, remindersEnabled: false, prayerReminderMinutes: 10, sleepReminder: "22:30" },
   prayerConfig: EMPTY_PRAYER_CONFIG, prayerEntries: [], qadaEntries: [], quranEntries: [], extraPrayerEntries: [],
@@ -100,7 +96,7 @@ const EMPTY_DATA: LocalAppData = {
   prayerPreferences: { calculationMethod: 1, asrSchool: 1, locationLabel: "ময়মনসিংহ, বাংলাদেশ (পরিবর্তনযোগ্য)", latitude: 24.7471, longitude: 90.4203, mosqueTimes: { fajr: "", dhuhr: "", asr: "", maghrib: "", isha: "" }, mosqueReminderMinutes: 10, waqtEndPrompt: true, nightQadaReminder: "21:30", notificationPermissionAsked: false, lastTimesFetchedAt: "" },
   prayerTimesCache: [], reminderEvents: [], updatedAt: new Date(0).toISOString()
 };
-let snapshot: LocalAppData = EMPTY_DATA;
+let workspaceState: WorkspaceData = EMPTY_DATA;
 let hydrated = false;
 let hydrateTask: Promise<void> | null = null;
 const listeners = new Set<() => void>();
@@ -110,11 +106,11 @@ let cloudSyncMessage = "অনলাইন তথ্য লোড হচ্ছ�
 let cloudSyncTimer: ReturnType<typeof setTimeout> | null = null;
 let cloudSavePromise: Promise<void> | null = null;
 let cloudSyncAgain = false;
-let pendingSnapshot: LocalAppData | null = null;
+let pendingWorkspaceState: WorkspaceData | null = null;
 let onlineListenerAttached = false;
 let lifecycleListenerAttached = false;
 let remoteUpdatedAt: string | null = null;
-let syncedSnapshot: LocalAppData = EMPTY_DATA;
+let confirmedWorkspaceState: WorkspaceData = EMPTY_DATA;
 let hasUnsavedChanges = false;
 let workspaceLoadError = "";
 function setCloudSyncState(state: CloudSyncState, message = "") { cloudSyncState = state; cloudSyncMessage = message; emitChange(); }
@@ -154,7 +150,7 @@ function normalisePrayerConfig(value: unknown): PrayerConfig {
   });
   return result;
 }
-function normaliseData(value: unknown): LocalAppData {
+function normaliseData(value: unknown): WorkspaceData {
   if (!isObject(value) || ![1, 2, 3].includes(Number(value.schemaVersion))) throw new Error("এই Backup ফাইলের সংস্করণ সমর্থিত নয়।");
   const preferences = isObject(value.preferences) ? value.preferences : {};
   const prayerPreferences = isObject(value.prayerPreferences) ? value.prayerPreferences : {};
@@ -207,7 +203,7 @@ function normaliseData(value: unknown): LocalAppData {
   });
   return {
     schemaVersion: 3,
-    goals: arrayOrEmpty<LocalGoal>(value.goals), records: arrayOrEmpty<LocalRecord>(value.records), prayerDays: arrayOrEmpty<PrayerDay>(value.prayerDays), notes: arrayOrEmpty<LocalNote>(value.notes),
+    goals: arrayOrEmpty<WorkspaceGoal>(value.goals), records: arrayOrEmpty<WorkspaceRecord>(value.records), prayerDays: arrayOrEmpty<PrayerDay>(value.prayerDays), notes: arrayOrEmpty<WorkspaceNote>(value.notes),
     preferences: {
       displayName: typeof preferences.displayName === "string" ? preferences.displayName.slice(0, 80) : "",
       timeZone: safeTimeZone(preferences.timeZone), maghribTime: validClock(preferences.maghribTime), maghribRollover: preferences.maghribRollover !== false,
@@ -221,7 +217,7 @@ function normaliseData(value: unknown): LocalAppData {
     habitDefinitions: arrayOrEmpty<HabitDefinition>(value.habitDefinitions), habitLogs: arrayOrEmpty<HabitLog>(value.habitLogs), reflections: arrayOrEmpty<ReflectionEntry>(value.reflections),
     journeys: arrayOrEmpty<Journey>(value.journeys),
     journeyMilestones: arrayOrEmpty<unknown>(value.journeyMilestones).filter(isObject).map((item) => ({
-      id: typeof item.id === "string" ? item.id : createLocalId(),
+      id: typeof item.id === "string" ? item.id : createWorkspaceRecordId(),
       journeyId: typeof item.journeyId === "string" ? item.journeyId : "",
       stageNumber: Math.max(1, Math.floor(Number(item.stageNumber) || 1)),
       title: typeof item.title === "string" ? item.title.slice(0, 120) : "অর্জনের মাইলফলক",
@@ -249,65 +245,26 @@ function normaliseData(value: unknown): LocalAppData {
     updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : new Date().toISOString()
   };
 }
-export function subscribeLocalData(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); }
-export function getLocalDataSnapshot() { return snapshot; }
-export function getLocalDataServerSnapshot() { return EMPTY_DATA; }
+export function subscribeWorkspaceData(listener: () => void) { listeners.add(listener); return () => listeners.delete(listener); }
+export function getWorkspaceData() { return workspaceState; }
+export function getWorkspaceServerData() { return EMPTY_DATA; }
 export function getCloudSyncState() { return cloudSyncState; }
 export function getCloudSyncMessage() { return cloudSyncMessage; }
 export function getWorkspaceLoadError() { return workspaceLoadError; }
-// One-time compatibility reader: previous builds used IndexedDB/localStorage.
-// Existing data is read only when no cloud snapshot exists, uploaded once, and
-// deleted from the browser only after Supabase confirms the write.
-
-async function openLegacyDatabase(): Promise<IDBDatabase | null> {
-  if (typeof indexedDB === "undefined") return null;
-  const factory = indexedDB as IDBFactory & { databases?: () => Promise<Array<{ name?: string }>> };
-  if (factory.databases) {
-    try {
-      const known = await factory.databases();
-      if (!known.some((item) => item.name === DB_NAME)) return null;
-    } catch {
-      // If database enumeration is unavailable, still attempt a read-only open
-      // so a previous IndexedDB-only account is not mistaken for an empty one.
-    }
-  }
-  return new Promise((resolve) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onupgradeneeded = () => { const db = request.result; if (!db.objectStoreNames.contains(DB_STORE)) db.createObjectStore(DB_STORE, { keyPath: "key" }); };
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => resolve(null);
-    request.onblocked = () => resolve(null);
-  });
-}
-async function readLegacyBrowserData(): Promise<LocalAppData | null> {
-  let indexed: unknown = null;
-  const db = await openLegacyDatabase();
-  if (db) {
-    indexed = await new Promise<unknown>((resolve) => {
-      const request = db.transaction(DB_STORE, "readonly").objectStore(DB_STORE).get("primary");
-      request.onsuccess = () => resolve(request.result?.data ?? null);
-      request.onerror = () => resolve(null);
-    });
-    db.close();
-  }
-  let legacy: unknown = null;
+// Cleanup-only compatibility step. Current durable data is stored in the
+// authenticated Supabase relational workspace; browser persistence is never read or written.
+function purgeLegacyBrowserStorage() {
+  if (typeof window === "undefined") return;
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
-    legacy = raw ? JSON.parse(raw) as unknown : null;
-  } catch { /* Missing/blocked legacy storage does not prevent cloud-only use. */ }
-  const value = indexed ?? legacy;
-  return value ? normaliseData(value) : null;
-}
-function clearLegacyBrowserData() {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY);
-  } catch { /* The application no longer writes browser storage. */ }
+    window.localStorage.removeItem("amar-nfser-hisab:frontend-workspace:v1");
+    window.localStorage.removeItem("amar-nfser-hisab:theme");
+  } catch { /* Storage can be disabled; the app itself does not persist there. */ }
   if (typeof indexedDB !== "undefined") {
     try {
-      const request = indexedDB.deleteDatabase(DB_NAME);
+      const request = indexedDB.deleteDatabase("amar-nfser-hisab-local");
       request.onerror = () => undefined;
       request.onblocked = () => undefined;
-    } catch { /* Best-effort cleanup after the cloud copy is confirmed. */ }
+    } catch { /* Best-effort removal of the previous release's database only. */ }
   }
 }
 
@@ -336,26 +293,26 @@ function rowKey(collection: WorkspaceCollectionKey, value: Record<string, unknow
   return "";
 }
 
-function recordsForCollection(data: LocalAppData, collection: WorkspaceCollectionKey): WorkspaceDeltaRow[] {
+function recordsForCollection(data: WorkspaceData, collection: WorkspaceCollectionKey): WorkspaceDeltaRow[] {
   if (collection === "deadlineTasks") {
     return data.deadlinePlans.flatMap((plan) => plan.tasks.map((task) => ({
       id: task.id,
       record: { ...task, planId: plan.id } as unknown as Record<string, unknown>
     })));
   }
-  const source = data[collection as keyof LocalAppData];
+  const source = data[collection as keyof WorkspaceData];
   if (!Array.isArray(source)) return [];
   return source.map((item) => {
     const value = item as unknown as Record<string, unknown>;
     const id = rowKey(collection, value);
     const record = collection === "deadlinePlans"
-      ? (({ tasks: _tasks, ...plan }) => plan)(value)
+      ? Object.fromEntries(Object.entries(value).filter(([key]) => key !== "tasks"))
       : value;
     return id ? { id, record } : null;
   }).filter((row): row is WorkspaceDeltaRow => row !== null);
 }
 
-function buildWorkspaceChanges(previous: LocalAppData, next: LocalAppData) {
+function buildWorkspaceChanges(previous: WorkspaceData, next: WorkspaceData) {
   const collections: Record<string, { upserts: WorkspaceDeltaRow[]; deletes: string[] }> = {};
   for (const key of WORKSPACE_COLLECTION_KEYS) {
     const before = new Map(recordsForCollection(previous, key).map((row) => [row.id, JSON.stringify(row.record)]));
@@ -373,18 +330,18 @@ function buildWorkspaceChanges(previous: LocalAppData, next: LocalAppData) {
   return changes;
 }
 
-function scheduleCloudSync(data: LocalAppData) {
-  pendingSnapshot = data;
+function scheduleWorkspaceSync(data: WorkspaceData) {
+  pendingWorkspaceState = data;
   if (!hydrated) return;
   if (cloudSyncTimer) clearTimeout(cloudSyncTimer);
   if (typeof navigator !== "undefined" && !navigator.onLine) {
     setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। পরিবর্তন অনলাইনে সংরক্ষিত হয়নি; সংযোগ ফিরলে আবার চেষ্টা হবে।");
     return;
   }
-  cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; void pushCloudSnapshot(pendingSnapshot ?? snapshot); }, 220);
+  cloudSyncTimer = setTimeout(() => { cloudSyncTimer = null; void pushWorkspaceChanges(pendingWorkspaceState ?? workspaceState); }, 220);
 }
 
-async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
+async function pushWorkspaceChanges(data: WorkspaceData): Promise<void> {
   if (typeof window === "undefined") return;
   if (!navigator.onLine) {
     hasUnsavedChanges = true;
@@ -392,11 +349,11 @@ async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
     return;
   }
   if (cloudSavePromise) {
-    if (snapshot.updatedAt !== data.updatedAt) cloudSyncAgain = true;
+    if (workspaceState.updatedAt !== data.updatedAt) cloudSyncAgain = true;
     await cloudSavePromise;
     if (hasUnsavedChanges) {
       cloudSyncAgain = false;
-      await pushCloudSnapshot(snapshot);
+      await pushWorkspaceChanges(workspaceState);
     } else {
       cloudSyncAgain = false;
     }
@@ -404,14 +361,14 @@ async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
   }
 
   const target = data;
-  const changes = buildWorkspaceChanges(syncedSnapshot, target);
+  const changes = buildWorkspaceChanges(confirmedWorkspaceState, target);
   if (!changes.collections && !changes.settings) {
-    syncedSnapshot = target;
-    hasUnsavedChanges = snapshot.updatedAt !== target.updatedAt;
+    confirmedWorkspaceState = target;
+    hasUnsavedChanges = workspaceState.updatedAt !== target.updatedAt;
     if (!hasUnsavedChanges) {
-      pendingSnapshot = null;
+      pendingWorkspaceState = null;
       setCloudSyncState("synced", "সব পরিবর্তন সংরক্ষিত আছে।");
-      clearLegacyBrowserData();
+      purgeLegacyBrowserStorage();
     }
     return;
   }
@@ -428,12 +385,12 @@ async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
       if (response.status === 409) throw new Error(result.message || "অন্য ট্যাব বা ডিভাইসে তথ্য পরিবর্তিত হয়েছে। Refresh করে সর্বশেষ তথ্য নাও।");
       if (!response.ok) throw new Error(result.message || (response.status === 401 ? "সেশন যাচাই করা যায়নি। আবার লগইন করো।" : "অনলাইন সংরক্ষণ ব্যর্থ হয়েছে।"));
       remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : remoteUpdatedAt;
-      syncedSnapshot = target;
-      hasUnsavedChanges = snapshot.updatedAt !== target.updatedAt;
+      confirmedWorkspaceState = target;
+      hasUnsavedChanges = workspaceState.updatedAt !== target.updatedAt;
       if (!hasUnsavedChanges) {
-        pendingSnapshot = null;
+        pendingWorkspaceState = null;
         setCloudSyncState("synced", "সর্বশেষ পরিবর্তন অনলাইনে সংরক্ষিত হয়েছে।");
-        clearLegacyBrowserData();
+        purgeLegacyBrowserStorage();
       } else {
         setCloudSyncState("syncing", "নতুন পরিবর্তনগুলোও অনলাইনে সংরক্ষণ হচ্ছে…");
       }
@@ -444,15 +401,15 @@ async function pushCloudSnapshot(data: LocalAppData): Promise<void> {
   })();
   await cloudSavePromise;
   cloudSavePromise = null;
-  if (cloudSyncAgain || (hasUnsavedChanges && pendingSnapshot && pendingSnapshot.updatedAt !== target.updatedAt)) {
+  if (cloudSyncAgain || (hasUnsavedChanges && pendingWorkspaceState && pendingWorkspaceState.updatedAt !== target.updatedAt)) {
     cloudSyncAgain = false;
-    await pushCloudSnapshot(snapshot);
+    await pushWorkspaceChanges(workspaceState);
   }
 }
-async function synchronizeCloudSnapshot() {
+async function synchronizeWorkspace() {
   if (typeof window === "undefined") return;
   if (!navigator.onLine) { setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। অনলাইন তথ্য লোড করা যাচ্ছে না।"); return; }
-  if (hasUnsavedChanges) { await pushCloudSnapshot(snapshot); return; }
+  if (hasUnsavedChanges) { await pushWorkspaceChanges(workspaceState); return; }
   setCloudSyncState("syncing", "সর্বশেষ তথ্য যাচাই হচ্ছে…");
   try {
     const response = await fetch("/api/workspace", { cache: "no-store", credentials: "same-origin" });
@@ -460,17 +417,17 @@ async function synchronizeCloudSnapshot() {
     const result = await response.json() as { payload?: unknown | null; updatedAt?: string | null };
     if (result.payload) {
       const remote = normaliseData(result.payload);
-      snapshot = remote;
-      syncedSnapshot = remote;
+      workspaceState = remote;
+      confirmedWorkspaceState = remote;
       remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : null;
       hasUnsavedChanges = false;
       emitChange();
       setCloudSyncState("synced", "সর্বশেষ তথ্য লোড হয়েছে।");
     } else {
       remoteUpdatedAt = null;
-      syncedSnapshot = normaliseData(EMPTY_DATA);
+      confirmedWorkspaceState = normaliseData(EMPTY_DATA);
       hasUnsavedChanges = true;
-      await pushCloudSnapshot(snapshot);
+      await pushWorkspaceChanges(workspaceState);
     }
   } catch (error) {
     setCloudSyncState(navigator.onLine ? "error" : "offline", error instanceof Error ? error.message : "অনলাইন তথ্য লোড করা যায়নি।");
@@ -478,8 +435,8 @@ async function synchronizeCloudSnapshot() {
 }
 export async function syncCloudNow() {
   if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
-  if (hasUnsavedChanges) await pushCloudSnapshot(snapshot);
-  else await synchronizeCloudSnapshot();
+  if (hasUnsavedChanges) await pushWorkspaceChanges(workspaceState);
+  else await synchronizeWorkspace();
 }
 function attachSaveLifecycle() {
   if (lifecycleListenerAttached || typeof window === "undefined") return;
@@ -487,18 +444,18 @@ function attachSaveLifecycle() {
   const flushWhenHidden = () => {
     if (document.visibilityState !== "hidden" || !hasUnsavedChanges) return;
     if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
-    void pushCloudSnapshot(snapshot);
+    void pushWorkspaceChanges(workspaceState);
   };
   const flushWhenLeaving = () => {
     if (!hasUnsavedChanges) return;
     if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
     // Best effort only: browsers may stop requests during tab/process shutdown.
-    void pushCloudSnapshot(snapshot);
+    void pushWorkspaceChanges(workspaceState);
   };
   document.addEventListener("visibilitychange", flushWhenHidden);
   window.addEventListener("pagehide", flushWhenLeaving);
   window.addEventListener("focus", () => {
-    if (hasUnsavedChanges && navigator.onLine && !cloudSavePromise) scheduleCloudSync(snapshot);
+    if (hasUnsavedChanges && navigator.onLine && !cloudSavePromise) scheduleWorkspaceSync(workspaceState);
   });
 }
 function attachOnlineListener() {
@@ -507,16 +464,16 @@ function attachOnlineListener() {
   if (onlineListenerAttached) return;
   onlineListenerAttached = true;
   window.addEventListener("online", () => {
-    if (hasUnsavedChanges) scheduleCloudSync(snapshot);
-    else void synchronizeCloudSnapshot();
+    if (hasUnsavedChanges) scheduleWorkspaceSync(workspaceState);
+    else void synchronizeWorkspace();
   });
   window.addEventListener("offline", () => setCloudSyncState("offline", "ইন্টারনেট সংযোগ নেই। নতুন পরিবর্তন অনলাইনে সংরক্ষিত হবে না।"));
 }
-export async function flushLocalData() {
+export async function flushWorkspaceChanges() {
   if (cloudSyncTimer) { clearTimeout(cloudSyncTimer); cloudSyncTimer = null; }
-  if (hasUnsavedChanges) await pushCloudSnapshot(snapshot);
+  if (hasUnsavedChanges) await pushWorkspaceChanges(workspaceState);
 }
-export async function hydrateLocalData() {
+export async function hydrateWorkspaceData() {
   if (hydrated || typeof window === "undefined") return hydrateTask ?? Promise.resolve();
   if (hydrateTask) return hydrateTask;
   hydrateTask = (async () => {
@@ -527,43 +484,24 @@ export async function hydrateLocalData() {
       const response = await fetch("/api/workspace", { cache: "no-store", credentials: "same-origin" });
       if (!response.ok) throw new Error(response.status === 401 ? "সেশন শেষ হয়েছে। আবার লগইন করো।" : "তথ্য লোড করা যায়নি। সংযোগ ও সংরক্ষণ সেটআপ পরীক্ষা করে আবার চেষ্টা করো।");
       const result = await response.json() as { payload?: unknown | null; updatedAt?: string | null };
+      // The authenticated relational workspace is the only durable source of truth.
+      // Old browser data is deliberately not imported; legacy stores are removed instead.
+      purgeLegacyBrowserStorage();
       if (result.payload) {
         const remote = normaliseData(result.payload);
+        workspaceState = remote;
+        confirmedWorkspaceState = remote;
         remoteUpdatedAt = typeof result.updatedAt === "string" ? result.updatedAt : null;
-        syncedSnapshot = remote;
-        const legacy = await readLegacyBrowserData();
-        const localVersion = legacy ? (Date.parse(legacy.updatedAt) || 0) : 0;
-        const remotePayloadVersion = Date.parse(remote.updatedAt) || 0;
-        if (legacy && localVersion > remotePayloadVersion) {
-          // Preserve a newer unsynced pre-cloud browser snapshot and commit it
-          // against the server version read above before deleting old storage.
-          snapshot = legacy;
-          hydrated = true;
-          hasUnsavedChanges = true;
-          await pushCloudSnapshot(snapshot);
-          if (!hasUnsavedChanges && cloudSyncState === "synced") {
-            clearLegacyBrowserData();
-            setCloudSyncState("synced", "আগের নতুন রেকর্ডগুলো অনলাইনে স্থানান্তর হয়েছে।");
-          }
-        } else {
-          snapshot = remote;
-          hasUnsavedChanges = false;
-          hydrated = true;
-          clearLegacyBrowserData();
-          setCloudSyncState("synced", "তোমার সর্বশেষ তথ্য অনলাইন থেকে লোড হয়েছে।");
-        }
-      } else {
-        const legacy = await readLegacyBrowserData();
-        snapshot = legacy ?? { ...structuredClone(EMPTY_DATA), updatedAt: new Date().toISOString() };
-        syncedSnapshot = normaliseData(EMPTY_DATA);
-        remoteUpdatedAt = null;
+        hasUnsavedChanges = false;
         hydrated = true;
-        hasUnsavedChanges = true;
-        await pushCloudSnapshot(snapshot);
-        if (!hasUnsavedChanges && cloudSyncState === "synced") {
-          clearLegacyBrowserData();
-          setCloudSyncState("synced", legacy ? "আগের রেকর্ডগুলো অনলাইনে স্থানান্তর হয়েছে; পুরোনো ডিভাইস কপি সরানো হয়েছে।" : "অনলাইন ব্যক্তিগত ওয়ার্কস্পেস তৈরি হয়েছে।");
-        }
+        setCloudSyncState("synced", "সর্বশেষ তথ্য অনলাইন অ্যাকাউন্ট থেকে লোড হয়েছে।");
+      } else {
+        workspaceState = { ...structuredClone(EMPTY_DATA), updatedAt: new Date().toISOString() };
+        confirmedWorkspaceState = normaliseData(EMPTY_DATA);
+        remoteUpdatedAt = null;
+        hasUnsavedChanges = false;
+        hydrated = true;
+        setCloudSyncState("synced", "অনলাইন ব্যক্তিগত ওয়ার্কস্পেস প্রস্তুত।");
       }
       attachOnlineListener();
       emitChange();
@@ -582,35 +520,35 @@ export async function retryCloudLoad() {
   hydrated = false;
   workspaceLoadError = "";
   hydrateTask = null;
-  await hydrateLocalData();
+  await hydrateWorkspaceData();
 }
-export function updateLocalData(updater: (current: LocalAppData) => LocalAppData) {
-  const next = normaliseData(updater(snapshot));
+export function updateWorkspaceData(updater: (current: WorkspaceData) => WorkspaceData) {
+  const next = normaliseData(updater(workspaceState));
   next.updatedAt = new Date().toISOString();
-  snapshot = next;
+  workspaceState = next;
   hasUnsavedChanges = true;
-  if (typeof window !== "undefined") scheduleCloudSync(next);
+  if (typeof window !== "undefined") scheduleWorkspaceSync(next);
   emitChange();
 }
-export function replaceLocalData(value: unknown) {
+export function replaceWorkspaceData(value: unknown) {
   const next = normaliseData(value);
   next.updatedAt = new Date().toISOString();
-  snapshot = next;
+  workspaceState = next;
   hydrated = true;
   hasUnsavedChanges = true;
-  if (typeof window !== "undefined") scheduleCloudSync(next);
+  if (typeof window !== "undefined") scheduleWorkspaceSync(next);
   emitChange();
 }
-export function resetLocalData() {
-  replaceLocalData({ ...structuredClone(EMPTY_DATA), updatedAt: new Date().toISOString() });
+export function resetWorkspaceData() {
+  replaceWorkspaceData({ ...structuredClone(EMPTY_DATA), updatedAt: new Date().toISOString() });
 }
-export function createLocalId() { return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`; }
-export function getLocalJournalDate(now = new Date(), timeZone = "Asia/Dhaka", maghribTime: string | null = null) {
+export function createWorkspaceRecordId() { return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`; }
+export function getJournalDate(now = new Date(), timeZone = "Asia/Dhaka", maghribTime: string | null = null) {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
   const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   const civilDate = `${values.year}-${values.month}-${values.day}`;
-  const cachedMaghrib = snapshot.prayerTimesCache.find((item) => item.date === civilDate
-    && item.latitude === snapshot.prayerPreferences.latitude && item.longitude === snapshot.prayerPreferences.longitude)?.maghrib;
+  const cachedMaghrib = workspaceState.prayerTimesCache.find((item) => item.date === civilDate
+    && item.latitude === workspaceState.prayerPreferences.latitude && item.longitude === workspaceState.prayerPreferences.longitude)?.maghrib;
   const effectiveMaghrib = maghribTime && /^([01]\d|2[0-3]):[0-5]\d$/.test(maghribTime)
     ? maghribTime : cachedMaghrib || "";
   if (effectiveMaghrib && /^([01]\d|2[0-3]):[0-5]\d$/.test(effectiveMaghrib)) {

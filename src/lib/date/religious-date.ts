@@ -1,4 +1,4 @@
-import { getLocalDataSnapshot, getLocalJournalDate } from "../local/store.ts";
+import { getWorkspaceData, getJournalDate } from "../workspace/store.ts";
 
 export type ReligiousDate = {
   civilDate: string;
@@ -21,12 +21,12 @@ function dateParts(date: Date, timeZone: string) {
 /**
  * The accounting day begins at local Maghrib and continues until the next
  * Maghrib. This wrapper intentionally delegates the date key to the same
- * IndexedDB-backed helper used by all tracker entry forms.
+ * Account-workspace date helper used by all tracker entry forms.
  */
 export function getReligiousDateKey(now = new Date(), timeZone = "Asia/Dhaka", maghribTime: string | null = null): ReligiousDate {
   const parts = dateParts(now, timeZone);
   const civilDate = `${parts.year}-${parts.month}-${parts.day}`;
-  const local = getLocalDataSnapshot();
+  const local = getWorkspaceData();
   const cached = local.prayerTimesCache.find((item) => item.date === civilDate
     && item.latitude === local.prayerPreferences.latitude
     && item.longitude === local.prayerPreferences.longitude)?.maghrib;
@@ -36,7 +36,7 @@ export function getReligiousDateKey(now = new Date(), timeZone = "Asia/Dhaka", m
   const isAfterMaghrib = chosen !== null && currentMinutes >= maghribMinutes;
   return {
     civilDate,
-    dateKey: getLocalJournalDate(now, timeZone, chosen),
+    dateKey: getJournalDate(now, timeZone, chosen),
     isAfterMaghrib,
     usedMaghribRollover: isAfterMaghrib,
     fallback: chosen === null,

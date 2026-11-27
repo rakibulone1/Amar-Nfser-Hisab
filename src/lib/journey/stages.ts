@@ -116,10 +116,10 @@ export const FIXED_JOURNEY_STAGES: FixedJourneyStage[] = (() => {
     const durationDays = stageNumber <= 36 ? stageNumber + 2 : 74 - stageNumber;
     const startOffset = offset;
     const endOffset = offset + durationDays - 1;
-    const module: 1 | 2 | 3 = stageNumber <= 33 ? 1 : stageNumber <= 38 ? 2 : 3;
+    const moduleNumber: 1 | 2 | 3 = stageNumber <= 33 ? 1 : stageNumber <= 38 ? 2 : 3;
     offset += durationDays;
     return {
-      stageNumber, title, module, durationDays, startOffset, endOffset,
+      stageNumber, title, module: moduleNumber, durationDays, startOffset, endOffset,
       startDate: addDaysToDateKey(FIXED_JOURNEY_START_DATE, startOffset),
       endDate: addDaysToDateKey(FIXED_JOURNEY_START_DATE, endOffset)
     };
@@ -167,6 +167,10 @@ export function getJourneyStageTitle(stageNumber: number): string {
 }
 
 /** Backward-compatible helper for historical entries created before the fixed 2026–2030 journey. */
+const LEGACY_JOURNEY_STAGE_TITLE_OVERRIDES: Readonly<Record<number, string>> = {
+  3: "প্রবৃত্তির বিরুদ্ধে অবস্থান"
+};
+
 export function getJourneyStage(dayCount: number) {
   let remaining = Math.max(1, Math.trunc(dayCount || 1));
   let stageNumber = 1;
@@ -178,7 +182,7 @@ export function getJourneyStage(dayCount: number) {
   }
   return {
     stageNumber,
-    title: getJourneyStageTitle(stageNumber),
+    title: LEGACY_JOURNEY_STAGE_TITLE_OVERRIDES[stageNumber] || getJourneyStageTitle(stageNumber),
     requiredDays: durationDays,
     dayInStage: remaining,
     daysRemaining: durationDays - remaining,

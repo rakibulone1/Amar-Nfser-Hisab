@@ -1,4 +1,4 @@
-import type { PrayerId, PrayerTimesCache } from "@/lib/local/store";
+import type { PrayerId, PrayerTimesCache } from "@/lib/workspace/store";
 
 export const BANGLADESH_TIME_ZONE = "Asia/Dhaka";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

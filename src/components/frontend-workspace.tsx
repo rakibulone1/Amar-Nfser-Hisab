@@ -19,10 +19,10 @@ import { SURAHS } from "@/modules/journal/surahs";
 import { PrayerTimeWidget } from "@/modules/trackers/prayer-time-widget";
 import { PrayerSettingsPanel, PrayerReminderEngine } from "@/modules/trackers/prayer-settings";
 import {
-  createLocalId, getCloudSyncMessage, getCloudSyncState, getLocalDataSnapshot, getLocalDataServerSnapshot, getLocalJournalDate, getWorkspaceLoadError,
-  hydrateLocalData, replaceLocalData, subscribeLocalData, updateLocalData, flushLocalData,
+  createWorkspaceRecordId, getCloudSyncMessage, getCloudSyncState, getWorkspaceData, getWorkspaceServerData, getJournalDate, getWorkspaceLoadError,
+  hydrateWorkspaceData, replaceWorkspaceData, subscribeWorkspaceData, updateWorkspaceData, flushWorkspaceChanges,
   type AppSection, type DeadlinePlan, type DeadlineTask, type JourneyMilestone, type JourneyObservation, type PrayerId, type PrayerEntry, type ReminderEvent
-} from "@/lib/local/store";
+} from "@/lib/workspace/store";
 import { getDhakaDateTimeInput, getPrayerCivilDate, getPrayerWaqtWindow, nextDhakaDate, toDhakaIso } from "@/lib/prayer-time";
 import { addDaysToDateKey, differenceInDateKeys, FIXED_JOURNEY_END_DATE, FIXED_JOURNEY_ID, FIXED_JOURNEY_START_DATE, FIXED_JOURNEY_STAGES, getFixedJourneyProgress } from "@/lib/journey/stages";
 
@@ -71,17 +71,17 @@ function navigateSection(section: AppSection, tracker?: string, prayer?: PrayerI
   window.scrollTo({ top: 0, behavior: "auto" });
 }
 function useLocalData() {
-  const data = useSyncExternalStore(subscribeLocalData, getLocalDataSnapshot, getLocalDataServerSnapshot);
+  const data = useSyncExternalStore(subscribeWorkspaceData, getWorkspaceData, getWorkspaceServerData);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
     let active = true;
-    void hydrateLocalData().finally(() => { if (active) setLoaded(true); });
+    void hydrateWorkspaceData().finally(() => { if (active) setLoaded(true); });
     return () => { active = false; };
   }, []);
   return loaded && !getWorkspaceLoadError() ? data : null;
 }
 function todayKey(timeZone: string, maghribTime: string) {
-  return getLocalJournalDate(new Date(), timeZone || "Asia/Dhaka", maghribTime || null);
+  return getJournalDate(new Date(), timeZone || "Asia/Dhaka", maghribTime || null);
 }
 function formatCompactDate(value: string) {
   return new Intl.DateTimeFormat("bn-BD", { day: "numeric", month: "short", timeZone: "Asia/Dhaka" }).format(new Date(`${value}T12:00:00Z`));
@@ -90,7 +90,7 @@ function getInitials(name: string) {
   const clean = name.trim();
   return clean ? clean.slice(0, 1) : "আ";
 }
-function uid() { return createLocalId(); }
+function uid() { return createWorkspaceRecordId(); }
 
 function BrandMark({ compact = false }: { compact?: boolean }) {
   return (
@@ -101,7 +101,7 @@ function BrandMark({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function PageIntro({ eyebrow, title, description: _description, action, onBack }: { eyebrow: string; title: string; description: string; action?: React.ReactNode; onBack: () => void }) {
+function PageIntro({ eyebrow, title, action, onBack }: { eyebrow: string; title: string; description: string; action?: React.ReactNode; onBack: () => void }) {
   return (
     <div className="page-intro">
       <div className="page-intro-main">
@@ -136,15 +136,19 @@ const HADITH_DATA = hadithData as HadithDataset;
 function getHijriLabel(dateKey: string) {
   return formatHijriDate(dateKey);
 }
+function chooseDailyHadith(dateKey: string) {
+  const seed = [...dateKey].reduce((value, character) => (value * 31 + character.charCodeAt(0)) >>> 0, 7);
+  return HADITH_DATA.hadiths[seed % HADITH_DATA.hadiths.length] ?? HADITH_DATA.hadiths[0];
+}
 function chooseRandomHadith(exceptId?: string) {
   const available = HADITH_DATA.hadiths.filter((item) => item.id !== exceptId);
   const pool = available.length ? available : HADITH_DATA.hadiths;
   return pool[Math.floor(Math.random() * pool.length)] ?? HADITH_DATA.hadiths[0];
 }
-function DailyHadithCard() {
+function DailyHadithCard({ date }: { date: string }) {
   const router = useRouter();
-  const [item, setItem] = useState<HadithRecord>(HADITH_DATA.hadiths[0]);
-  useEffect(() => { setItem(chooseRandomHadith()); }, []);
+  // The chosen hadith is deterministic for the Maghrib-based day, keeping SSR hydration stable.
+  const [item, setItem] = useState<HadithRecord>(() => chooseDailyHadith(date));
   const category = HADITH_DATA.categories.find((value) => value.id === item.category_id)?.name || "হাদিস";
   return <section className="hadith-daily-card">
     <div className="hadith-daily-head"><span>হাদিস থেকে শিক্ষা</span><button type="button" className="hadith-refresh-button" onClick={() => setItem(chooseRandomHadith(item.id))}>অন্য হাদিস</button></div>
@@ -166,14 +170,14 @@ function formatEnglishGregorianDate(dateKey: string) {
 function DashboardDateCard({ date }: { date: string }) {
   return <div className="dashboard-date-card"><span lang="en">{formatEnglishGregorianDate(date)}</span><span className="dashboard-date-divider"/><span>{getHijriLabel(date)}</span></div>;
 }
-function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof getLocalDataSnapshot>; date: string }) {
+function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof getWorkspaceData>; date: string }) {
   const progress = getFixedJourneyProgress(date);
   const stage = progress.currentStage;
   const nextPlan = [...data.deadlinePlans]
     .filter((plan) => plan.deadline >= date)
     .sort((a, b) => a.deadline.localeCompare(b.deadline))[0];
   const daysToPlan = nextPlan ? Math.max(0, differenceInDateKeys(date, nextPlan.deadline)) : null;
-  const module = stage?.module ?? (progress.status === "upcoming" ? 1 : 3);
+  const journeyModule = stage?.module ?? (progress.status === "upcoming" ? 1 : 3);
   const statusTitle = progress.status === "upcoming"
     ? "নতুন যাত্রার প্রস্তুতি"
     : progress.status === "completed"
@@ -188,7 +192,7 @@ function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof get
   const remainingText = stage
     ? `${progress.stageRemainingDays.toLocaleString("bn-BD")} দিন বাকি`
     : progress.status === "upcoming" ? "শুরু হতে বাকি" : "সম্পন্ন";
-  return <section className={`dashboard-journey-card dashboard-journey-card-compact module-tone-${module}`}>
+  return <section className={`dashboard-journey-card dashboard-journey-card-compact module-tone-${journeyModule}`}>
     <div className="dashboard-journey-header">
       <div><span className="dashboard-journey-overline">আত্মশুদ্ধির যাত্রা</span><small>{stage ? `মডিউল ${stage.module.toLocaleString("bn-BD")} · পর্যায় ${stage.stageNumber.toLocaleString("bn-BD")}` : progress.status === "upcoming" ? "শুরুর প্রস্তুতি" : "যাত্রা সম্পন্ন"}</small></div>
       <button type="button" className="dashboard-journey-open" onClick={() => navigateSection("goals")}>বিস্তারিত <ArrowRight size={14}/></button>
@@ -207,16 +211,13 @@ function FixedJourneyDashboardCard({ data, date }: { data: ReturnType<typeof get
   </section>;
 }
 
-function DashboardView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) {
+function DashboardView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const date = todayKey(data.preferences.timeZone, data.preferences.maghribTime);
   const [expandedPrayer, setExpandedPrayer] = useState<PrayerId | null>(null);
   const prayerEntries = data.prayerEntries.filter((item) => item.date === date && item.method !== "qada");
   const qadaToday = data.prayerEntries.filter((item) => item.date === date && item.method === "qada");
   const completedPrayerIds = new Set(prayerEntries.filter((item) => item.method !== "not-performed" && item.missedRakats === 0 && item.components.some((part) => part.category === "fard" && part.performed && part.performedRakats >= part.plannedRakats)).map((item) => item.prayer));
   const completedPrayerCount = completedPrayerIds.size;
-  const recordedPrayerIds = new Set(prayerEntries.map((item) => item.prayer));
-  const unrecordedPrayerCount = Math.max(0, 5 - recordedPrayerIds.size);
-  const missedPrayerCount = new Set([...prayerEntries.filter((item) => item.method === "not-performed" || item.missedRakats > 0).map((item) => item.prayer), ...data.qadaEntries.filter((item) => item.missedDate === date).map((item) => item.prayer)]).size;
   const extraPrayerToday = data.extraPrayerEntries.filter((item) => item.date === date);
   const extraRakats = extraPrayerToday.reduce((sum, item) => sum + item.rakats, 0);
   const regularRakats = prayerEntries.flatMap((item) => item.components).reduce((sum, part) => sum + part.performedRakats, 0) + extraRakats;
@@ -244,7 +245,7 @@ function DashboardView({ data }: { data: ReturnType<typeof getLocalDataSnapshot>
 
     </div>
 
-    <DailyHadithCard/>
+    <DailyHadithCard date={date}/>
     <PrayerTimeWidget data={data}/>
     <Panel eyebrow="কুরআন তেলাওয়াত" title="আজকের পাঠ ও সর্বশেষ অবস্থান" action={<button className="text-action" type="button" onClick={() => navigateSection("journal", "quran")}>তেলাওয়াত এন্ট্রি <ArrowRight size={15}/></button>}>
       <div className="quran-dashboard-summary"><div><strong>{ayahTotal.toLocaleString("bn-BD")}</strong><small>আজকের আয়াত</small></div><div><strong>{data.quranEntries.reduce((sum, item) => sum + item.ayahTo - item.ayahFrom + 1, 0).toLocaleString("bn-BD")}</strong><small>মোট সংরক্ষিত আয়াত</small></div><div><strong>{data.quranEntries[0] ? `${SURAHS[data.quranEntries[0].surahFrom - 1]?.name || "সূরা"} · ${data.quranEntries[0].ayahFrom.toLocaleString("bn-BD")}–${data.quranEntries[0].ayahTo.toLocaleString("bn-BD")}` : "এখনো পাঠ নেই"}</strong><small>সর্বশেষ পড়ার অবস্থান</small></div></div>
@@ -284,7 +285,7 @@ function DashboardView({ data }: { data: ReturnType<typeof getLocalDataSnapshot>
       </Panel>
       <div className="side-stack">
         <Panel className="reflection-panel" eyebrow="আজকের আত্মপর্যালোচনা" title="নিজের কাছে একটি প্রশ্ন"><div className="reflection-mark">“</div><p className="reflection-question">আজ এমন কোন কাজটি করেছি, যা আগামীকাল আরও ভালোভাবে করতে পারি?</p><span className="reflection-note">নিজেকে বিচার নয়—নিজেকে বোঝার চেষ্টা।</span><button className="text-action" type="button" onClick={() => navigateSection("journal", "reflection")}>মুহাসাবা লিখি <ArrowRight size={15}/></button></Panel>
-        <Panel className="quick-note-panel" eyebrow="দ্রুত নোট" title="আজকের ছোট্ট নোট"><QuickNote date={date} initialValue={note?.body || ""}/></Panel>
+        <Panel className="quick-note-panel" eyebrow="দ্রুত নোট" title="আজকের ছোট্ট নোট"><QuickNote key={date} date={date} initialValue={note?.body || ""}/></Panel>
       </div>
     </div>
 
@@ -298,9 +299,8 @@ function DashboardView({ data }: { data: ReturnType<typeof getLocalDataSnapshot>
 function QuickNote({ date, initialValue }: { date: string; initialValue: string }) {
   const [value, setValue] = useState(initialValue);
   const [saved, setSaved] = useState(false);
-  useEffect(() => setValue(initialValue), [date, initialValue]);
   function save() {
-    updateLocalData((current) => {
+    updateWorkspaceData((current) => {
       const old = current.notes.find((note) => note.date === date);
       const next = { date, mood: old?.mood || "", body: value.slice(0, 4000), reflection: old?.reflection || "", gratitude: old?.gratitude || "", updatedAt: new Date().toISOString() };
       return { ...current, notes: old ? current.notes.map((note) => note.date === date ? next : note) : [next, ...current.notes] };
@@ -339,7 +339,7 @@ function StageDetailView({
   onBack
 }: {
   stage: (typeof FIXED_JOURNEY_STAGES)[number];
-  data: ReturnType<typeof getLocalDataSnapshot>;
+  data: ReturnType<typeof getWorkspaceData>;
   currentDate: string;
   onBack: () => void;
 }) {
@@ -359,16 +359,21 @@ function StageDetailView({
   const [situation, setSituation] = useState("");
   const [response, setResponse] = useState("");
   const [reflection, setReflection] = useState("");
-  const [rewardTitle, setRewardTitle] = useState(milestone?.rewardTitle || "");
-  const [rewardAmount, setRewardAmount] = useState(milestone?.rewardAmount == null ? "" : String(milestone.rewardAmount));
-  const [rewardNote, setRewardNote] = useState(milestone?.rewardNote || "");
+  const milestoneKey = `${milestone?.id ?? "new"}:${milestone?.rewardTitle ?? ""}:${milestone?.rewardAmount ?? ""}:${milestone?.rewardNote ?? ""}`;
+  const initialRewardDraft = {
+    sourceKey: milestoneKey,
+    title: milestone?.rewardTitle || "",
+    amount: milestone?.rewardAmount == null ? "" : String(milestone.rewardAmount),
+    note: milestone?.rewardNote || ""
+  };
+  const [rewardDraft, setRewardDraft] = useState(initialRewardDraft);
+  // React's guarded render-phase adjustment keeps an external milestone update in sync
+  // without an effect that triggers an avoidable cascading render.
+  if (rewardDraft.sourceKey !== milestoneKey) setRewardDraft(initialRewardDraft);
+  const rewardTitle = rewardDraft.title;
+  const rewardAmount = rewardDraft.amount;
+  const rewardNote = rewardDraft.note;
   const [feedback, setFeedback] = useState("");
-
-  useEffect(() => {
-    setRewardTitle(milestone?.rewardTitle || "");
-    setRewardAmount(milestone?.rewardAmount == null ? "" : String(milestone.rewardAmount));
-    setRewardNote(milestone?.rewardNote || "");
-  }, [milestone?.id, milestone?.rewardTitle, milestone?.rewardAmount, milestone?.rewardNote]);
 
   function resetEntryForm() {
     setEditingId(null);
@@ -407,7 +412,7 @@ function StageDetailView({
       reflection: reflection.trim().slice(0, 2000), createdAt: editingId
         ? observations.find((item) => item.id === editingId)?.createdAt || now : now
     };
-    updateLocalData((current) => ({
+    updateWorkspaceData((current) => ({
       ...current,
       journeyObservations: editingId
         ? current.journeyObservations.map((item) => item.id === editingId ? entry : item)
@@ -432,7 +437,7 @@ function StageDetailView({
 
   function deleteObservation(id: string) {
     if (!window.confirm("এই অনুভূতির নোটটি মুছে ফেলবে?")) return;
-    updateLocalData((current) => ({ ...current, journeyObservations: current.journeyObservations.filter((item) => item.id !== id) }));
+    updateWorkspaceData((current) => ({ ...current, journeyObservations: current.journeyObservations.filter((item) => item.id !== id) }));
   }
 
   function saveReward(event: FormEvent<HTMLFormElement>) {
@@ -441,7 +446,7 @@ function StageDetailView({
     const amount = rewardAmount.trim() ? Number(rewardAmount) : null;
     if (amount !== null && (!Number.isFinite(amount) || amount < 0 || amount > 100000000)) return;
     const now = new Date().toISOString();
-    updateLocalData((current) => {
+    updateWorkspaceData((current) => {
       const existing = current.journeyMilestones.find((item) => item.journeyId === FIXED_JOURNEY_ID && item.stageNumber === stage.stageNumber);
       if (existing) return {
         ...current,
@@ -510,9 +515,9 @@ function StageDetailView({
     {complete && <section className="stage-reward-panel">
       <div><span className="eyebrow">অর্জনের স্বীকৃতি</span><h2>নিজেকে কী পুরস্কার দেবে?</h2></div>
       <form onSubmit={saveReward}>
-        <label className="tracker-field"><span>পুরস্কারের নাম</span><input className="tracker-input" value={rewardTitle} onChange={(event) => setRewardTitle(event.target.value)} maxLength={120} placeholder="যেমন: পছন্দের একটি বই" required/></label>
-        <label className="tracker-field"><span>নির্ধারিত পরিমাণ (ঐচ্ছিক)</span><input className="tracker-input" type="number" min="0" max="100000000" step="1" value={rewardAmount} onChange={(event) => setRewardAmount(event.target.value)} placeholder="ঐচ্ছিক"/></label>
-        <label className="tracker-field"><span>বিস্তারিত (ঐচ্ছিক)</span><textarea className="tracker-input tracker-textarea" rows={2} value={rewardNote} onChange={(event) => setRewardNote(event.target.value)} maxLength={1200}/></label>
+        <label className="tracker-field"><span>পুরস্কারের নাম</span><input className="tracker-input" value={rewardTitle} onChange={(event) => setRewardDraft((current) => ({ ...current, title: event.target.value }))} maxLength={120} placeholder="যেমন: পছন্দের একটি বই" required/></label>
+        <label className="tracker-field"><span>নির্ধারিত পরিমাণ (ঐচ্ছিক)</span><input className="tracker-input" type="number" min="0" max="100000000" step="1" value={rewardAmount} onChange={(event) => setRewardDraft((current) => ({ ...current, amount: event.target.value }))} placeholder="ঐচ্ছিক"/></label>
+        <label className="tracker-field"><span>বিস্তারিত (ঐচ্ছিক)</span><textarea className="tracker-input tracker-textarea" rows={2} value={rewardNote} onChange={(event) => setRewardDraft((current) => ({ ...current, note: event.target.value }))} maxLength={1200}/></label>
         <button type="submit" className="tracker-primary-button" disabled={!rewardTitle.trim()}>পুরস্কার সংরক্ষণ</button>
       </form>
       {milestone?.badgeAwarded && <span className="stage-verified-badge"><CheckCircle2 size={16}/> পর্যায় সম্পন্ন</span>}
@@ -520,7 +525,7 @@ function StageDetailView({
   </div>;
 }
 
-function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) {
+function GoalsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const dateNow = todayKey(data.preferences.timeZone, data.preferences.maghribTime);
   const progress = getFixedJourneyProgress(dateNow);
   const [activeTab, setActiveTab] = useState<"journey" | "goals">("journey");
@@ -548,7 +553,7 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
       requiredDays: stage.durationDays, completedAt: stage.endDate, rewardTitle: "", rewardAmount: null,
       rewardNote: "", badgeAwarded: true, createdAt: new Date().toISOString()
     }));
-    if (missing.length) updateLocalData((current) => ({ ...current, journeyMilestones: [...current.journeyMilestones, ...missing] }));
+    if (missing.length) updateWorkspaceData((current) => ({ ...current, journeyMilestones: [...current.journeyMilestones, ...missing] }));
   }, [completedStages, milestonesSnapshot]);
 
   function stageGoal(stage: (typeof FIXED_JOURNEY_STAGES)[number]) {
@@ -593,14 +598,14 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
     }
     const now = new Date().toISOString();
     if (editingPlanId) {
-      updateLocalData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === editingPlanId ? {
+      updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === editingPlanId ? {
         ...plan, title: goalTitle.trim(), startDate: goalStartDate, deadline: goalDeadline, category: goalCategory,
         description: goalDescription.trim(), updatedAt: now
       } : plan) }));
     } else {
       const plan: DeadlinePlan = { id: uid(), title: goalTitle.trim(), startDate: goalStartDate, deadline: goalDeadline,
         category: goalCategory, description: goalDescription.trim(), tasks: [], createdAt: now, updatedAt: now };
-      updateLocalData((current) => ({ ...current, deadlinePlans: [...current.deadlinePlans, plan] }));
+      updateWorkspaceData((current) => ({ ...current, deadlinePlans: [...current.deadlinePlans, plan] }));
     }
     cancelGoalForm();
   }
@@ -611,22 +616,22 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
     const now = new Date().toISOString();
     const task: DeadlineTask = { id: uid(), title: taskTitle.trim(), details: taskDetails.trim(), dueDate: taskDueDate,
       completed: false, completedAt: null, createdAt: now };
-    updateLocalData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: [...plan.tasks, task], updatedAt: now } : plan) }));
+    updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: [...plan.tasks, task], updatedAt: now } : plan) }));
     setTaskTitle(""); setTaskDetails(""); setTaskDueDate(""); setTaskPlanId("");
   }
   function toggleTask(planId: string, taskId: string) {
     const now = new Date().toISOString();
-    updateLocalData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id !== planId ? plan : {
+    updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id !== planId ? plan : {
       ...plan, updatedAt: now, tasks: plan.tasks.map((task) => task.id === taskId ? { ...task, completed: !task.completed, completedAt: task.completed ? null : now } : task)
     }) }));
   }
   function removeTask(planId: string, taskId: string) {
     if (!window.confirm("এই কাজটি মুছে ফেলবে?")) return;
-    updateLocalData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: plan.tasks.filter((task) => task.id !== taskId), updatedAt: new Date().toISOString() } : plan) }));
+    updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.map((plan) => plan.id === planId ? { ...plan, tasks: plan.tasks.filter((task) => task.id !== taskId), updatedAt: new Date().toISOString() } : plan) }));
   }
   function removeGoal(planId: string) {
     if (!window.confirm("এই লক্ষ্য ও এর কাজগুলো মুছে ফেলবে?")) return;
-    updateLocalData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.filter((plan) => plan.id !== planId) }));
+    updateWorkspaceData((current) => ({ ...current, deadlinePlans: current.deadlinePlans.filter((plan) => plan.id !== planId) }));
   }
 
   const sortedPlans = [...data.deadlinePlans].sort((a, b) => (a.startDate || a.createdAt.slice(0, 10)).localeCompare(b.startDate || b.createdAt.slice(0, 10)));
@@ -724,11 +729,11 @@ function GoalsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) 
   </div>;
 }
 
-function JournalView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) {
+function JournalView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   return <TrackerCenter data={data} onBack={() => navigateSection("home")}/>;
 }
 
-function MirrorView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) {
+function MirrorView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const [range, setRange] = useState<"7" | "30" | "90">("7");
   const end = todayKey(data.preferences.timeZone, data.preferences.maghribTime);
   const startDate = new Date(`${end}T12:00:00`); startDate.setDate(startDate.getDate() - Number(range) + 1);
@@ -757,7 +762,7 @@ function MirrorView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> })
   </div>;
 }
 
-function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnType<typeof getLocalDataSnapshot>; event: ReminderEvent; onCancel: () => void; onSaved: () => void }) {
+function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnType<typeof getWorkspaceData>; event: ReminderEvent; onCancel: () => void; onSaved: () => void }) {
   const prayerId = event.prayer;
   const configuredFard = prayerId ? data.prayerConfig[prayerId].find((part) => part.category === "fard") : undefined;
   const fard = configuredFard;
@@ -807,13 +812,13 @@ function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnT
     const existingFardDone = existingPartial?.components.find((part) => part.category === "fard")?.performedRakats || 0;
     const duplicateOnWaqtDate = !isQada && !!existingPartial && existingPartial.missedRakats === 0 && existingPartial.components.some((part) => part.category === "fard" && part.performed && part.performedRakats >= part.plannedRakats);
     if (existingObligation || duplicateOnWaqtDate) { setError("এই ওয়াক্তের রেকর্ড ইতিমধ্যে সম্পন্ন হয়েছে। ইতিহাস থেকে যাচাই করো।"); return; }
-    const pendingSnapshot = data.qadaEntries.find((item) => item.prayer === currentPrayer && item.missedDate === event.date && item.status === "pending");
-    const qadaRakats = pendingSnapshot?.rakats || Math.max(1, currentFard.rakats - existingFardDone);
-    const qadaId = isQada ? pendingSnapshot?.id || createLocalId() : undefined;
-    const entryId = createLocalId();
+    const pendingWorkspaceState = data.qadaEntries.find((item) => item.prayer === currentPrayer && item.missedDate === event.date && item.status === "pending");
+    const qadaRakats = pendingWorkspaceState?.rakats || Math.max(1, currentFard.rakats - existingFardDone);
+    const qadaId = isQada ? pendingWorkspaceState?.id || createWorkspaceRecordId() : undefined;
+    const entryId = createWorkspaceRecordId();
     const entry: PrayerEntry = {
       id: entryId,
-      date: isQada ? getLocalJournalDate(new Date(performedAt), data.preferences.timeZone, data.preferences.maghribTime || null) : event.date,
+      date: isQada ? getJournalDate(new Date(performedAt), data.preferences.timeZone, data.preferences.maghribTime || null) : event.date,
       prayer: currentPrayer,
       method: isQada ? "qada" : method,
       ...(qadaId ? { qadaId } : {}),
@@ -828,7 +833,7 @@ function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnT
       note: [note.trim(), isQada ? `ওয়াক্তের পরে আদায় · মূল পদ্ধতি: ${method === "jamaat" ? "জামাতে" : "বাসায় / একাকী"}` : ""].filter(Boolean).join(" · "),
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
     };
-    updateLocalData((current) => {
+    updateWorkspaceData((current) => {
       const duplicate = isQada
         ? current.prayerEntries.some((item) => item.method === "qada" && item.qadaId === qadaId)
         : current.prayerEntries.some((item) => item.date === entry.date && item.prayer === entry.prayer && item.method !== "qada" && item.missedRakats === 0);
@@ -842,7 +847,7 @@ function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnT
           ? { ...item, sourceEntryId: entryId, reason: reason.trim(), status: "settled" as const, settledAt: performedAt, settlementNote: note.trim() }
           : item);
       } else if (isQada && !current.qadaEntries.some((item) => item.prayer === currentPrayer && item.missedDate === event.date && item.status === "settled")) {
-        qadaEntries = [{ id: qadaId || createLocalId(), prayer: currentPrayer, missedDate: event.date, sourceEntryId: entryId, rakats: qadaRakats, reason: reason.trim(), status: "settled" as const, settledAt: performedAt, settlementNote: note.trim(), createdAt: new Date().toISOString() }, ...current.qadaEntries];
+        qadaEntries = [{ id: qadaId || createWorkspaceRecordId(), prayer: currentPrayer, missedDate: event.date, sourceEntryId: entryId, rakats: qadaRakats, reason: reason.trim(), status: "settled" as const, settledAt: performedAt, settlementNote: note.trim(), createdAt: new Date().toISOString() }, ...current.qadaEntries];
       }
       return { ...current, prayerEntries, qadaEntries, reminderEvents: current.reminderEvents.map((item) => item.id === event.id ? { ...item, resolved: true, response: "prayed" as const } : item) };
     });
@@ -866,7 +871,7 @@ function WaqtPrayerEntryForm({ data, event, onCancel, onSaved }: { data: ReturnT
   </form>;
 }
 
-function WaqtNotPerformedForm({ data, event, onCancel, onSaved }: { data: ReturnType<typeof getLocalDataSnapshot>; event: ReminderEvent; onCancel: () => void; onSaved: () => void }) {
+function WaqtNotPerformedForm({ data, event, onCancel, onSaved }: { data: ReturnType<typeof getWorkspaceData>; event: ReminderEvent; onCancel: () => void; onSaved: () => void }) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const prayerId = event.prayer;
@@ -875,12 +880,12 @@ function WaqtNotPerformedForm({ data, event, onCancel, onSaved }: { data: Return
     eventSubmit.preventDefault();
     if (!prayerId || !fard) { setError("সালাতের Configuration পাওয়া যায়নি।"); return; }
     if (reason.trim().length < 2) { setError("কেন আদায় হয়নি, সংক্ষেপে লিখো।"); return; }
-    updateLocalData((current) => {
+    updateWorkspaceData((current) => {
       const exists = current.qadaEntries.some((item) => item.prayer === prayerId && item.missedDate === event.date && item.status === "pending");
       const previousEntry = current.prayerEntries.find((item) => item.date === event.date && item.prayer === prayerId && item.method !== "qada");
       const alreadyCompleted = previousEntry?.components.find((part) => part.category === "fard")?.performedRakats || 0;
       const remainingRakats = Math.max(1, fard.rakats - alreadyCompleted);
-      const entryId = previousEntry?.id || createLocalId();
+      const entryId = previousEntry?.id || createWorkspaceRecordId();
       const now = new Date().toISOString();
       const updatedPrayerEntries = previousEntry
         ? current.prayerEntries.map((item) => item.id !== previousEntry.id ? item : { ...item, missedRakats: remainingRakats, missedReason: reason.trim(), updatedAt: now })
@@ -888,7 +893,7 @@ function WaqtNotPerformedForm({ data, event, onCancel, onSaved }: { data: Return
       return {
         ...current,
         prayerEntries: updatedPrayerEntries,
-        qadaEntries: exists ? current.qadaEntries : [{ id: createLocalId(), prayer: prayerId, missedDate: event.date, sourceEntryId: entryId, rakats: remainingRakats, reason: reason.trim(), status: "pending", settledAt: null, settlementNote: "", createdAt: now }, ...current.qadaEntries],
+        qadaEntries: exists ? current.qadaEntries : [{ id: createWorkspaceRecordId(), prayer: prayerId, missedDate: event.date, sourceEntryId: entryId, rakats: remainingRakats, reason: reason.trim(), status: "pending", settledAt: null, settlementNote: "", createdAt: now }, ...current.qadaEntries],
         reminderEvents: current.reminderEvents.map((item) => item.id === event.id ? { ...item, resolved: true, response: "not-prayed" as const } : item)
       };
     });
@@ -903,26 +908,26 @@ function WaqtNotPerformedForm({ data, event, onCancel, onSaved }: { data: Return
   </form>;
 }
 
-function NotificationPopover({ events, data }: { events: ReminderEvent[]; data: ReturnType<typeof getLocalDataSnapshot> }) {
+function NotificationPopover({ events, data }: { events: ReminderEvent[]; data: ReturnType<typeof getWorkspaceData> }) {
   const [open, setOpen] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [answerMode, setAnswerMode] = useState<{ id: string; choice: "prayed" | "not-prayed" } | null>(null);
   const ordered = [...events].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const unread = ordered.filter((item) => !item.readAt).length;
   function markRead(id: string) {
-    updateLocalData((current) => ({ ...current, reminderEvents: current.reminderEvents.map((item) => item.id === id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item) }));
+    updateWorkspaceData((current) => ({ ...current, reminderEvents: current.reminderEvents.map((item) => item.id === id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item) }));
   }
   function markAllRead() {
     const now = new Date().toISOString();
-    updateLocalData((current) => ({ ...current, reminderEvents: current.reminderEvents.map((item) => ({ ...item, readAt: item.readAt || now })) }));
+    updateWorkspaceData((current) => ({ ...current, reminderEvents: current.reminderEvents.map((item) => ({ ...item, readAt: item.readAt || now })) }));
   }
   function removeOne(id: string) {
-    updateLocalData((current) => ({ ...current, reminderEvents: current.reminderEvents.filter((item) => item.id !== id) }));
+    updateWorkspaceData((current) => ({ ...current, reminderEvents: current.reminderEvents.filter((item) => item.id !== id) }));
     if (expandedId === id) setExpandedId(null);
   }
   function removeAll() {
     if (!ordered.length || !window.confirm("সব নোটিফিকেশন মুছে ফেলবে?")) return;
-    updateLocalData((current) => ({ ...current, reminderEvents: [] }));
+    updateWorkspaceData((current) => ({ ...current, reminderEvents: [] }));
     setExpandedId(null);
   }
   return <div className="notification-popover-wrap">
@@ -957,13 +962,17 @@ function NotificationPopover({ events, data }: { events: ReminderEvent[]; data: 
   </div>;
 }
 
-function SettingsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> }) {
+function SettingsView({ data }: { data: ReturnType<typeof getWorkspaceData> }) {
   const { theme, setTheme, themeSaveState, themeSaveMessage } = useTheme();
   const [displayName, setDisplayName] = useState(data.preferences.displayName);
   const [maghribTime, setMaghribTime] = useState(data.preferences.maghribTime);
   const [saved, setSaved] = useState(false);
   const [backupMessage, setBackupMessage] = useState("");
   const [importing, setImporting] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState("");
   useEffect(() => {
     const timer = window.setTimeout(() => {
       setDisplayName(data.preferences.displayName);
@@ -973,8 +982,8 @@ function SettingsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> 
   }, [data.preferences.displayName, data.preferences.maghribTime]);
   async function savePreferences(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    updateLocalData((current) => ({ ...current, preferences: { ...current.preferences, displayName: displayName.trim().slice(0, 80), timeZone: "Asia/Dhaka", maghribTime } }));
-    await flushLocalData();
+    updateWorkspaceData((current) => ({ ...current, preferences: { ...current.preferences, displayName: displayName.trim().slice(0, 80), timeZone: "Asia/Dhaka", maghribTime } }));
+    await flushWorkspaceChanges();
     if (getCloudSyncState() === "synced") {
       setSaved(true);
       window.setTimeout(() => setSaved(false), 1800);
@@ -983,7 +992,7 @@ function SettingsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> 
     }
   }
   async function exportData() {
-    await flushLocalData();
+    await flushWorkspaceChanges();
     if (getCloudSyncState() !== "synced") {
       setBackupMessage(getCloudSyncMessage() || "ব্যাকআপের আগে অনলাইন সংরক্ষণ সম্পন্ন করো।");
       return;
@@ -1001,12 +1010,41 @@ function SettingsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> 
     try {
       const parsed = JSON.parse(await file.text()) as unknown;
       if (typeof parsed !== "object" || parsed === null || !("data" in parsed)) throw new Error("ফাইলটি সঠিক backup নয়।");
-      replaceLocalData((parsed as { data: unknown }).data);
-      await flushLocalData();
+      replaceWorkspaceData((parsed as { data: unknown }).data);
+      await flushWorkspaceChanges();
       setBackupMessage(getCloudSyncState() === "synced" ? "Backup সফলভাবে অনলাইন ওয়ার্কস্পেসে পুনরুদ্ধার হয়েছে।" : getCloudSyncMessage() || "পুনরুদ্ধারের তথ্য এখনো অনলাইনে সংরক্ষিত হয়নি।");
     } catch (error) {
       setBackupMessage(error instanceof Error ? error.message : "Backup পড়া যায়নি।");
     } finally { setImporting(false); }
+  }
+  async function deleteAccount(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setDeleteMessage("");
+    if (deleteConfirmation !== "DELETE") {
+      setDeleteMessage("নিশ্চিত করতে ইংরেজিতে DELETE লিখো।");
+      return;
+    }
+    setDeleteBusy(true);
+    try {
+      // Do not delete an account while a previous online write is still pending.
+      await flushWorkspaceChanges();
+      if (getCloudSyncState() !== "synced") {
+        throw new Error(getCloudSyncMessage() || "আগের পরিবর্তনগুলো অনলাইনে সংরক্ষিত হয়নি।");
+      }
+      const response = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+        body: JSON.stringify({ password: deletePassword, confirmation: deleteConfirmation })
+      });
+      const result = await response.json().catch(() => ({})) as { message?: string };
+      if (!response.ok) throw new Error(result.message || "অ্যাকাউন্ট মুছে ফেলা যায়নি।");
+      window.location.replace("/login?accountDeleted=1");
+    } catch (error) {
+      setDeleteMessage(error instanceof Error ? error.message : "অ্যাকাউন্ট মুছে ফেলা যায়নি।");
+      setDeleteBusy(false);
+    }
   }
   return (
     <div className="view-stack">
@@ -1018,6 +1056,18 @@ function SettingsView({ data }: { data: ReturnType<typeof getLocalDataSnapshot> 
       </div>
       <Panel eyebrow="অনলাইন সংরক্ষণ" title="ব্যক্তিগত অনলাইন ওয়ার্কস্পেস"><div className="backup-summary"><span className="backup-summary-icon"><ShieldCheck size={20}/></span><div><strong>{getCloudSyncState() === "synced" ? "সব তথ্য অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" ? "অনলাইনে সংরক্ষণ চলছে" : getCloudSyncState() === "offline" ? "ইন্টারনেট সংযোগ নেই" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত হচ্ছে"}</strong><p>{data.prayerEntries.length + data.extraPrayerEntries.length}টি সালাত · {data.quranEntries.length}টি কুরআন পাঠ · {data.dhikrSessions.length}টি জিকির · {data.deadlinePlans.length}টি সময়সীমা · {data.journeys.length}টি যাত্রা</p></div><span className={`local-badge cloud-status-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? "অনলাইনে আছে" : getCloudSyncState() === "offline" ? "সংযোগ নেই" : getCloudSyncState() === "error" ? "সমস্যা" : getCloudSyncState() === "syncing" ? "সংরক্ষণ হচ্ছে" : "প্রস্তুতি"}</span></div><div className="backup-actions"><button type="button" className="button-secondary" onClick={exportData}><Download size={15}/> JSON ব্যাকআপ ডাউনলোড</button><label className="button-secondary upload-button"><Upload size={15}/>{importing ? "পড়া হচ্ছে…" : "ব্যাকআপ পুনরুদ্ধার"}<input type="file" accept="application/json,.json" onChange={(event) => void importData(event.target.files?.[0])} disabled={importing}/></label></div>{backupMessage && <p className="inline-feedback" role="status">{backupMessage}</p>}<p className="security-caption"><LockKeyhole size={14}/> রেকর্ড অনলাইনে সংরক্ষিত হয়; ইন্টারনেট না থাকলে নতুন পরিবর্তন সংরক্ষণ হয় না। JSON ব্যাকআপ এনক্রিপ্ট করা নয়—নিরাপদে রাখো।</p></Panel>
       <div className={`local-data-note cloud-sync-note cloud-sync-${getCloudSyncState()}`}>{getCloudSyncState() === "synced" ? <Cloud size={15}/> : <CloudOff size={15}/>} {getCloudSyncMessage() || "তোমার পরিবর্তন অনলাইনে সংরক্ষিত হয়।"}</div>
+      <Panel className="account-danger-panel" eyebrow="স্থায়ী সিদ্ধান্ত" title="অ্যাকাউন্ট ও সব তথ্য মুছে ফেলা">
+        <div className="account-danger-copy">
+          <strong>এই কাজটি ফেরানো যাবে না।</strong>
+          <p>অ্যাকাউন্ট মুছে দিলে সালাত, কাজা, কুরআন, জিকির, লক্ষ্য, আত্মশুদ্ধির নোট, সেটিংস এবং ব্যক্তিগত ছবি স্থায়ীভাবে মুছে যাবে।</p>
+        </div>
+        <form className="workspace-form account-delete-form" onSubmit={deleteAccount}>
+          <label>বর্তমান পাসওয়ার্ড<input type="password" autoComplete="current-password" minLength={8} maxLength={128} required value={deletePassword} onChange={(event) => setDeletePassword(event.target.value)} placeholder="পরিচয় নিশ্চিত করতে পাসওয়ার্ড" /></label>
+          <label>নিশ্চিত করতে DELETE লিখো<input value={deleteConfirmation} onChange={(event) => setDeleteConfirmation(event.target.value)} autoComplete="off" spellCheck={false} required placeholder="DELETE" /></label>
+          {deleteMessage && <p className="inline-feedback account-delete-feedback" role="alert">{deleteMessage}</p>}
+          <div className="form-actions"><button type="submit" className="button-danger-solid" disabled={deleteBusy || !deletePassword || deleteConfirmation !== "DELETE"}>{deleteBusy ? "অ্যাকাউন্ট মুছে ফেলা হচ্ছে…" : <><Trash2 size={15}/> অ্যাকাউন্ট স্থায়ীভাবে মুছে ফেলো</>}</button></div>
+        </form>
+      </Panel>
     </div>
   );
 }
@@ -1038,7 +1088,6 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
     const timer = window.setInterval(update, 15_000);
     return () => window.clearInterval(timer);
   }, [data]);
-  const day = data ? liveDay || todayKey(data.preferences.timeZone, data.preferences.maghribTime) : "";
 
   useEffect(() => {
     NAV_ITEMS.forEach((item) => {
@@ -1077,7 +1126,7 @@ export function FrontendWorkspace({ userEmail, initialSection = "home" }: { user
       <main className="workspace-main">
         <header className="workspace-topbar"><div className="mobile-brand"><BrandMark compact/><strong>Amar Nfser Hisab</strong></div><div className="topbar-context"><span className="breadcrumb-root">আমার পরিসর</span><ChevronRight size={14}/><strong>{selected.label}</strong></div><div className="topbar-right"><span className={`local-mode-label cloud-status-${getCloudSyncState()}`}><span/>{getCloudSyncState() === "synced" ? "অনলাইনে সংরক্ষিত" : getCloudSyncState() === "syncing" || getCloudSyncState() === "loading" ? "অনলাইনে সংরক্ষণ হচ্ছে" : getCloudSyncState() === "offline" ? "অফলাইন · সংরক্ষিত নয়" : getCloudSyncState() === "error" ? "অনলাইন সংরক্ষণে সমস্যা" : "অনলাইন সংরক্ষণ প্রস্তুত"}</span><NotificationPopover events={data.reminderEvents} data={data}/><button className="topbar-icon-button mobile-settings-shortcut" type="button" onClick={() => navigateSection("settings")} aria-label="নোটিফিকেশন ও অ্যাপ সেটিংস"><Settings size={18}/></button><button className="topbar-icon-button" type="button" onClick={() => setTheme(theme === "dark" ? "light" : "dark")} aria-label="থিম পরিবর্তন">{theme === "dark" ? <Sun size={18}/> : <Moon size={18}/>}</button><span className="topbar-avatar" title={displayName}>{getInitials(displayName)}</span></div></header>
         <div className="workspace-content">
-          {section === "home" && <DashboardView data={data}/>} 
+          {section === "home" && <DashboardView key={liveDay} data={data}/>} 
           {section === "goals" && <GoalsView data={data}/>} 
           {section === "journal" && <JournalView data={data}/>} 
           {section === "mirror" && <MirrorView data={data}/>} 

@@ -6,14 +6,14 @@ const read = (path) => fs.readFileSync(new URL(path, import.meta.url), 'utf8');
 
 test('cloud-only workspace waits for authenticated Supabase hydration and blocks when it fails', () => {
   const workspace = read('../src/components/frontend-workspace.tsx');
-  assert.match(workspace, /hydrateLocalData\(\)\.finally/);
+  assert.match(workspace, /hydrateWorkspaceData\(\)\.finally/);
   assert.match(workspace, /return loaded && !getWorkspaceLoadError\(\) \? data : null/);
   assert.match(workspace, /workspace-loading/);
   assert.match(workspace, /অনলাইন তথ্য খোলা যায়নি/);
 });
 
 test('Qada entries retain the rakats obligation snapshot across configuration changes', () => {
-  const store = read('../src/lib/local/store.ts');
+  const store = read('../src/lib/workspace/store.ts');
   const tracker = read('../src/modules/trackers/tracker-center.tsx');
   assert.match(store, /sourceEntryId: string \| null; rakats: number/);
   assert.match(store, /requestedRakats/);
@@ -74,8 +74,8 @@ test('all new customer-facing app identity remains Bengali-first with English br
 test('dashboard reminder runtime dependencies are explicitly imported and journal fetch helper is available', () => {
   const settings = read('../src/modules/trackers/prayer-settings.tsx');
   const journal = read('../src/modules/journal/journal-workspace.tsx');
-  assert.match(settings, /import \{ getLocalDataSnapshot, getLocalJournalDate, updateLocalData/);
-  assert.match(settings, /getLocalDataSnapshot\(\)/);
+  assert.match(settings, /import \{ getWorkspaceData, getJournalDate, updateWorkspaceData/);
+  assert.match(settings, /getWorkspaceData\(\)/);
   assert.match(journal, /import \{ fetchJsonOnce \} from "@\/lib\/client\/fetch-json-once"/);
 });
 

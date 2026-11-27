@@ -28,7 +28,7 @@ test('prayer time manual refresh state exists and countdown recomputes without m
   assert.doesNotMatch(source, /useMemo/);
 });
 
-test('static hadith card replaces the unused personal dua collection and rotates automatically', () => {
+test('static hadith card selects a stable daily record and supports manual rotation', () => {
   const tracker = read('../src/modules/trackers/tracker-center.tsx');
   const workspace = read('../src/components/frontend-workspace.tsx');
   const hadith = JSON.parse(read('../src/data/hadith-bn.json'));
@@ -36,8 +36,10 @@ test('static hadith card replaces the unused personal dua collection and rotates
   assert.equal(new Set(hadith.hadiths.map((item) => item.id)).size, 20);
   assert.doesNotMatch(tracker, /function DuaForm|দোয়া সংগ্রহ/);
   assert.match(workspace, /function DailyHadithCard/);
-  assert.match(workspace, /useEffect\(\(\) => \{ setItem\(chooseRandomHadith\(\)\); \}, \[\]\)/);
+  assert.match(workspace, /function chooseDailyHadith\(dateKey: string\)/);
+  assert.match(workspace, /useState<HadithRecord>\(\(\) => chooseDailyHadith\(date\)\)/);
   assert.match(workspace, /onClick=\{\(\) => setItem\(chooseRandomHadith\(item\.id\)\)\}/);
+  assert.doesNotMatch(workspace, /useEffect\(\(\) => \{ setItem\(chooseRandomHadith\(\)\); \}, \[\]\)/);
   assert.match(workspace, /অন্য হাদিস/);
   assert.doesNotMatch(workspace, /setInterval\(.*hadith/i);
 });

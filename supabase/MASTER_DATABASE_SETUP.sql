@@ -1,8 +1,8 @@
 -- Amar Nfser Hisab · consolidated master schema
 -- Run once in the Supabase SQL Editor for a new project.
 -- This file installs the current account, journal, tracker, goal, backup,
--- analytics, rate-limit and table-per-record workspace schema. The old snapshot
--- table is retained only as a one-time migration source and is not used at runtime.
+-- analytics, rate-limit and relational workspace schema. No browser/local
+-- database or JSON workspace snapshot is created by this release.
 
 begin;
 
@@ -45,19 +45,6 @@ create table if not exists public.user_preferences (
   updated_at timestamptz not null default now(),
   constraint user_preferences_latitude_range check (prayer_latitude is null or prayer_latitude between -90 and 90),
   constraint user_preferences_longitude_range check (prayer_longitude is null or prayer_longitude between -180 and 180)
-);
-
--- Legacy archive from Releases 1.0–1.1. Release 1.2+ reads and writes per-record
--- workspace_* tables installed below. This table is retained only to migrate older data;
--- runtime application routes do not read or write this snapshot.
-create table if not exists public.user_workspace_snapshots (
-  user_id uuid primary key references auth.users(id) on delete cascade,
-  schema_version integer not null default 3 check (schema_version = 3),
-  payload jsonb not null,
-  payload_bytes integer not null default 0 check (payload_bytes between 0 and 5242880),
-  updated_at timestamptz not null default now(),
-  created_at timestamptz not null default now(),
-  constraint workspace_payload_is_object check (jsonb_typeof(payload) = 'object')
 );
 
 create table if not exists public.self_purification_journeys (
@@ -348,7 +335,7 @@ do $$
 declare table_name text;
 begin
   foreach table_name in array array[
-    'profiles','user_preferences','user_workspace_snapshots','self_purification_journeys',
+    'profiles','user_preferences','self_purification_journeys',
     'obstacle_templates','journey_obstacles','learning_goals','learning_goal_tasks','prayer_logs',
     'prayer_components','qada_obligations','fasting_templates','fasting_logs',
     'quran_reading_logs','dhikr_templates','dhikr_logs','deed_templates','deed_logs',
@@ -379,7 +366,7 @@ do $$
 declare table_name text;
 begin
   foreach table_name in array array[
-    'user_preferences','user_workspace_snapshots','self_purification_journeys','obstacle_templates',
+    'user_preferences','self_purification_journeys','obstacle_templates',
     'journey_obstacles','learning_goals','learning_goal_tasks','prayer_logs','prayer_components',
     'qada_obligations','fasting_templates','fasting_logs','quran_reading_logs',
     'dhikr_templates','dhikr_logs','deed_templates','deed_logs','daily_journals','journal_attachments','notifications'
@@ -618,7 +605,7 @@ grant execute on function public.save_prayer_entry(text,date,text,text,integer,t
 grant execute on function public.get_nafs_report_dataset(date,date,date) to authenticated;
 grant execute on function public.restore_personal_backup(jsonb) to authenticated;
 
-grant select, insert, update, delete on public.profiles, public.user_preferences, public.user_workspace_snapshots,
+grant select, insert, update, delete on public.profiles, public.user_preferences,
   public.self_purification_journeys, public.obstacle_templates, public.journey_obstacles, public.learning_goals,
   public.learning_goal_tasks, public.prayer_logs, public.prayer_components, public.qada_obligations,
   public.fasting_templates, public.fasting_logs, public.quran_reading_logs,
@@ -628,96 +615,6 @@ grant select, insert on public.qada_settlements to authenticated;
 revoke update, delete on public.qada_settlements from authenticated;
 
 grant usage, select on all sequences in schema public to authenticated;
-
-create or replace function public.save_user_workspace_snapshot(
-  p_payload jsonb,
-  p_expected_updated_at timestamptz
-)
-returns table(updated_at timestamptz, payload_bytes integer)
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-  v_user uuid := auth.uid();
-  v_current_updated_at timestamptz;
-  v_saved_at timestamptz := clock_timestamp();
-  v_bytes integer;
-  v_required text[] := array[
-    'goals','records','prayerDays','notes','prayerEntries','qadaEntries','quranEntries',
-    'extraPrayerEntries','dhikrTemplates','dhikrSessions','fastingEntries','deedEntries',
-    'avoidEntries','duaItems','studyEntries','habitDefinitions','habitLogs','reflections',
-    'journeys','journeyMilestones','journeyObservations','deadlinePlans','prayerTimesCache','reminderEvents'
-  ];
-  v_key text;
-begin
-  if v_user is null then
-    raise exception 'authentication required' using errcode = '28000';
-  end if;
-
-  if p_payload is null or jsonb_typeof(p_payload) <> 'object' or coalesce((p_payload->>'schemaVersion')::integer, 0) <> 3 then
-    raise exception 'invalid workspace payload' using errcode = '22023';
-  end if;
-
-  foreach v_key in array v_required loop
-    if jsonb_typeof(p_payload->v_key) is distinct from 'array' then
-      raise exception 'workspace array missing: %', v_key using errcode = '22023';
-    end if;
-  end loop;
-
-  if jsonb_typeof(p_payload->'preferences') is distinct from 'object'
-    or jsonb_typeof(p_payload->'prayerConfig') is distinct from 'object'
-    or jsonb_typeof(p_payload->'prayerPreferences') is distinct from 'object'
-    or coalesce(p_payload->>'updatedAt','') = '' then
-    raise exception 'workspace object missing' using errcode = '22023';
-  end if;
-
-  -- Recompute size from the actual JSONB value. Never trust a client-provided byte count.
-  v_bytes := octet_length(p_payload::text);
-  if v_bytes < 2 or v_bytes > 5242880 then
-    raise exception 'workspace payload size out of range' using errcode = '22023';
-  end if;
-
-  -- Serialize the first insert as well as updates. A row lock alone cannot
-  -- protect the no-row-yet case for two simultaneous first writes.
-  perform pg_advisory_xact_lock(hashtextextended(v_user::text, 0));
-
-  select s.updated_at
-    into v_current_updated_at
-    from public.user_workspace_snapshots s
-    where s.user_id = v_user
-    for update;
-
-  if found then
-    if v_current_updated_at is distinct from p_expected_updated_at then
-      raise exception 'WORKSPACE_VERSION_CONFLICT' using errcode = '40001';
-    end if;
-
-    update public.user_workspace_snapshots s
-      set schema_version = 3,
-          payload = p_payload,
-          payload_bytes = v_bytes,
-          updated_at = v_saved_at
-      where s.user_id = v_user;
-  else
-    if p_expected_updated_at is not null then
-      raise exception 'WORKSPACE_VERSION_CONFLICT' using errcode = '40001';
-    end if;
-
-    insert into public.user_workspace_snapshots(user_id, schema_version, payload, payload_bytes, updated_at)
-      values (v_user, 3, p_payload, v_bytes, v_saved_at);
-  end if;
-
-  return query
-    select s.updated_at, s.payload_bytes
-    from public.user_workspace_snapshots s
-    where s.user_id = v_user;
-end;
-$$;
-
-revoke all on function public.save_user_workspace_snapshot(jsonb,timestamptz) from public, anon;
-grant execute on function public.save_user_workspace_snapshot(jsonb,timestamptz) to authenticated;
-
 
 -- Updated-at triggers.
 do $$
@@ -742,10 +639,8 @@ drop policy if exists "journal private owner delete" on storage.objects;
 create policy "journal private owner delete" on storage.objects for delete to authenticated using (bucket_id='journal-private' and owner_id=auth.uid()::text);
 
 
--- Release 1.2 relational workspace migration (also shipped separately for existing databases).
--- Release 1.2: move the active workspace from one JSON snapshot to
--- owner-scoped, table-per-collection records. The old snapshot table is kept
--- as a read-only migration source; this application no longer reads or writes it.
+-- Relational workspace: owner-scoped, table-per-collection records.
+-- All durable tracker state is stored in the authenticated account's rows.
 
 create table if not exists public.workspace_sync_state (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -982,86 +877,6 @@ $$;
 
 revoke all on function public.save_relational_workspace_changes(jsonb,timestamptz) from public, anon;
 grant execute on function public.save_relational_workspace_changes(jsonb,timestamptz) to authenticated;
-
--- One-time safe migration from the old JSON snapshot table. The old table is
--- deliberately retained as an archive; after this migration, runtime reads
--- and writes use only the relational tables above.
-do $$
-declare
-  v_snapshot record;
-  v_map record;
-  v_row jsonb;
-  v_id text;
-  v_date_text text;
-  v_date date;
-  v_record jsonb;
-  v_tasks jsonb;
-  v_task jsonb;
-begin
-  if to_regclass('public.user_workspace_snapshots') is null then return; end if;
-  for v_snapshot in execute 'select user_id,payload,updated_at from public.user_workspace_snapshots' loop
-    if v_snapshot.payload is null or jsonb_typeof(v_snapshot.payload) <> 'object' then continue; end if;
-    for v_map in select * from (values
-      ('goals','workspace_legacy_goals','deadline'),('records','workspace_legacy_records','date'),
-      ('prayerDays','workspace_prayer_days','date'),('notes','workspace_notes','date'),
-      ('prayerEntries','workspace_prayer_entries','date'),('qadaEntries','workspace_qada_entries','missedDate'),
-      ('quranEntries','workspace_quran_entries','date'),('extraPrayerEntries','workspace_extra_prayer_entries','date'),
-      ('dhikrTemplates','workspace_dhikr_templates',''),('dhikrSessions','workspace_dhikr_sessions','date'),
-      ('fastingEntries','workspace_fasting_entries','date'),('deedEntries','workspace_deed_entries','date'),
-      ('avoidEntries','workspace_avoid_entries','date'),('duaItems','workspace_dua_items',''),
-      ('studyEntries','workspace_study_entries','date'),('habitDefinitions','workspace_habit_definitions',''),
-      ('habitLogs','workspace_habit_logs','date'),('reflections','workspace_reflections','date'),
-      ('journeys','workspace_journeys','startDate'),('journeyMilestones','workspace_journey_milestones','completedAt'),
-      ('journeyObservations','workspace_journey_observations','date'),('deadlinePlans','workspace_deadline_plans','startDate'),
-      ('prayerTimesCache','workspace_prayer_times_cache','date'),('reminderEvents','workspace_reminder_events','date')
-    ) as m(collection_key,table_name,date_key) loop
-      if jsonb_typeof(v_snapshot.payload->v_map.collection_key) <> 'array' then continue; end if;
-      for v_row in select value from jsonb_array_elements(v_snapshot.payload->v_map.collection_key) loop
-        v_record := v_row;
-        if v_map.collection_key = 'deadlinePlans' then
-          v_tasks := coalesce(v_row->'tasks','[]'::jsonb);
-          v_record := v_row - 'tasks';
-        else
-          v_tasks := '[]'::jsonb;
-        end if;
-        v_id := coalesce(nullif(v_record->>'id',''), nullif(v_record->>'date',''),
-          case when v_map.collection_key = 'prayerTimesCache' then coalesce(v_record->>'date','') || ':' || coalesce(v_record->>'latitude','') || ':' || coalesce(v_record->>'longitude','') end,
-          'legacy-' || substr(md5(v_record::text),1,32));
-        v_date_text := nullif(v_record->>v_map.date_key,'');
-        v_date := null;
-        if v_date_text is not null and v_date_text ~ '^\d{4}-\d{2}-\d{2}$' then v_date := v_date_text::date; end if;
-        execute format(
-          'insert into public.%I(user_id,id,record_date,record,created_at,updated_at) values($1,$2,$3,$4,coalesce(nullif($4->>''createdAt'','''')::timestamptz,$5),$5) on conflict(user_id,id) do nothing',
-          v_map.table_name
-        ) using v_snapshot.user_id, v_id, v_date, v_record, v_snapshot.updated_at;
-        if v_map.collection_key = 'deadlinePlans' and jsonb_typeof(v_tasks) = 'array' then
-          for v_task in select value from jsonb_array_elements(v_tasks) loop
-            v_id := coalesce(nullif(v_task->>'id',''), 'legacy-task-' || substr(md5(v_task::text),1,32));
-            v_record := v_task || jsonb_build_object('planId', coalesce(v_row->>'id',''));
-            v_date_text := nullif(v_task->>'dueDate','');
-            v_date := case when v_date_text ~ '^\d{4}-\d{2}-\d{2}$' then v_date_text::date else null end;
-            insert into public.workspace_deadline_tasks(user_id,id,record_date,record,created_at,updated_at)
-              values(v_snapshot.user_id,v_id,v_date,v_record,coalesce(nullif(v_task->>'createdAt','')::timestamptz,v_snapshot.updated_at),v_snapshot.updated_at)
-              on conflict(user_id,id) do nothing;
-          end loop;
-        end if;
-      end loop;
-    end loop;
-    insert into public.workspace_user_settings(user_id,id,record,updated_at)
-      values(v_snapshot.user_id,'primary',jsonb_build_object(
-        'preferences',coalesce(v_snapshot.payload->'preferences','{}'::jsonb),
-        'prayerConfig',coalesce(v_snapshot.payload->'prayerConfig','{}'::jsonb),
-        'prayerPreferences',coalesce(v_snapshot.payload->'prayerPreferences','{}'::jsonb)
-      ),v_snapshot.updated_at)
-      on conflict(user_id,id) do nothing;
-    insert into public.workspace_sync_state(user_id,updated_at) values(v_snapshot.user_id,v_snapshot.updated_at)
-      on conflict(user_id) do update set updated_at = greatest(public.workspace_sync_state.updated_at, excluded.updated_at);
-  end loop;
-end $$;
-
-comment on table public.user_workspace_snapshots is 'Legacy snapshot archive. Release 1.2+ runtime uses workspace_* record tables.';
-revoke insert, update, delete on table public.user_workspace_snapshots from authenticated;
-revoke execute on function public.save_user_workspace_snapshot(jsonb, timestamptz) from public, anon, authenticated;
 
 -- Enforce non-overlapping goal date ranges for future inserts and edits.
 create or replace function public.prevent_workspace_goal_overlap()

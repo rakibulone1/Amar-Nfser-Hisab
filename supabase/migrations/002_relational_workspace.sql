@@ -1,8 +1,7 @@
 begin;
 
--- Release 1.2: move the active workspace from one JSON snapshot to
--- owner-scoped, table-per-collection records. The old snapshot table is kept
--- as a read-only migration source; this application no longer reads or writes it.
+-- Historical migration: move prior-release workspace data into owner-scoped
+-- table-per-collection records. Release 1.2.5 removes the retired source table.
 
 create table if not exists public.workspace_sync_state (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -240,9 +239,8 @@ $$;
 revoke all on function public.save_relational_workspace_changes(jsonb,timestamptz) from public, anon;
 grant execute on function public.save_relational_workspace_changes(jsonb,timestamptz) to authenticated;
 
--- One-time safe migration from the old JSON snapshot table. The old table is
--- deliberately retained as an archive; after this migration, runtime reads
--- and writes use only the relational tables above.
+-- One-time migration from the pre-1.2 browser-era database snapshot, if it exists.
+-- The follow-up Release 1.2.5 migration removes this retired source table.
 do $$
 declare
   v_snapshot record;
@@ -316,9 +314,16 @@ begin
   end loop;
 end $$;
 
-comment on table public.user_workspace_snapshots is 'Legacy snapshot archive. Release 1.2+ runtime uses workspace_* record tables.';
-revoke insert, update, delete on table public.user_workspace_snapshots from authenticated;
-revoke execute on function public.save_user_workspace_snapshot(jsonb, timestamptz) from public, anon, authenticated;
+do $$
+begin
+  if to_regclass('public.user_workspace_snapshots') is not null then
+    execute 'comment on table public.user_workspace_snapshots is ''Retired migration source. Dropped by Release 1.2.5.''';
+    execute 'revoke insert, update, delete on table public.user_workspace_snapshots from authenticated';
+  end if;
+  if to_regprocedure('public.save_user_workspace_snapshot(jsonb,timestamptz)') is not null then
+    execute 'revoke execute on function public.save_user_workspace_snapshot(jsonb,timestamptz) from public, anon, authenticated';
+  end if;
+end $$;
 
 -- Enforce non-overlapping goal date ranges for future inserts and edits.
 create or replace function public.prevent_workspace_goal_overlap()

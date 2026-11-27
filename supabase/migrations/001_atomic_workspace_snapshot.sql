@@ -1,3 +1,8 @@
+-- HISTORICAL MIGRATION — RETIRED IN RELEASE 1.2.5.
+-- Keep this file only as migration history for old installations.
+-- Do not run it for a new database or after migrations 002/003.
+-- New databases must use supabase/MASTER_DATABASE_SETUP.sql only.
+
 -- Amar Nfser Hisab · incremental workspace reliability migration
 -- Run once AFTER the existing MASTER_DATABASE_SETUP.sql.
 -- Adds no tables, extensions, background jobs or paid services.

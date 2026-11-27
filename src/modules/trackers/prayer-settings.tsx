@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { AlarmClock, Bell, CheckCircle2, MapPin, Plus, Save, ShieldCheck, X } from "lucide-react";
-import { getLocalDataSnapshot, getLocalJournalDate, updateLocalData, type LocalAppData, type PrayerId, type PrayerPartCategory } from "@/lib/local/store";
+import { getWorkspaceData, getJournalDate, updateWorkspaceData, type WorkspaceData, type PrayerId, type PrayerPartCategory } from "@/lib/workspace/store";
 import { getPrayerWaqtWindow, nextDhakaDate } from "@/lib/prayer-time";
 
 const PRAYERS: PrayerId[] = ["maghrib", "isha", "fajr", "dhuhr", "asr"];
@@ -10,7 +10,7 @@ const LABELS: Record<PrayerId, string> = { fajr: "ফজর", dhuhr: "যোহ�
 const CATEGORIES: { id: PrayerPartCategory; label: string }[] = [{ id: "sunnah", label: "সুন্নত" }, { id: "fard", label: "ফরজ" }, { id: "wajib", label: "ওয়াজিব" }, { id: "nafl", label: "নফল" }];
 const bn = (n: number) => n.toLocaleString("bn-BD");
 
-export function PrayerSettingsPanel({ data }: { data: LocalAppData }) {
+export function PrayerSettingsPanel({ data }: { data: WorkspaceData }) {
   const [prayer, setPrayer] = useState<PrayerId>("maghrib");
   const [label, setLabel] = useState("");
   const [category, setCategory] = useState<PrayerPartCategory>("nafl");
@@ -50,7 +50,7 @@ export function PrayerSettingsPanel({ data }: { data: LocalAppData }) {
   const activeParts = data.prayerConfig[prayer];
 
   function updatePart(id: string, patch: Partial<(typeof activeParts)[number]>) {
-    updateLocalData((current) => ({ ...current, prayerConfig: { ...current.prayerConfig, [prayer]: current.prayerConfig[prayer].map((part) => part.id === id ? { ...part, ...patch } : part) } }));
+    updateWorkspaceData((current) => ({ ...current, prayerConfig: { ...current.prayerConfig, [prayer]: current.prayerConfig[prayer].map((part) => part.id === id ? { ...part, ...patch } : part) } }));
   }
   function requestPartDisable(part: (typeof activeParts)[number]) {
     if (part.category === "fard" || part.required) return;
@@ -69,14 +69,14 @@ export function PrayerSettingsPanel({ data }: { data: LocalAppData }) {
   }
   function addPart(event: FormEvent<HTMLFormElement>) {
     event.preventDefault(); if (!label.trim()) return;
-    updateLocalData((current) => ({ ...current, prayerConfig: { ...current.prayerConfig, [prayer]: [...current.prayerConfig[prayer], { id: `custom-${Date.now().toString(36)}`, label: label.trim(), category, rakats: Math.max(0, Math.min(20, Number(rakats) || 0)), enabled: true, required: false }] } }));
+    updateWorkspaceData((current) => ({ ...current, prayerConfig: { ...current.prayerConfig, [prayer]: [...current.prayerConfig[prayer], { id: `custom-${Date.now().toString(36)}`, label: label.trim(), category, rakats: Math.max(0, Math.min(20, Number(rakats) || 0)), enabled: true, required: false }] } }));
     setLabel(""); setRakats("2"); setSaved("সালাতের অংশ যোগ হয়েছে।");
   }
   function savePrayerSettings(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const lat = Number(latitude); const lon = Number(longitude);
     if (!latitude.trim() || !longitude.trim() || !Number.isFinite(lat) || lat < -90 || lat > 90 || !Number.isFinite(lon) || lon < -180 || lon > 180) { setSaved("অবস্থানের অক্ষাংশ ও দ্রাঘিমাংশ সঠিকভাবে লিখো।"); return; }
-    updateLocalData((current) => ({ ...current, preferences: { ...current.preferences, remindersEnabled }, prayerPreferences: { ...current.prayerPreferences, locationLabel: locationLabel.trim() || "নির্বাচিত অবস্থান", latitude: lat, longitude: lon, mosqueTimes: mosqueDraft, mosqueReminderMinutes: Math.max(1, Math.min(120, Number(leadMinutes) || 10)), nightQadaReminder: nightReminder, waqtEndPrompt: waqtPrompt } }));
+    updateWorkspaceData((current) => ({ ...current, preferences: { ...current.preferences, remindersEnabled }, prayerPreferences: { ...current.prayerPreferences, locationLabel: locationLabel.trim() || "নির্বাচিত অবস্থান", latitude: lat, longitude: lon, mosqueTimes: mosqueDraft, mosqueReminderMinutes: Math.max(1, Math.min(120, Number(leadMinutes) || 10)), nightQadaReminder: nightReminder, waqtEndPrompt: waqtPrompt } }));
     setSaved("সালাতের সময় ও জামাতের সেটিংস সংরক্ষিত হয়েছে।");
   }
   async function askPermission() {
@@ -84,7 +84,7 @@ export function PrayerSettingsPanel({ data }: { data: LocalAppData }) {
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
-      updateLocalData((current) => ({ ...current, prayerPreferences: { ...current.prayerPreferences, notificationPermissionAsked: true } }));
+      updateWorkspaceData((current) => ({ ...current, prayerPreferences: { ...current.prayerPreferences, notificationPermissionAsked: true } }));
       setSaved(result === "granted" ? "নোটিফিকেশনের অনুমতি চালু হয়েছে।" : "নোটিফিকেশনের অনুমতি দেওয়া হয়নি। ব্রাউজার সেটিংস থেকে অনুমতি দিতে পারো।");
     } catch {
       setSaved("এই ব্রাউজারে নোটিফিকেশনের অনুমতি নেওয়া যায়নি।");
@@ -137,10 +137,10 @@ export function PrayerReminderEngine({ userName = "" }: { userName?: string }) {
     let active = true;
     const run = () => {
       if (!active) return;
-      const data = getLocalDataSnapshot();
+      const data = getWorkspaceData();
       if (!data.preferences.remindersEnabled) return;
       const { date: civilDate, minutes } = getDhakaDateAndTime();
-      const journalDate = getLocalJournalDate(new Date(), data.preferences.timeZone || "Asia/Dhaka", data.preferences.maghribTime || null);
+      const journalDate = getJournalDate(new Date(), data.preferences.timeZone || "Asia/Dhaka", data.preferences.maghribTime || null);
       const times = data.prayerTimesCache.find((item) => item.date === civilDate && item.latitude === data.prayerPreferences.latitude && item.longitude === data.prayerPreferences.longitude);
       if (!times) return;
       const tomorrowDate = nextDhakaDate(civilDate);
@@ -156,7 +156,7 @@ export function PrayerReminderEngine({ userName = "" }: { userName?: string }) {
       const events = data.reminderEvents;
       const addEvent = (key: string, eventDate: string, kind: "waqt-ended" | "jamaat-soon" | "night-qada", prayer: PrayerId | null, title: string, message: string) => {
         if (!eventDate || events.some((event) => event.key === key)) return;
-        updateLocalData((current) => ({ ...current, reminderEvents: [{ id: `${Date.now()}-${key}`, key, kind, date: eventDate, prayer, title, message, createdAt: new Date().toISOString(), resolved: false, response: null }, ...current.reminderEvents].slice(0, 100) }));
+        updateWorkspaceData((current) => ({ ...current, reminderEvents: [{ id: `${Date.now()}-${key}`, key, kind, date: eventDate, prayer, title, message, createdAt: new Date().toISOString(), resolved: false, response: null }, ...current.reminderEvents].slice(0, 100) }));
         notify(title, message);
       };
       const name = data.preferences.displayName.trim() || userName.trim() || "তোমার";

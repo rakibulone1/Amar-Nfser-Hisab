@@ -43,7 +43,7 @@ test('waqt expiry asks for user confirmation before a qada record is created', (
 });
 
 test('prayer tracker uses a sequential wizard and stores rakats by category and method', () => {
-  const store = read('../src/lib/local/store.ts');
+  const store = read('../src/lib/workspace/store.ts');
   const tracker = read('../src/modules/trackers/tracker-center.tsx');
   assert.match(store, /PrayerPartCategory/);
   assert.match(store, /PrayerEntry/);
@@ -56,7 +56,7 @@ test('prayer tracker uses a sequential wizard and stores rakats by category and 
 });
 
 test('all requested tracker families have dedicated entry and local data models', () => {
-  const store = read('../src/lib/local/store.ts');
+  const store = read('../src/lib/workspace/store.ts');
   const tracker = read('../src/modules/trackers/tracker-center.tsx');
   for (const field of ['quranEntries', 'dhikrTemplates', 'dhikrSessions', 'fastingEntries', 'deedEntries', 'avoidEntries', 'studyEntries', 'habitDefinitions', 'habitLogs', 'reflections', 'journeys']) {
     assert.match(store, new RegExp(field));
@@ -66,17 +66,17 @@ test('all requested tracker families have dedicated entry and local data models'
   }
 });
 
-test('legacy browser data can be read once for cloud migration and is cleared only after server confirmation', () => {
-  const store = read('../src/lib/local/store.ts');
-  assert.match(store, /\[1, 2, 3\]\.includes\(Number\(value\.schemaVersion\)\)/);
-  assert.match(store, /DB_NAME = "amar-nfser-hisab-local"/);
-  assert.match(store, /readLegacyBrowserData/);
-  assert.match(store, /clearLegacyBrowserData/);
-  assert.match(store, /আগের রেকর্ডগুলো অনলাইনে স্থানান্তর হয়েছে/);
-  assert.doesNotMatch(store, /writeIndexedData/);
+test('legacy browser persistence is cleanup-only and never imported into the online workspace', () => {
+  const store = read('../src/lib/workspace/store.ts');
+  const theme = read('../src/providers/theme-provider.tsx');
+  assert.match(store, /purgeLegacyBrowserStorage/);
+  assert.match(store, /localStorage\.removeItem/);
+  assert.match(store, /indexedDB\.deleteDatabase/);
+  assert.doesNotMatch(store, /indexedDB\.open|localStorage\.getItem|localStorage\.setItem|readLegacyBrowserData/);
+  assert.doesNotMatch(theme, /localStorage|indexedDB/);
   assert.match(store, /schemaVersion: 3/);
   assert.ok(fs.existsSync(new URL('../supabase/MASTER_DATABASE_SETUP.sql', import.meta.url)));
-  assert.ok(fs.existsSync(new URL('../supabase/migrations/001_atomic_workspace_snapshot.sql', import.meta.url)), 'atomic workspace save migration is included');
+  assert.ok(fs.existsSync(new URL('../supabase/migrations/003_remove_legacy_snapshot.sql', import.meta.url)));
 });
 
 test('short-lived signed login handoff is minted only after Supabase sign-in and cleared by proxy', () => {

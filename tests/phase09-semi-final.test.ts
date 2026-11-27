@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { getLocalJournalDate } from "../src/lib/local/store.ts";
+import { getJournalDate } from "../src/lib/workspace/store.ts";
 import {
   FIXED_JOURNEY_END_DATE, FIXED_JOURNEY_START_DATE, FIXED_JOURNEY_STAGES,
   getCompletedJourneyStages, getFixedJourneyProgress, getJourneyStage,
@@ -16,11 +16,11 @@ const read = (relative: string) => fs.readFileSync(path.join(root, relative), "u
 const hadith = JSON.parse(read("src/data/hadith-bn.json")) as HadithDataset;
 
 test("Maghrib-based accounting day changes at the Bangladesh Maghrib boundary", () => {
-  assert.equal(getLocalJournalDate(new Date("2026-11-25T10:59:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-25");
-  assert.equal(getLocalJournalDate(new Date("2026-11-25T11:00:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-26");
-  assert.equal(getLocalJournalDate(new Date("2026-11-25T18:30:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-26");
-  assert.equal(getLocalJournalDate(new Date("2026-11-26T10:59:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-26");
-  assert.equal(getLocalJournalDate(new Date("2026-11-26T11:00:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-27");
+  assert.equal(getJournalDate(new Date("2026-11-25T10:59:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-25");
+  assert.equal(getJournalDate(new Date("2026-11-25T11:00:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-26");
+  assert.equal(getJournalDate(new Date("2026-11-25T18:30:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-26");
+  assert.equal(getJournalDate(new Date("2026-11-26T10:59:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-26");
+  assert.equal(getJournalDate(new Date("2026-11-26T11:00:00.000Z"), "Asia/Dhaka", "17:00"), "2026-11-27");
 });
 
 test("fixed 2026–2030 journey contains 71 stages, 1,438 days and three modules", () => {
@@ -57,7 +57,7 @@ test("backward-compatible stage helpers remain deterministic for archived journe
 
 test("dashboard, trackers and prayer settings retain the Maghrib-first and dynamic-entry workflow", () => {
   const workspace = read("src/components/frontend-workspace.tsx");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   const prayerWidget = read("src/modules/trackers/prayer-time-widget.tsx");
   const settings = read("src/modules/trackers/prayer-settings.tsx");
   assert.match(workspace, /সালাতের বিস্তারিত হিসাব/);
@@ -87,7 +87,7 @@ test("static hadith library contains twenty structured records and is not a trac
 
 test("active workspace reads and writes per-record relational tables instead of a runtime snapshot", () => {
   const api = read("src/app/api/workspace/route.ts");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   const migration = read("supabase/migrations/002_relational_workspace.sql");
   assert.match(api, /rpc\("load_relational_workspace"\)/);
   assert.match(api, /rpc\("save_relational_workspace_changes"/);

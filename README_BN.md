@@ -64,12 +64,20 @@ npm run dev
 - মসজিদের জামাতের সময় Settings থেকে হাতে দিতে হবে; সেটি ওয়াক্তের শুরু/শেষের হিসাব থেকে আলাদা
 - API সময়সূচি না পেলে পূর্বে Cache করা সময় ব্যবহার হয়; প্রথমবার Offline থাকলে মাগরিবের সময় না পাওয়া পর্যন্ত দিন-পরিবর্তন নির্ধারণে সীমাবদ্ধতা থাকবে
 
-## ৭. নিরাপত্তা
+## ৭. বিদ্যমান Database Upgrade ও Legacy Snapshot অপসারণ
+
+Release 1.2.2-এর Relational Migration `002_relational_workspace.sql` একবার সম্পূর্ণ সফল হয়ে সব পুরোনো Snapshot Record আলাদা `workspace_*` টেবিলে স্থানান্তরিত এবং Audit দ্বারা যাচাই হওয়ার পরই `003_remove_legacy_snapshot.sql` চালাবে। এই Migration পুরোনো `user_workspace_snapshots` টেবিল ও `save_user_workspace_snapshot` RPC স্থায়ীভাবে Drop করে। এটি সক্রিয় `workspace_*` রেকর্ড মুছে না।
+
+**সতর্কতা:** 003 Migration পুরোনো Snapshot Archive-এর অবশিষ্ট কপি স্থায়ীভাবে মুছে ফেলে। আগে Supabase Backup নাও এবং `workspace_sync_state`, `workspace_user_settings`, Relational RPC ও গুরুত্বপূর্ণ Tracker Row Count যাচাই করো। Migration-এর প্রি-চেক ব্যর্থ হলে জোর করে Table Drop করবে না।
+
+নতুন/খালি Database-এ শুধু `MASTER_DATABASE_SETUP.sql` চালাবে; 001, 002 বা 003 চালাবে না। বিদ্যমান Database-এ Master SQL পুনরায় চালাবে না।
+
+## ৮. নিরাপত্তা
 
 `.env.local`, Supabase Secret Key, session cookie বা ব্যক্তিগত Backup কখনো ZIP, Git Repository বা কারও সঙ্গে শেয়ার করবে না। এই পূর্ণ Project ZIP-এ কোনো ব্যক্তিগত Environment Secret অন্তর্ভুক্ত নেই।
 
 
-## ৮. Vercel-এ প্রথম Production Release
+## ৯. Vercel-এ Production Release
 
 এই প্রজেক্টটি Next.js App Router ব্যবহার করে। Vercel-এ নতুন Project তৈরি বা Git Repository Import করার সময় Framework Preset `Next.js` এবং Root Directory প্রজেক্টের Root-এ রাখো। Vercel Next.js নিজে শনাক্ত করে; আলাদা `vercel.json`, Output Directory override বা Supabase Cron/Edge Function দরকার নেই। `package-lock.json` থাকায় npm নির্ধারিত হবে। Node.js Version `22.x` ব্যবহার করো।
 

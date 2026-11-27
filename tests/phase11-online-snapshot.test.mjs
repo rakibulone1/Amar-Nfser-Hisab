@@ -9,12 +9,12 @@ const read = (relative) => fs.readFileSync(path.join(root, relative), "utf8");
 
 test("runtime workspace is loaded from table-per-collection relational records, not a JSON snapshot", () => {
   const api = read("src/app/api/workspace/route.ts");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   const migration = read("supabase/migrations/002_relational_workspace.sql");
   assert.match(api, /rpc\("load_relational_workspace"\)/);
   assert.match(api, /rpc\("save_relational_workspace_changes"/);
   assert.doesNotMatch(api, /user_workspace_snapshots/);
-  assert.match(store, /buildWorkspaceChanges\(syncedSnapshot, target\)/);
+  assert.match(store, /buildWorkspaceChanges\(confirmedWorkspaceState, target\)/);
   assert.match(store, /upserts/);
   assert.match(store, /deletes/);
   assert.match(migration, /workspace_prayer_entries/);
@@ -27,26 +27,32 @@ test("runtime workspace is loaded from table-per-collection relational records, 
   assert.match(migration, /workspace_sync_state/);
 });
 
-test("the old snapshot is only a one-time migration source and is retained for rollback", () => {
-  const migration = read("supabase/migrations/002_relational_workspace.sql");
-  const api = read("src/app/api/workspace/route.ts");
-  assert.match(migration, /One-time safe migration from the old JSON snapshot table/);
-  assert.match(migration, /user_workspace_snapshots/);
-  assert.match(migration, /Legacy snapshot archive/);
-  assert.doesNotMatch(api, /save_user_workspace_snapshot/);
+test("Release 1.2.5 removes local persistence reads and the retired database snapshot", () => {
+  const store = read("src/lib/workspace/store.ts");
+  const theme = read("src/providers/theme-provider.tsx");
+  const master = read("supabase/MASTER_DATABASE_SETUP.sql");
+  const cleanup = read("supabase/migrations/003_remove_legacy_snapshot.sql");
+  assert.doesNotMatch(store, /indexedDB\.open|localStorage\.getItem|localStorage\.setItem|readLegacyBrowserData/);
+  assert.match(store, /indexedDB\.deleteDatabase/);
+  assert.match(store, /localStorage\.removeItem/);
+  assert.doesNotMatch(theme, /localStorage/);
+  assert.doesNotMatch(master, /user_workspace_snapshots|save_user_workspace_snapshot/);
+  assert.match(cleanup, /drop table if exists public\.user_workspace_snapshots/);
+  assert.match(cleanup, /drop function if exists public\.save_user_workspace_snapshot/);
+  assert.match(cleanup, /ON DELETE CASCADE/);
 });
 
 test("delta saves are owner-scoped, version-checked and bounded without a per-edit full snapshot write", () => {
   const migration = read("supabase/migrations/002_relational_workspace.sql");
   const api = read("src/app/api/workspace/route.ts");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   assert.match(migration, /auth\.uid\(\)/);
   assert.match(migration, /WORKSPACE_VERSION_CONFLICT/);
   assert.match(migration, /pg_advisory_xact_lock/);
   assert.match(migration, /WORKSPACE_TOO_LARGE/);
   assert.match(api, /MAX_WORKSPACE_BYTES = 5 \* 1024 \* 1024/);
-  assert.match(store, /setTimeout\(\(\) => \{ cloudSyncTimer = null; void pushCloudSnapshot/);
-  assert.match(store, /syncedSnapshot = target/);
+  assert.match(store, /setTimeout\(\(\) => \{ cloudSyncTimer = null; void pushWorkspaceChanges/);
+  assert.match(store, /confirmedWorkspaceState = target/);
 });
 
 test("goal date ranges cannot overlap and stage observations have separate records", () => {

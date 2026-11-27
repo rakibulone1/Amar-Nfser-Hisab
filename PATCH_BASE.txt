@@ -1,2 +1,5 @@
-Apply only on Amar Nfser Hisab Release 1.2.3 with Release 1.2.2 Build Fix 01 already applied.
-No database migration is required. No environment variables or Supabase schema changes are included.
+Amar Nfser Hisab Release 1.2.5 A+ Account-Owned Online
+Fix Patch 01
+
+Apply this patch only to the Release 1.2.5 project.
+Do not apply it to Release 1.2.4 or earlier versions.

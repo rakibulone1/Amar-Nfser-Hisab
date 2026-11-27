@@ -30,7 +30,7 @@ test("dashboard displays the Gregorian date in English and Hijri date in Bengali
 });
 
 test("prayer-time cache keys include date and coordinates before the generic date fallback", () => {
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   const from = store.indexOf("function rowKey(");
   const to = store.indexOf("\nfunction ", from + 10);
   const block = store.slice(from, to > from ? to : from + 900);
@@ -57,18 +57,19 @@ test("goal cards open linked journey stages and keep long multi-stage links comp
 
 test("relational audit remains read-only and covers every key tracker and cache collection", () => {
   const audit = read("supabase/WORKSPACE_DATA_AUDIT_RELATIONAL.sql");
-  for (const phrase of ["পুরোনো লক্ষ্য", "সাধারণ রেকর্ড", "দৈনিক সালাতের সারাংশ", "দৈনিক নোট", "সালাত", "কাজা", "কুরআন", "জিকির", "সিয়াম", "ভালো কাজ", "অভ্যাস নিয়ন্ত্রণ", "পুরোনো দোয়ার সংরক্ষণ", "ইলম ও অধ্যয়ন", "মুহাসাবা", "অনুভূতির নোট", "সময়সীমার লক্ষ্য", "লক্ষ্যের কাজ", "সালাতের সময়সূচির ক্যাশ", "স্মরণিকা"]) {
+  for (const phrase of ["প্রোফাইল", "ব্যবহারকারী সেটিংস", "সালাত", "কাজা", "কুরআন", "জিকিরের তালিকা", "জিকির সেশন", "সিয়াম", "ভালো কাজ", "অভ্যাস নিয়ন্ত্রণ", "ইলম ও অধ্যয়ন", "মুহাসাবা", "আত্মশুদ্ধির যাত্রা", "পর্যায়ের অর্জন", "পর্যায়ের পর্যবেক্ষণ", "সময়সীমার লক্ষ্য", "লক্ষ্যের কাজ", "সালাতের সময় ক্যাশ", "স্মরণিকা", "ব্যক্তিগত ছবি"]) {
     assert.ok(audit.includes(phrase), `Audit query is missing ${phrase}`);
   }
   assert.doesNotMatch(audit, /\b(insert|update|delete|truncate)\s+(into|from|table)?\b/i);
 });
 
-test("release metadata and aggregate tests are advanced to 1.2.4", () => {
+test("release metadata and aggregate tests are advanced to 1.2.5", () => {
   const pkg = JSON.parse(read("package.json"));
   const lock = JSON.parse(read("package-lock.json"));
-  assert.equal(pkg.version, "1.2.4");
-  assert.equal(lock.version, "1.2.4");
-  assert.equal(lock.packages[""].version, "1.2.4");
+  assert.equal(pkg.version, "1.2.5");
+  assert.equal(lock.version, "1.2.5");
+  assert.equal(lock.packages[""].version, "1.2.5");
   assert.match(pkg.scripts["test:all"], /test:phase13/);
   assert.match(pkg.scripts["test:all"], /test:phase16/);
+  assert.match(pkg.scripts["test:all"], /test:phase17/);
 });

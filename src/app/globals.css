@@ -3855,3 +3855,72 @@ button:disabled, .primary-button:disabled, .button-primary:disabled, .tracker-pr
   .minimal-field input { height: 52px; font-size: 14px; }
   .minimal-login-submit { min-height: 49px; }
 }
+
+/* Release 1.2.5 — account-owned workspace and destructive-action clarity. */
+.account-danger-panel {
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--line));
+  background: color-mix(in srgb, var(--rose-soft) 22%, var(--paper));
+}
+.account-danger-panel .panel-title-row h2 { color: var(--danger); }
+.account-danger-copy {
+  display: grid;
+  gap: 4px;
+  max-width: 760px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--danger) 18%, var(--line));
+  border-radius: 13px;
+  background: color-mix(in srgb, var(--rose-soft) 62%, var(--paper));
+}
+.account-danger-copy strong { color: var(--danger); font-size: 13px; font-weight: 800; }
+.account-danger-copy p { margin: 0; color: var(--ink-soft); font-size: 12px; line-height: 1.8; }
+.account-delete-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: end;
+  gap: 13px;
+  margin-top: 15px;
+}
+.account-delete-form label { min-width: 0; }
+.account-delete-form input {
+  min-height: 47px;
+  padding: 0 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 11px;
+  color: var(--ink);
+  background: var(--paper);
+  font-size: 13px;
+}
+.account-delete-form input:focus { border-color: var(--danger); outline: 3px solid color-mix(in srgb, var(--danger) 15%, transparent); }
+.account-delete-form .form-actions { grid-column: 1 / -1; justify-content: flex-start; margin-top: 2px; }
+.button-danger-solid {
+  min-height: 45px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid #93443f;
+  border-radius: 11px;
+  color: #fff;
+  background: #93443f;
+  font-size: 12px;
+  font-weight: 800;
+  transition: background .16s ease, transform .16s ease, opacity .16s ease;
+}
+.button-danger-solid:hover:not(:disabled) { background: #7e3834; transform: translateY(-1px); }
+.button-danger-solid:disabled { cursor: not-allowed; opacity: .48; }
+.account-delete-feedback { grid-column: 1 / -1; margin: 0; }
+:root[data-theme="dark"] .account-danger-panel {
+  border-color: color-mix(in srgb, var(--danger) 32%, var(--line));
+  background: color-mix(in srgb, var(--rose-soft) 34%, var(--paper));
+}
+:root[data-theme="dark"] .account-danger-copy {
+  border-color: color-mix(in srgb, var(--danger) 25%, var(--line));
+  background: color-mix(in srgb, var(--rose-soft) 56%, var(--paper));
+}
+@media (max-width: 680px) {
+  .account-delete-form { grid-template-columns: minmax(0, 1fr); gap: 11px; }
+  .account-delete-form .form-actions { grid-column: 1; }
+  .account-delete-form .button-danger-solid { width: 100%; min-height: 49px; }
+  .account-danger-copy { padding: 12px; }
+}

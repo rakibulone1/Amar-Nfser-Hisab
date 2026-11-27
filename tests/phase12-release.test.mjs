@@ -40,7 +40,7 @@ test("dashboard hierarchy is date strip, journey summary, four metric cards and 
 
 test("notification popover supports read, expanded detail and individual or bulk deletion", () => {
   const workspace = read("src/components/frontend-workspace.tsx");
-  const store = read("src/lib/local/store.ts");
+  const store = read("src/lib/workspace/store.ts");
   assert.match(workspace, /function NotificationPopover/);
   assert.match(workspace, /markAllRead/);
   assert.match(workspace, /removeAll/);
@@ -115,17 +115,18 @@ test("new database Master SQL contains the same table-per-record schema and secu
   }
   assert.match(migration, /revoke all on function public\.load_relational_workspace\(\) from public, anon/);
   assert.match(migration, /revoke all on function public\.save_relational_workspace_changes\(jsonb,timestamptz\) from public, anon/);
-  assert.match(master, /Legacy snapshot archive/);
+  assert.doesNotMatch(master, /user_workspace_snapshots|save_user_workspace_snapshot/);
+  assert.match(read("supabase/migrations/003_remove_legacy_snapshot.sql"), /drop table if exists public\.user_workspace_snapshots/);
   assert.match(master, /notify pgrst, 'reload schema'/);
 });
 
-test("relational audit query compares archived snapshot counts with the new tables and reports legacy sources", () => {
+test("relational audit query reads active account-owned tables without the retired snapshot", () => {
   const audit = read("supabase/WORKSPACE_DATA_AUDIT_RELATIONAL.sql");
-  assert.match(audit, /old_snapshot_rows/);
-  assert.match(audit, /online_rows/);
-  assert.match(audit, /legacy_prayer_logs/);
-  assert.match(audit, /legacy_quran_logs/);
-  assert.match(audit, /relational_revision_at/);
+  assert.doesNotMatch(audit, /user_workspace_snapshots|old_snapshot_rows/);
+  assert.match(audit, /tracker/);
+  assert.match(audit, /workspace_prayer_entries/);
+  assert.match(audit, /workspace_quran_entries/);
+  assert.match(audit, /journal_attachments/);
   assert.doesNotMatch(audit, /\b(update|delete|insert)\s+into\b/i);
 });
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlarmClock, CalendarClock, MapPin, RefreshCw } from "lucide-react";
-import { updateLocalData, type LocalAppData, type PrayerTimesCache, type PrayerId } from "@/lib/local/store";
+import { updateWorkspaceData, type WorkspaceData, type PrayerTimesCache, type PrayerId } from "@/lib/workspace/store";
 import { shiftPrayerClock } from "@/lib/prayer-time";
 
 const NAMES: Record<PrayerId, string> = { fajr: "ফজর", dhuhr: "যোহর", asr: "আসর", maghrib: "মাগরিব", isha: "ইশা" };
@@ -31,7 +31,7 @@ function fmt(time: string, date = currentDate()) { return new Intl.DateTimeForma
 function dateOffset(base: string, offset: number) { const d = new Date(`${base}T12:00:00+06:00`); d.setUTCDate(d.getUTCDate() + offset); return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka", year: "numeric", month: "2-digit", day: "2-digit" }).format(d); }
 function leftLabel(minutes: number) { const safe = Math.max(0, minutes); const h = Math.floor(safe / 60); const m = safe % 60; return h ? `${h.toLocaleString("bn-BD")} ঘণ্টা ${m.toLocaleString("bn-BD")} মিনিট` : `${m.toLocaleString("bn-BD")} মিনিট`; }
 
-export function PrayerTimeWidget({ data }: { data: LocalAppData }) {
+export function PrayerTimeWidget({ data }: { data: WorkspaceData }) {
   const [times, setTimes] = useState<PrayerTimesCache | null>(null);
   const [loading, setLoading] = useState(false);
   const [problem, setProblem] = useState("");
@@ -49,7 +49,7 @@ export function PrayerTimeWidget({ data }: { data: LocalAppData }) {
         const timings = await fetchPrayerTimesOnce(targetDate, latitude, longitude);
         if (cancelled) return;
         if (primary) setTimes(timings);
-        updateLocalData((current) => ({ ...current, prayerTimesCache: [timings, ...current.prayerTimesCache.filter((item) => item.date !== targetDate || item.latitude !== latitude || item.longitude !== longitude)].slice(0, 60), prayerPreferences: primary ? { ...current.prayerPreferences, lastTimesFetchedAt: timings.fetchedAt } : current.prayerPreferences }));
+        updateWorkspaceData((current) => ({ ...current, prayerTimesCache: [timings, ...current.prayerTimesCache.filter((item) => item.date !== targetDate || item.latitude !== latitude || item.longitude !== longitude)].slice(0, 60), prayerPreferences: primary ? { ...current.prayerPreferences, lastTimesFetchedAt: timings.fetchedAt } : current.prayerPreferences }));
       } catch (error) {
         if (primary && !cancelled) setProblem(error instanceof Error ? error.message : "সময়সূচি পাওয়া যায়নি।");
       } finally { if (primary && !cancelled) setLoading(false); }
@@ -81,7 +81,7 @@ export function PrayerTimeWidget({ data }: { data: LocalAppData }) {
   })() : null;
 
   return <section className="prayer-time-widget">
-    <header><div><span className="tracker-eyebrow">বাংলাদেশ · হানাফি পদ্ধতি</span><h3>আজকের ওয়াক্তের সময়</h3><p><MapPin size={13}/> {data.prayerPreferences.locationLabel}</p></div><button type="button" className="tracker-icon-button" title="সময়সূচি আবার আনো" onClick={() => { updateLocalData((current) => ({ ...current, prayerTimesCache: current.prayerTimesCache.filter((item) => item.date !== date || item.latitude !== latitude || item.longitude !== longitude) })); setTimes(null); setProblem(""); setRefreshKey((value) => value + 1); }}><RefreshCw size={16}/></button></header>
+    <header><div><span className="tracker-eyebrow">বাংলাদেশ · হানাফি পদ্ধতি</span><h3>আজকের ওয়াক্তের সময়</h3><p><MapPin size={13}/> {data.prayerPreferences.locationLabel}</p></div><button type="button" className="tracker-icon-button" title="সময়সূচি আবার আনো" onClick={() => { updateWorkspaceData((current) => ({ ...current, prayerTimesCache: current.prayerTimesCache.filter((item) => item.date !== date || item.latitude !== latitude || item.longitude !== longitude) })); setTimes(null); setProblem(""); setRefreshKey((value) => value + 1); }}><RefreshCw size={16}/></button></header>
     {currentTimes ? <><div className="prayer-time-next"><span>পরবর্তী ওয়াক্ত</span><strong>{NAMES[state?.next || "fajr"]}</strong><b>{state ? leftLabel(state.delta) : "—"} বাকি</b><small>{fmt(currentTimes[state?.next || "fajr"])}</small></div><div className="prayer-time-grid">{ACCOUNTING_ORDER.map((prayer) => {
       const endTime = prayer === "fajr" ? currentTimes.sunrise : prayer === "dhuhr" ? currentTimes.asr : prayer === "asr" ? currentTimes.maghrib : prayer === "maghrib" ? currentTimes.isha : tomorrowTimes?.fajr ? shiftPrayerClock(tomorrowTimes.fajr, -1) : undefined;
       const endDate = prayer === "isha" ? tomorrowDate : date;

@@ -1,0 +1,6 @@
+Release 1.2.5 Patch — Manual removal required after extraction:
+
+Delete this obsolete source file if it still exists in the target project:
+  src/lib/local/store.ts
+
+Do not delete `src/lib/workspace/store.ts`; this is the current authenticated relational online store.

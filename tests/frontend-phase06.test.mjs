@@ -13,7 +13,7 @@ test('Phase 06 persistent navigation is still the base for the new tracker cente
 });
 
 test('workspace uses a versioned online-first workspace snapshot', () => {
-  const source = read('../src/lib/local/store.ts');
+  const source = read('../src/lib/workspace/store.ts');
   assert.match(source, /schemaVersion: 3/);
   assert.match(source, /fetch\("\/api\/workspace"/);
   assert.match(source, /পরিবর্তন অনলাইনে সংরক্ষণ হচ্ছে/);
