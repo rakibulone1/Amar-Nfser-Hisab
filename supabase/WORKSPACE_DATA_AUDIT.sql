@@ -1,3 +1,0 @@
--- Release 1.2.5: the snapshot/local-browser audit has been retired.
--- Use supabase/WORKSPACE_DATA_AUDIT_RELATIONAL.sql for the current read-only
--- per-account relational workspace audit.
