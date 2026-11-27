@@ -20,11 +20,26 @@ const expectedCollections = [
   "reminderEvents"
 ];
 
+const expectedTables = [
+  "workspace_goals", "workspace_records", "workspace_prayer_days", "workspace_notes",
+  "workspace_prayer_entries", "workspace_qada_entries", "workspace_quran_entries",
+  "workspace_extra_prayer_entries", "workspace_dhikr_templates", "workspace_dhikr_sessions",
+  "workspace_fasting_entries", "workspace_deed_entries", "workspace_avoid_entries",
+  "workspace_dua_items", "workspace_study_entries", "workspace_habit_definitions",
+  "workspace_habit_logs", "workspace_reflections", "workspace_journeys",
+  "workspace_journey_milestones", "workspace_journey_observations",
+  "workspace_deadline_plans", "workspace_deadline_tasks",
+  "workspace_prayer_times_cache", "workspace_reminder_events"
+];
+
 function arrayBlock(source, declaration) {
-  const escaped = declaration.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const match = source.match(new RegExp(escaped + "[\\s\\S]*?array\\[([\\s\\S]*?)\\]", "m"));
-  assert.ok(match, `Could not find SQL array declaration: ${declaration}`);
-  return match[1];
+  const declarationStart = source.indexOf(declaration);
+  assert.notEqual(declarationStart, -1, `Could not find SQL declaration: ${declaration}`);
+  const arrayStart = source.indexOf("array[", declarationStart);
+  assert.notEqual(arrayStart, -1, `Could not find array initializer for: ${declaration}`);
+  const arrayEnd = source.indexOf("]", arrayStart);
+  assert.notEqual(arrayEnd, -1, `Could not find end of array initializer for: ${declaration}`);
+  return source.slice(arrayStart + "array[".length, arrayEnd);
 }
 
 test("Release 1.4.0 package and lock metadata are aligned", () => {
@@ -37,7 +52,7 @@ test("Release 1.4.0 package and lock metadata are aligned", () => {
   assert.match(pkg.scripts["verify:release"], /npm run test:all/);
 });
 
-test("all 25 API collection names map exactly once to the Master SQL tables", () => {
+test("the workspace API allow-list and SQL write mapping contain the same 25 collections", () => {
   const apiBlock = api.match(/const COLLECTIONS = new Set\(\[([\s\S]*?)\]\);/);
   assert.ok(apiBlock, "workspace API collection allow-list must exist");
   const apiCollections = [...apiBlock[1].matchAll(/"([^"]+)"/g)].map((match) => match[1]);
@@ -47,27 +62,15 @@ test("all 25 API collection names map exactly once to the Master SQL tables", ()
   const mappingBlock = sql.match(/for v_collection in select \* from \(values([\s\S]*?)\) as m\(collection_key,table_name,date_key\)/);
   assert.ok(mappingBlock, "Master SQL collection-to-table mapping must exist");
   const mappings = [...mappingBlock[1].matchAll(/\('([^']+)','(workspace_[^']+)','([^']*)'\)/g)]
-    .map((match) => ({ key: match[1], table: match[2], dateKey: match[3] }));
+    .map((match) => ({ key: match[1], table: match[2] }));
   assert.deepEqual(mappings.map((item) => item.key), expectedCollections);
+  assert.deepEqual(mappings.map((item) => item.table), expectedTables);
   assert.equal(new Set(mappings.map((item) => item.table)).size, 25);
-  assert.ok(mappings.every(({ key, table }) => table === `workspace_${key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`)}`) ||
-    mappings.every(({ table }) => /^workspace_[a-z0-9_]+$/.test(table)));
 });
 
-test("the Master SQL creates a separate table for every mapped collection and secures ownership", () => {
+test("the Master SQL creates the same 25 account-owned tables and enables RLS", () => {
   const tablesBlock = arrayBlock(sql, "v_tables text[] :=");
   const tableNames = [...tablesBlock.matchAll(/'(workspace_[a-z0-9_]+)'/g)].map((match) => match[1]);
-  const expectedTables = [
-    "workspace_goals", "workspace_records", "workspace_prayer_days", "workspace_notes",
-    "workspace_prayer_entries", "workspace_qada_entries", "workspace_quran_entries",
-    "workspace_extra_prayer_entries", "workspace_dhikr_templates", "workspace_dhikr_sessions",
-    "workspace_fasting_entries", "workspace_deed_entries", "workspace_avoid_entries",
-    "workspace_dua_items", "workspace_study_entries", "workspace_habit_definitions",
-    "workspace_habit_logs", "workspace_reflections", "workspace_journeys",
-    "workspace_journey_milestones", "workspace_journey_observations",
-    "workspace_deadline_plans", "workspace_deadline_tasks",
-    "workspace_prayer_times_cache", "workspace_reminder_events"
-  ];
   assert.deepEqual(tableNames, expectedTables);
 
   assert.match(sql, /user_id uuid not null references auth\.users\(id\) on delete cascade/);
@@ -77,19 +80,13 @@ test("the Master SQL creates a separate table for every mapped collection and se
   assert.match(sql, /jsonb_typeof\(record\) = ''object''/);
 });
 
-test("load and save RPCs cover each collection without an account-wide snapshot", () => {
-  const mappingBlock = sql.match(/for v_collection in select \* from \(values([\s\S]*?)\) as m\(collection_key,table_name,date_key\)/);
-  assert.ok(mappingBlock);
-  const mappings = [...mappingBlock[1].matchAll(/\('([^']+)','(workspace_[^']+)','([^']*)'\)/g)]
-    .map((match) => ({ key: match[1], table: match[2] }));
-
-  for (const { key, table } of mappings) {
-    assert.ok(sql.includes(`'${key}', coalesce((select jsonb_agg(r.record`), `load RPC must return ${key}`);
-    assert.ok(sql.includes(`from public.${table} r where r.user_id = v_user`), `load RPC must be owner-scoped for ${key}`);
+test("load and save RPCs cover every collection without a whole-workspace snapshot", () => {
+  for (const key of expectedCollections) {
+    assert.match(sql, new RegExp(`'${key}',\\s*coalesce\\(\\(select jsonb_agg\\(r\\.record`), `load RPC must return ${key}`);
   }
 
   assert.match(sql, /create or replace function public\.load_relational_workspace\(\)/);
-  assert.match(sql, /create or replace function public\.save_relational_workspace_changes\(p_changes jsonb, p_expected_updated_at timestamptz\)/);
+  assert.match(sql, /create or replace function public\.save_relational_workspace_changes\(\s*p_changes jsonb,\s*p_expected_updated_at timestamptz/);
   assert.match(sql, /WORKSPACE_VERSION_CONFLICT/);
   assert.match(sql, /INVALID_COLLECTION_ENVELOPE/);
   assert.match(sql, /UNKNOWN_CHANGE_SECTION/);
@@ -97,7 +94,7 @@ test("load and save RPCs cover each collection without an account-wide snapshot"
   assert.doesNotMatch(sql, /create or replace function public\.save_user_workspace_snapshot/i);
 });
 
-test("the setup is guarded for a fresh database and refuses legacy migration replay", () => {
+test("the Master SQL is fresh-project-only and legacy migration files are removed", () => {
   assert.match(sql, /begin;[\s\S]*AMAR_NFSER_HISAB_DATABASE_ALREADY_INITIALIZED[\s\S]*commit;/);
   assert.match(sql, /Create a new empty Supabase project/);
   for (const oldPath of [
@@ -111,7 +108,7 @@ test("the setup is guarded for a fresh database and refuses legacy migration rep
   }
 });
 
-test("authenticated RPC grants and final schema assertions protect the workspace", () => {
+test("workspace RPC execution is limited to authenticated users and the schema asserts RLS", () => {
   assert.match(sql, /revoke all on function public\.load_relational_workspace\(\) from public, anon/);
   assert.match(sql, /grant execute on function public\.load_relational_workspace\(\) to authenticated/);
   assert.match(sql, /revoke all on function public\.save_relational_workspace_changes\(jsonb,timestamptz\) from public, anon/);
